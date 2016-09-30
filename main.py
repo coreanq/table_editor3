@@ -22,7 +22,6 @@ parsing_file_list = [KPD_BASIC_TITLE_SRC_FILE, KPD_ADD_TITLE_SRC_FILE,
 
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'{(([^{}\n,])+[,]?)+}[,]?([^\n]*)', re.DOTALL)
-# re_parse_params = re.compile(r'{(([^{}\n,])+[,]?)+}[,]?([^\n]*)', re.DOTALL)
 re_parse_params = re.compile(r'[^,{}\n]+', re.DOTALL)
 
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
@@ -64,8 +63,8 @@ def read_kpd_para_vari(contents):
                 array_footer = '['+ str(defines_dict[find_list[0][2]]) + ']'
             except KeyError:
                 array_footer = ""  
-            # {'k_wUnlmtCarrFreqSel': ['WORD', '//변수설명']}
-            yield {find_list[0][0] + array_footer: [vari_type, find_list[0][3]] }
+            # ('k_wUnlmtCarrFreqSel': ['WORD', '//변수설명'] )
+            yield (find_list[0][0] + array_footer, [vari_type, find_list[0][3]]) 
             continue
     pass
 
@@ -86,8 +85,8 @@ def read_enum_title(contents):
                 # (group0        )              (group1)
                 find_list = re_parse_enum_title.findall(searched_line)
                 if( len(find_list) ):
-                    # {'T_nnn5kW4': '//1065'}
-                    yield {find_list[0][0]: find_list[0][1] } 
+                    # ('T_nnn5kW4', '//1065')
+                    yield (find_list[0][0], find_list[0][1] ) 
     else: 
         yield None
     pass
@@ -114,8 +113,8 @@ def read_basic_title(contents):
                 if( len(find_list) ):
                     temp_string = find_list[0][0].replace('0x', '')
                     temp_string = temp_string.replace(',', '')
-                    # {'T_UMarrMCn': ['55264D094D434020202020202020', '//726  "U&M\tMC@        "T_UMarrMCn']}
-                    yield {find_list[0][2]:[temp_string, find_list[0][1]]} 
+                    # ('T_UMarrMCn', ['55264D094D434020202020202020', '//726  "U&M\tMC@        "T_UMarrMCn'])
+                    yield (find_list[0][2], [temp_string, find_list[0][1]]) 
     else: 
         yield None
     pass
@@ -138,8 +137,8 @@ def read_add_title(contents):
                 if( len(find_list) ):
                     temp_string = find_list[0][0].replace('0x', '')
                     temp_string = temp_string.replace(',', '')
-                    # {'T_RegenAvdIgain': ['526567656E41766420496761696E', '//1005 "RegenAvd Igain      "T_RegenAvdIgain']}
-                    yield {find_list[0][2]:[temp_string, find_list[0][1]]} 
+                    # ('T_RegenAvdIgain': ['526567656E41766420496761696E', '//1005 "RegenAvd Igain      "T_RegenAvdIgain'])
+                    yield (find_list[0][2], [temp_string, find_list[0][1]])
     else: 
         yield None
     pass
@@ -170,10 +169,8 @@ def test():
                 continue
             contents = ""
             filePath = root + os.sep + filename
-            grpName = ""
             with open(filePath, 'r', encoding='utf8') as f:
                 contents = f.read()
-    
             # print(filePath)
             if(filename.lower() == KPD_PARA_TABLE_SRC_FILE ):
                 for item in read_table(contents):
@@ -183,25 +180,22 @@ def test():
                 for item in read_basic_title(contents):
                     # print(item)
                     pass
+                pass
             elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE):
                 for item in read_add_title(contents):
                     # print(item)
                     pass
+                pass
             elif( filename.lower() == KPD_ENUM_TITLE_HEADER_FILE):
                 for item in read_enum_title(contents):
                     # print(item)
                     pass
+                pass
             elif ( filename.lower() == KPD_PARA_VARI_HEADER_FILE):
                 for item in read_kpd_para_vari(contents):
                     # print(item)
                     pass
-                    # for line in f.readlines():
-                    #     result  = read_grp(line)
-                    #     if( result ):
-                    #         grpName = result
-                    #     params = read_params(line) 
-                    #     if( params ):
-                    #         print(grpName, params)
+                pass
 
                
 if __name__ == '__main__':
