@@ -20,14 +20,15 @@ parsing_file_list = [KPD_BASIC_TITLE_SRC_FILE, KPD_ADD_TITLE_SRC_FILE,
                     KPD_PARA_TABLE_SRC_FILE, KPD_PARA_VARI_HEADER_FILE]
 
 
-re_check_grp = re.compile(r'(S_TABLE_X_TYPE t_ast([A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
-re_check_params = re.compile(r'\{([^\n,{}]+[,]?)+\}', re.DOTALL)
-re_parse_params = re.compile(r'(\([^,\n{}]+\))?([^\n,{}]+)', re.DOTALL)
+re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
+re_check_params = re.compile(r'{(([^{}\n,])+[,]?)+}[,]?([^\n]*)', re.DOTALL)
+# re_parse_params = re.compile(r'{(([^{}\n,])+[,]?)+}[,]?([^\n]*)', re.DOTALL)
+re_parse_params = re.compile(r'[^,{}\n]+', re.DOTALL)
 
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
 re_extract_basic_title_vari = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
 re_extract_add_title_vari = re.compile(r'WORD g_awAddTitleEng[^;]+};')
-re_check_title = re.compile(r'{([^{},]+[,]?)+}[^\n]+', re.DOTALL)
+re_check_title = re.compile(r'{([^{},]+[,]?)+}[^\n]+')
 re_parse_title = re.compile(r'{([^{}]+)}(\/\/[^\n]+(T_[^\n]+))')
 
 re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
@@ -36,7 +37,7 @@ re_parse_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+(\/\/[^\n]+)')
 
 re_parse_kpd_declaration = re.compile(r'extern ([A-Z_a-z0-9]+)\s+\/\/')
 re_parse_kpd_vari_define = re.compile(r'#define K_(K_[A-Z_0-9]+)\s+([0-9]+)')
-re_parse_kpd_vari = re.compile(r'[,]?(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*(\/\/[^\n]*)?')
+re_parse_kpd_vari = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*(\/\/[^\n]*)?')
 
 
 def read_kpd_para_vari(contents):
@@ -44,13 +45,11 @@ def read_kpd_para_vari(contents):
     defines_dict = {}
     buf = io.StringIO(contents) 
     for line in buf.readlines():
-
         find_list = re_parse_kpd_declaration.findall(line)
         if( len(find_list) ):
             # extern WORD ...
             vari_type = find_list[0]
             continue
-
         find_list  = re_parse_kpd_vari_define.findall(line)
         if( len(find_list) ):
             # [('K_AWAOCONST', '2')]
@@ -145,29 +144,21 @@ def read_add_title(contents):
         yield None
     pass
 
-
-def read_grp(contents):
-    #re.match 는 문장 처음부터 찾는다. 중간거는 못찾음  
-    searchObj = re_check_grp.search(contents)
-
-    if( searchObj ):
-        buf = io.StringIO(contents)
-        for line in buf.readline():
-            read_params(line)
-
-    if( searchObj ) :
-        return searchObj.group(1)
-    return None 
-
-def read_params(line):
-    # 처음엔 파라미터 형식에 맞는 라인을 찾는다. 
-    lineMatchObj = re_check_params.search(line)
-    params = None
-    if(lineMatchObj):
-        params = re_parse_params.findall(line) 
-        return params
-    else: 
-        return None
+def read_table(contents):
+    find_list = []
+    search_grp_iter = re_extract_grp.finditer(contents)
+    for match in search_grp_iter:
+        # all contents, groupname
+        group_name = match.group('group_name')
+        group_data = match.group('group_data')
+        buf = io.StringIO(group_data) 
+        for line in buf.readlines():
+            search_line_obj = re_check_params.search(line)
+            if(search_line_obj):
+                searched_line =  search_line_obj.string[search_line_obj.start(0):]
+                find_list = re_parse_params.findall(searched_line)
+                yield (group_name, [item.strip() for item in find_list])
+    pass
 
 # 파일 이름 별로 파싱 루틴을 다르게 적용하지만 실제로 파일에 관계 없이 동작하도록 해야함. 
 def test():
@@ -185,7 +176,9 @@ def test():
     
             # print(filePath)
             if(filename.lower() == KPD_PARA_TABLE_SRC_FILE ):
-                read_grp(contents)
+                for item in read_table(contents):
+                    print(item)
+                pass
             elif ( filename.lower() == KPD_BASIC_TITLE_SRC_FILE):
                 for item in read_basic_title(contents):
                     # print(item)
@@ -200,7 +193,7 @@ def test():
                     pass
             elif ( filename.lower() == KPD_PARA_VARI_HEADER_FILE):
                 for item in read_kpd_para_vari(contents):
-                    print(item)
+                    # print(item)
                     pass
                     # for line in f.readlines():
                     #     result  = read_grp(line)
