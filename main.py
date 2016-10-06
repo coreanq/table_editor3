@@ -1,13 +1,16 @@
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5 import uic
 import read_data as rd
-import main_wnd
+import mainwindow
 
-
-if __name__ ==  '__main__':
+if __name__ == '__main__':
+    print("Hello world")
     app = QApplication(sys.argv)
-    w = QWidget()
-    w.resize(250, 150)
-    w.show()
+    widget = mainwindow.MainWindow() 
+
+    # widget = uic.loadUi("main_wnd.ui")
+    widget.resize(640, 480)
+    widget.show()
     sys.exit(app.exec_())
