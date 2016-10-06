@@ -6,8 +6,6 @@ import io
 # 파일 명에 상관없이 변수 명을 통해 그 파싱 내용이 어느 부분 데이터 인지 파악함
 # 각 인자들 파싱 
 
-TARGET_DIR = r'D:\download\1'
-
 KPD_BASIC_TITLE_SRC_FILE='kpd_tbl_msg_eng.c'
 KPD_ADD_TITLE_SRC_FILE = 'addtitle_eng.c'
 KPD_ADD_TITLE_HEADER_FILE = 'addtitle_eng.h'
@@ -17,11 +15,7 @@ KPD_PARA_VARI_HEADER_FILE = 'kpdpara_vari.h'
 KPD_PARA_MSG_SRC_FILE =  'kpdpara_msg.c'
 KPD_PARA_MSG_HEADER_FILE = 'kpdpara_msg.h'
 
-parsing_file_list = [KPD_BASIC_TITLE_SRC_FILE, KPD_ADD_TITLE_SRC_FILE,
-                    KPD_ADD_TITLE_HEADER_FILE, KPD_ENUM_TITLE_HEADER_FILE, 
-                    KPD_PARA_TABLE_SRC_FILE, KPD_PARA_VARI_HEADER_FILE,
-                    KPD_PARA_MSG_SRC_FILE, KPD_PARA_MSG_HEADER_FILE]
-
+parsing_file_func_dict = {} 
 
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'{[^\n]+}[^\n]+')
@@ -63,7 +57,7 @@ def read_para_msg(contents):
             if(search_line_obj):
                 searched_line =  search_line_obj.string[search_line_obj.start(0):]
                 find_list = re_parse_params.findall(searched_line)
-                yield (msg_name, [item[1].strip() for item in find_list])
+                yield (msg_name, *[item[1].strip() for item in find_list])
     pass
 def read_kpd_para_vari(contents):
     vari_type = "WORD"
@@ -90,7 +84,7 @@ def read_kpd_para_vari(contents):
             except KeyError:
                 array_footer = ""  
             # ('k_wUnlmtCarrFreqSel': ['WORD', '//변수설명'] )
-            yield (find_list[0][0] + array_footer, [vari_type, find_list[0][3]]) 
+            yield (find_list[0][0] + array_footer, vari_type, find_list[0][3]) 
             continue
     pass
 
@@ -140,7 +134,7 @@ def read_basic_title(contents):
                     temp_string = find_list[0][0].replace('0x', '')
                     temp_string = temp_string.replace(',', '')
                     # ('T_UMarrMCn', ['55264D094D434020202020202020', '//726  "U&M\tMC@        "T_UMarrMCn'])
-                    yield (find_list[0][2], [temp_string, find_list[0][1]]) 
+                    yield (find_list[0][2], temp_string, find_list[0][1]) 
     else: 
         yield None
     pass
@@ -164,7 +158,7 @@ def read_add_title(contents):
                     temp_string = find_list[0][0].replace('0x', '')
                     temp_string = temp_string.replace(',', '')
                     # ('T_RegenAvdIgain': ['526567656E41766420496761696E', '//1005 "RegenAvd Igain      "T_RegenAvdIgain'])
-                    yield (find_list[0][2], [temp_string, find_list[0][1]])
+                    yield (find_list[0][2], temp_string, find_list[0][1])
     else: 
         yield None
     pass
@@ -182,53 +176,56 @@ def read_para_table(contents):
             if(search_line_obj):
                 searched_line =  search_line_obj.string[search_line_obj.start(0):]
                 find_list = re_parse_params.findall(searched_line)
-                yield (group_name, [item[1].strip() for item in find_list])
+                yield (group_name, *[item[1].strip() for item in find_list])
     pass
 
 # 파일 이름 별로 파싱 루틴을 다르게 적용하지만 실제로 파일에 관계 없이 동작하도록 해야함. 
 def test():
+    TARGET_DIR = r'D:\download\1'
     for root, directories, filenames in os.walk(TARGET_DIR):
         # print(root, directories, filenames)
-        
         for filename in filenames:
-            if( filename.lower() not in parsing_file_list ): 
+            try:
+                func = parsing_file_func_dict[filename.lower()]
+                contents = ""
+                filePath = root + os.sep + filename
+                with open(filePath, 'r', encoding='utf8') as f:
+                    contents = f.read()
+                for item in func(contents):
+                    if(filename.lower() == KPD_PARA_TABLE_SRC_FILE ):
+                            # print(item)
+                            pass
+                    elif ( filename.lower() == KPD_PARA_MSG_SRC_FILE):
+                            # print(item)
+                        pass
+                    elif ( filename.lower() == KPD_BASIC_TITLE_SRC_FILE):
+                            # print(item)
+                        pass
+                    elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE):
+                            # print(item)
+                        pass
+                    elif( filename.lower() == KPD_ENUM_TITLE_HEADER_FILE):
+                            # print(item)
+                        pass
+                    elif ( filename.lower() == KPD_PARA_VARI_HEADER_FILE):
+                            # print(item)
+                        pass
+                    print(item)
+                    pass
+                pass
+            except KeyError:
                 continue
-            contents = ""
-            filePath = root + os.sep + filename
-            with open(filePath, 'r', encoding='utf8') as f:
-                contents = f.read()
-                # print(filePath)
-            if(filename.lower() == KPD_PARA_TABLE_SRC_FILE ):
-                for item in read_para_table(contents):
-                    # print(item)
-                    pass
-            elif ( filename.lower() == KPD_PARA_MSG_SRC_FILE):
-                for item in read_para_msg(contents):
-                    # print(item)
-                    pass
                 pass
-            elif ( filename.lower() == KPD_BASIC_TITLE_SRC_FILE):
-                for item in read_basic_title(contents):
-                    # print(item)
-                    pass
-                pass
-            elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE):
-                for item in read_add_title(contents):
-                    # print(item)
-                    pass
-                pass
-            elif( filename.lower() == KPD_ENUM_TITLE_HEADER_FILE):
-                for item in read_enum_title(contents):
-                    # print(item)
-                    pass
-                pass
-            elif ( filename.lower() == KPD_PARA_VARI_HEADER_FILE):
-                for item in read_kpd_para_vari(contents):
-                    # print(item)
-                    pass
-                pass
+parsing_file_func_dict = {  KPD_BASIC_TITLE_SRC_FILE: read_basic_title ,
+                            KPD_ADD_TITLE_SRC_FILE: read_add_title,
+                            # KPD_ADD_TITLE_HEADER_FILE: None,
+                            KPD_ENUM_TITLE_HEADER_FILE: read_enum_title,
+                            KPD_PARA_TABLE_SRC_FILE: read_para_table,
+                            KPD_PARA_VARI_HEADER_FILE: read_kpd_para_vari,
+                            KPD_PARA_MSG_SRC_FILE: read_para_msg,
+                            # KPD_PARA_MSG_HEADER_FILE: None
+}               
 
-               
 if __name__ == '__main__':
     test() 
     print('finished')
