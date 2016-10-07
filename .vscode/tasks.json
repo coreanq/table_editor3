@@ -5,11 +5,11 @@
     "isShellCommand": true, 
     "showOutput": "always",  
     "suppressTaskName": true,
+    "echoCommand": true,'
     "tasks" : [
         {
             "taskName": "pyflakes",
-            "args": ["pyflakes", "${file}"],
-            "isBuildCommand": true
+            "args": ["pyflakes", "${file}"]
         },
         {
             "taskName": "makercc",
