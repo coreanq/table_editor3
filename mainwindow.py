@@ -21,24 +21,22 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         for root, directories, filenames in os.walk(TARGET_DIR):
             # print(root, directories, filenames)
             for filename in filenames:
-                try:
-                    func = rd.parsing_file_func_dict[filename.lower()]
+                if( filename.lower() in rd.parsing_files):
                     contents = ""
                     filePath = root + os.sep + filename
                     with open(filePath, 'r', encoding='utf8') as f:
                         contents = f.read()
-                    for item in func(contents):
-                        if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):                                  
+                    if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):
+                        for item in rd.read_para_table(contents):
                             self.addRowToModel(self.modelParameters, item)
-                            # print(item)
-                            pass
-                        elif( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE):
-                            print(item)
+                        for item in rd.read_grp_info(contents):
+                            self.addRowToModel(self.modelGroup, item)
                             pass
                         pass
+                    elif( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE):
+                        # print(item)
+                        pass
                     pass
-                except KeyError:
-                    continue
                     pass
         pass
         
