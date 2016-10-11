@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>674</width>
-    <height>527</height>
+    <width>925</width>
+    <height>580</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,7 +33,7 @@
           <widget class="QSplitter" name="splitter">
            <property name="maximumSize">
             <size>
-             <width>200</width>
+             <width>300</width>
              <height>16777215</height>
             </size>
            </property>
@@ -43,7 +43,7 @@
            <widget class="QTableView" name="viewGroup">
             <property name="maximumSize">
              <size>
-              <width>200</width>
+              <width>300</width>
               <height>16777215</height>
              </size>
             </property>
@@ -51,7 +51,7 @@
            <widget class="QTableView" name="viewGroupInfo">
             <property name="maximumSize">
              <size>
-              <width>200</width>
+              <width>300</width>
               <height>16777215</height>
              </size>
             </property>
@@ -100,6 +100,16 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="tabTitle">
+       <attribute name="title">
+        <string>Title</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QTableView" name="viewTitle"/>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -109,12 +119,60 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>674</width>
+     <width>925</width>
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionCooy_c"/>
+    <addaction name="actionPaste"/>
+    <addaction name="actionInsert"/>
+    <addaction name="actionDelete"/>
+    <addaction name="actionFind"/>
+   </widget>
+   <widget class="QMenu" name="menuAbout">
+    <property name="title">
+     <string>About</string>
+    </property>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionCooy_c">
+   <property name="text">
+    <string>Copy</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="text">
+    <string>Paste</string>
+   </property>
+  </action>
+  <action name="actionInsert">
+   <property name="text">
+    <string>Insert</string>
+   </property>
+  </action>
+  <action name="actionDelete">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="actionFind">
+   <property name="text">
+    <string>Find</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
