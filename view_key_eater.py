@@ -21,11 +21,11 @@ class ParameterViewKeyEater(QObject):
                 # print("control-v Key pressed")
                 return True
             elif( event.key() == Qt.Key_Insert):
-                print("insert key pressed")
+                # print("insert key pressed")
                 self.sig_insert_clicked.emit()
                 return True
             elif( event.key() == Qt.Key_Delete):
-                print("delete key preseed") 
+                # print("delete key preseed") 
                 self.sig_delete_clicked.emit()
                 return True
             else:

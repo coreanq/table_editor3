@@ -9,7 +9,8 @@
     "tasks" : [
         {
             "taskName": "pyflakes",
-            "args": ["pyflakes", "${file}"]
+            "args": ["pyflakes", "${file}"],
+            "isBuildCommand": true
         },
         {
             "taskName": "makercc",

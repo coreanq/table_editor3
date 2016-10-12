@@ -29,12 +29,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
         row = index.row()
-        column = index.column()
         grp_name = self.model_group.item(row, 0 ).text() 
         grp_name = grp_name.split('_')[1]
         regx = QRegExp(grp_name.strip()) 
         self.model_proxy_parameters.setFilterKeyColumn(0)
         self.model_proxy_parameters.setFilterRegExp(regx)
+        # 클립 보드 삭제 
+        clipboard = QApplication.clipboard()
+        clipboard.clear()
         pass
 
     def readDataFromFile(self):
@@ -69,6 +71,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             item_list.append(item)            
         model.appendRow(item_list)
         pass
+    def insertRowToModel(self, model, datas, insert_index):
+        item_list = []
+        for data in datas:
+            item = QStandardItem(data)
+            item_list.append(item)
+        # rowCount 는 1부터 시작 insert_index 는 0 부터  시작 
+        if( insert_index+ 1 >= model.rowCount() ):
+            model.appendRow(item_list)
+            pass
+        else :
+            model.insertRow(insert_index + 1, item_list)
+            pass
+        pass
 
     def initView(self):
         view_list = [self.viewGroup, self.viewGroupInfo, self.viewParameter]
@@ -91,50 +106,93 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewParameter.installEventFilter(parameter_view_eater)
         parameter_view_eater.sig_copy_clicked.connect(self.parameterViewCopyed)
         parameter_view_eater.sig_paste_clicked.connect(self.parameterViewPasted)
+        parameter_view_eater.sig_insert_clicked.connect(self.parameterViewInserted)
+        parameter_view_eater.sig_delete_clicked.connect(self.parameterViewDeleted)
         
     @pyqtSlot()
     def parameterViewCopyed(self):
         clipboard = QApplication.clipboard()
-        model = self.model_proxy_parameters
+        model = self.model_parameters
+        filter_model = self.model_proxy_parameters
         s_model = self.viewParameter.selectionModel()
         row_indexes = []
         if(s_model.hasSelection() ):
             row_indexes = s_model.selectedRows()
+        # 한개만 선택됨  
         for row_index in row_indexes:
-            row_data =  ','.join(model.data(model.index(row_index.row(), i) ) for i in range(model.columnCount() ) )
-        print(row_data)
-
-        clipboard.setText(row_data)
+            source_index = filter_model.mapToSource( row_index )
+            row_data =  ','.join(model.item( source_index.row() , i).text() for i in range(model.columnCount() ) )
+            print(row_data)
+            clipboard.setText(row_data)
         pass
+        
     @pyqtSlot()
     def parameterViewPasted(self):
         clipboard = QApplication.clipboard()
-        model = self.model_proxy_parameters
+        model = self.model_parameters
+        filter_model = self.model_proxy_parameters
         s_model = self.viewParameter.selectionModel()
         row_indexes = []
-        insert_index = 0
+        
+        insert_index = 0  
         if(s_model.hasSelection() ):
             row_indexes = s_model.selectedRows()
             # 한개만 선택됨 
             for row_index in row_indexes:
-                insert_index = model.maptoSource(row_index).row()
+                source_index = filter_model.mapToSource( row_index )
+                insert_index = source_index.row() 
         else:
-            insert_index = s_model.rowCount()
+            insert_index = model.rowCount()
         datas = clipboard.text().split(',')
-        row_items = [QStandardItem(data) for data in datas]
-        model.insertRow(insert_index, row_items)
-
-            
-
-        print(row_data)
+        self.insertRowToModel(model, datas, insert_index)
+        print(datas)
         pass 
     @pyqtSlot()
     def parameterViewInserted(self):
+        model = self.model_parameters
+        filter_model = self.model_proxy_parameters
+        s_model = self.viewParameter.selectionModel()
+        row_indexes = []
+        
+        insert_index = 0  
+        if(s_model.hasSelection() ):
+            row_indexes = s_model.selectedRows()
+            # 한개만 선택됨 
+            for row_index in row_indexes:
+                source_index = filter_model.mapToSource( row_index )
+                insert_index = source_index.row() 
+        else:
+            insert_index = model.rowCount()
+        grp_name = filter_model.filterRegExp().pattern() 
+        row_items = []
+        for i in range(model.columnCount() ) :
+            item = ''
+            if( i == 0 ):
+                item = grp_name
+            row_items.append(item)
+        
+        self.insertRowToModel(model, row_items, insert_index)
+         
         pass
     def parameterViewDeleted(self):
-        pass
+        model = self.model_parameters
+        filter_model = self.model_proxy_parameters
+        s_model = self.viewParameter.selectionModel()
+        row_indexes = []
+        
+        delete_index = 0  
+        if(s_model.hasSelection() ):
+            row_indexes = s_model.selectedRows()
+            # 한개만 선택됨 
+            for row_index in row_indexes:
+                source_index = filter_model.mapToSource( row_index )
+                delete_index = source_index.row() 
+            model.removeRow(delete_index)
+        else:
+            pass
     def groupViewCopyed(self):
         pass
+
 
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
