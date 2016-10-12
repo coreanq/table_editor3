@@ -34,10 +34,11 @@ re_extract_grp_info = re.compile(r'(?P<group_info_data>S_GROUP_X_TYPE t_astGrpIn
 re_check_grp_info = re.compile(r'{(?P<grp_info>[^\n]+)},')
 re_parse_grp_info = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
 
-re_extract_msg = re.compile(r'(?P<msg_data>S_MSG_TYPE t_ast(?P<msg_name>[A-Z-a-z_]+)\[[^;]+\}\;)') # 한개의 그룹 뽑아냄 
-re_check_msg_params = re.compile(r'{[^\n]+}[^\n]+')
-# re_parse_params = re.compile(r'[^,{}\n]+', re.DOTALL)
-re_parse_msg_params = re.compile(r'([^,{}\n])+')
+re_extract_msg = re.compile(r'(?P<msg_data>S_MSG_TYPE t_ast(?P<msg_name>[A-Z-a-z_]+)[^\n]+\/\/(?P<msg_info>[^\n]+)\/\/(?P<msg_info_comment>[^\n]*)[^;]+\;)') # 한개의 그룹 뽑아냄 
+re_check_msg_info = re.compile(r'S_MSG_TYPE t_ast[A-Z-a-z_]+[^\n]+\/\/([^\n]+)\/\/([^\n]+)')
+re_check_msg_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
+re_parse_msg_params = re.compile(r'([^,{}\n;]+)')
+re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
 
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
 re_extract_basic_title_vari = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
@@ -75,7 +76,31 @@ def read_para_table(contents):
                 # (WORD)blahblah
                 # item[0] item[1]
                 yield (group_name, *[item[1].strip() for item in find_list], *comment_list )
-                
+
+def read_para_msg(contents):
+    find_list = []
+    search_grp_iter = re_extract_msg.finditer(contents)
+    for match in search_grp_iter:
+        # all contents, groupname
+        msg_name = match.group('msg_name')
+        msg_data = match.group('msg_data')
+        msg_info = match.group('msg_info')
+        msg_info_comment = match.group('msg_info_comment') 
+        buf = io.StringIO(msg_data) 
+        for line in buf.readlines():
+            search_line_obj = re_check_msg_params.search(line)
+            if( search_line_obj ):
+                data_part =  search_line_obj.group('parameters')
+                comment_part = search_line_obj.group('comment')
+                find_list = re_parse_msg_params.findall(data_part)
+                # {T_nndnkW            ,2     }                           //" 0.2 kW       " 
+                comment = ""
+                comment_search_obj = re_parse_msg_comment.search(comment_part)
+                if( comment_search_obj ):
+                    comment = comment_search_obj.group(1)
+                yield (msg_name,msg_info, msg_info_comment,  *[item.strip() for item in find_list], comment.strip())
+    pass               
+    
 def read_grp_info(contents):
     match = re_extract_grp_info.search(contents)
     if( match ):
@@ -92,21 +117,7 @@ def read_grp_info(contents):
                 # {T_MAK     ,GRP_MAK_CODE_TOTAL  ,(WORD*)&g_wMakGrpShow    ,0x01      },
                 yield result[0], result[2], result[3]
     
-def read_para_msg(contents):
-    find_list = []
-    search_grp_iter = re_extract_msg.finditer(contents)
-    for match in search_grp_iter:
-        # all contents, groupname
-        msg_name = match.group('msg_name')
-        msg_data = match.group('msg_data')
-        buf = io.StringIO(msg_data) 
-        for line in buf.readlines():
-            search_line_obj = re_check_msg_params.search(line)
-            if(search_line_obj):
-                searched_line =  search_line_obj.string[search_line_obj.start(0):]
-                find_list = re_parse_params.findall(searched_line)
-                yield (msg_name, *[item[1].strip() for item in find_list])
-    pass
+
 
 def read_kpd_para_vari(contents):
     vari_type = "WORD"
@@ -226,13 +237,16 @@ def test():
                     contents = f.read()
                 if(filename.lower() == KPD_PARA_TABLE_SRC_FILE ):
                     for item in read_para_table(contents):
-                        print(item)
+                        # print(item)
                         pass
                     for item in read_grp_info(contents):
-                        print(item)
+                        # print(item)
                         pass
                     pass
-                elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE):
+                elif( filename.lower() == KPD_PARA_MSG_SRC_FILE):
+                    for item in read_para_msg(contents):
+                        print(item)
+                        pass
                     # print(item)
                     pass
                 pass

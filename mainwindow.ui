@@ -18,7 +18,7 @@
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tabParameter">
        <attribute name="title">
@@ -75,15 +75,21 @@
           <widget class="QSplitter" name="splitter_4">
            <property name="maximumSize">
             <size>
-             <width>16777215</width>
+             <width>200</width>
              <height>16777215</height>
             </size>
            </property>
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
-           <widget class="QTableView" name="viewMessage"/>
-           <widget class="QTableView" name="viewMessageInfo"/>
+           <widget class="QTableView" name="viewMessage">
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
           </widget>
           <widget class="QTableView" name="viewMessageValue"/>
          </widget>

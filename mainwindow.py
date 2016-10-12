@@ -17,6 +17,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_group_info = QStandardItemModel(self)
         self.model_parameters = QStandardItemModel(self)
         self.model_proxy_parameters = QSortFilterProxyModel(self)
+        
+        self.model_msg = QStandardItemModel(self)
+        self.model_msg_values = QStandardItemModel(self)
+        self.model_proxy_msg_values = QSortFilterProxyModel(self)
+        
+
         self.initView()
         self.createConnection()
         pass
@@ -25,6 +31,34 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewGroup.clicked.connect(self.onViewGroupClicked)  
         
         pass
+    def initView(self):
+        view_list = [self.viewGroup, self.viewGroupInfo, self.viewParameter, self.viewMessage, self.viewMessageValue]
+        
+        self.viewGroup.setModel(self.model_group)
+        self.viewGroupInfo.setModel(self.model_group_info)
+        self.model_proxy_parameters.setSourceModel(self.model_parameters)
+        self.viewParameter.setModel(self.model_proxy_parameters) 
+        
+        self.viewMessage.setModel(self.model_msg)
+        self.viewMessageValue.setModel(self.model_proxy_msg_values)
+        self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
+
+        # row 를 구분하기 위해서 번갈아 가면서 음영을 넣도록 함 
+        for item in view_list:
+            item.setAlternatingRowColors(True)
+            item.setSelectionBehavior(QAbstractItemView.SelectRows)
+            item.setDragEnabled(True)
+            item.setDragDropMode(QAbstractItemView.InternalMove)
+            item.setDefaultDropAction(Qt.MoveAction)
+            item.setSelectionMode(QAbstractItemView.SingleSelection)
+            
+        parameter_view_eater = ve.ParameterViewKeyEater(self)
+
+        self.viewParameter.installEventFilter(parameter_view_eater)
+        parameter_view_eater.sig_copy_clicked.connect(self.parameterViewCopyed)
+        parameter_view_eater.sig_paste_clicked.connect(self.parameterViewPasted)
+        parameter_view_eater.sig_insert_clicked.connect(self.parameterViewInserted)
+        parameter_view_eater.sig_delete_clicked.connect(self.parameterViewDeleted)
         
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
@@ -56,7 +90,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             self.addRowToModel(self.model_group, item)
                             pass
                         pass
-                    elif( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE):
+                    elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
+                        for item in rd.read_para_msg(contents):
+                            self.addRowToModel(self.model_msg_values, item)
+                            print(item)
+                            # self.addRowToModel()
                         # print(item)
                         pass
                     pass
@@ -85,29 +123,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             pass
         pass
 
-    def initView(self):
-        view_list = [self.viewGroup, self.viewGroupInfo, self.viewParameter]
-        self.viewGroup.setModel(self.model_group)
-        self.viewGroupInfo.setModel(self.model_group_info)
-        self.model_proxy_parameters.setSourceModel(self.model_parameters)
-        self.viewParameter.setModel(self.model_proxy_parameters) 
-        
-        # row 를 구분하기 위해서 번갈아 가면서 음영을 넣도록 함 
-        for item in view_list:
-            item.setAlternatingRowColors(True)
-            item.setSelectionBehavior(QAbstractItemView.SelectRows)
-            item.setDragEnabled(True)
-            item.setDragDropMode(QAbstractItemView.InternalMove)
-            item.setDefaultDropAction(Qt.MoveAction)
-            item.setSelectionMode(QAbstractItemView.SingleSelection)
-            
-        parameter_view_eater = ve.ParameterViewKeyEater(self)
-
-        self.viewParameter.installEventFilter(parameter_view_eater)
-        parameter_view_eater.sig_copy_clicked.connect(self.parameterViewCopyed)
-        parameter_view_eater.sig_paste_clicked.connect(self.parameterViewPasted)
-        parameter_view_eater.sig_insert_clicked.connect(self.parameterViewInserted)
-        parameter_view_eater.sig_delete_clicked.connect(self.parameterViewDeleted)
+  
         
     @pyqtSlot()
     def parameterViewCopyed(self):
@@ -147,6 +163,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.insertRowToModel(model, datas, insert_index)
         print(datas)
         pass 
+        
     @pyqtSlot()
     def parameterViewInserted(self):
         model = self.model_parameters
