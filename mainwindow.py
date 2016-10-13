@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeade
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel
 import mainwindow_ui 
+import parameter_view_delegate as pmd 
 import view_key_eater as ve
 import read_data as rd
 import util
@@ -27,6 +28,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_title = QStandardItemModel()
         self.model_proxy_title = QSortFilterProxyModel(self)
+        
+        self.delegate_parameter = pmd.ParameterDelegate(self)
         
         self.initView()
         self.createConnection()
@@ -54,7 +57,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewGroupInfo.setModel(self.model_group_info)
         self.model_proxy_parameters.setSourceModel(self.model_parameters)
         self.viewParameter.setModel(self.model_proxy_parameters) 
-        
+        self.viewParameter.setItemDelegate(self.delegate_parameter)
+       
         self.viewMessage.setModel(self.model_msg)
         self.viewMessageValue.setModel(self.model_proxy_msg_values)
         self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
@@ -64,7 +68,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.viewTitle.setModel(self.model_proxy_title)
         self.model_proxy_title.setSourceModel(self.model_title)
-
 
         # 모든 view 기본 설정  
         for item in view_list:
@@ -77,7 +80,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             headerView = item.horizontalHeader()
             # headerView.setStretchLastSection(True)
             headerView.setSectionResizeMode(QHeaderView.ResizeToContents)
-           
 
         
     @pyqtSlot(QModelIndex)
@@ -141,7 +143,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         for item in rd.read_basic_title(contents):
                             # 항상 add title 보다 앞서야 하므로 
                             self.addRowToModel(self.model_title, item, editing = False)
-                            
+
                     elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE ):
                         for item in rd.read_add_title(contents):
                             self.addRowToModel(self.model_title, item)
@@ -160,6 +162,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             item_list.append(item)            
         model.appendRow(item_list)
         pass
+
     def insertRowToModel(self, model, datas, insert_index, editing = True):
         item_list = []
         for data in datas:
@@ -175,8 +178,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             model.insertRow(insert_index + 1, item_list)
             pass
         pass
-
-  
         
     @pyqtSlot()
     def parameterViewCopyed(self):
@@ -242,8 +243,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             row_items.append(item)
         
         self.insertRowToModel(model, row_items, insert_index)
-         
         pass
+
     def parameterViewDeleted(self):
         model = self.model_parameters
         filter_model = self.model_proxy_parameters
@@ -260,6 +261,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             model.removeRow(delete_index)
         else:
             pass
+            
     def groupViewCopyed(self):
         pass
 
