@@ -24,7 +24,6 @@ parsing_files = (  KPD_BASIC_TITLE_SRC_FILE,
                             # KPD_PARA_MSG_HEADER_FILE: None
 )               
 
-
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
 re_parse_params = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
@@ -45,13 +44,14 @@ re_extract_basic_title_vari = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
 re_extract_add_title_vari = re.compile(r'WORD g_awAddTitleEng[^;]+};')
 re_check_title = re.compile(r'{([^{},]+[,]?)+}[^\n]+')
 re_parse_title = re.compile(r'{([^{}]+)}(\/\/[^\n]+(T_[^\n]+))')
+
 re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
 re_check_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+')
 re_parse_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+(\/\/[^\n]+)')
 
 re_parse_kpd_declaration = re.compile(r'extern ([A-Z_a-z0-9]+)\s+\/\/')
 re_parse_kpd_vari_define = re.compile(r'#define K_(K_[A-Z_0-9]+)\s+([0-9]+)')
-re_parse_kpd_vari = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*(\/\/[^\n]*)?')
+re_parse_kpd_vari = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*\/\/([^\n]*)?')
 
 def read_para_table(contents):
     find_list = []
@@ -174,7 +174,6 @@ def read_enum_title(contents):
 
 
 def read_basic_title(contents):
-    yield None
     find_list =  []
     search_file_obj = re_extract_basic_title_vari.search(contents)
     if( search_file_obj ):
@@ -192,11 +191,8 @@ def read_basic_title(contents):
                 #   (group0                                                              )(group1                 (group2  ))
                 if( len(find_list) ):
                     temp_string = find_list[0][0].replace('0x', '')
-                    temp_string = temp_string.replace(',', '')
-                    # ('T_UMarrMCn', ['55264D094D434020202020202020', '//726  "U&M\tMC@        "T_UMarrMCn'])
-                    yield (find_list[0][2], temp_string, find_list[0][1]) 
-    else: 
-        yield None
+                    # ('T_UMarrMCn', ,'UmarrMcn', 55264D094D434020202020202020')
+                    yield (find_list[0][2], bytes.fromhex(temp_string.replace(',', '')).decode('utf8'), temp_string ) 
     pass
 
 def read_add_title(contents):
@@ -216,11 +212,8 @@ def read_add_title(contents):
                 #   (group0                                                              )(group1                 (group2  ))
                 if( len(find_list) ):
                     temp_string = find_list[0][0].replace('0x', '')
-                    temp_string = temp_string.replace(',', '')
-                    # ('T_RegenAvdIgain': ['526567656E41766420496761696E', '//1005 "RegenAvd Igain      "T_RegenAvdIgain'])
-                    yield (find_list[0][2], temp_string, find_list[0][1])
-    else: 
-        yield None
+                    # ('T_UMarrMCn', ,'UmarrMcn', 55264D094D434020202020202020')
+                    yield (find_list[0][2], bytes.fromhex(temp_string.replace(',', '')).decode('utf8'), temp_string)
     pass
 
 

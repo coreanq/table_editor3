@@ -1,7 +1,7 @@
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView
-from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView
+from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel
 import mainwindow_ui 
 import view_key_eater as ve
@@ -22,17 +22,33 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_msg_values = QStandardItemModel(self)
         self.model_proxy_msg_values = QSortFilterProxyModel(self)
         
-
+        self.model_vari = QStandardItemModel(self)
+        self.model_proxy_vari = QSortFilterProxyModel(self)
+        
+        self.model_title = QStandardItemModel()
+        self.model_proxy_title = QSortFilterProxyModel(self)
+        
         self.initView()
         self.createConnection()
         pass
 
     def createConnection(self):
         self.viewGroup.clicked.connect(self.onViewGroupClicked)  
+        self.viewMessage.clicked.connect(self.onViewMessageClicked)
+        
+        parameter_view_eater = ve.ParameterViewKeyEater(self)
+        self.viewParameter.installEventFilter(parameter_view_eater)
+        parameter_view_eater.sig_copy_clicked.connect(self.parameterViewCopyed)
+        parameter_view_eater.sig_paste_clicked.connect(self.parameterViewPasted)
+        parameter_view_eater.sig_insert_clicked.connect(self.parameterViewInserted)
+        parameter_view_eater.sig_delete_clicked.connect(self.parameterViewDeleted)
         
         pass
     def initView(self):
-        view_list = [self.viewGroup, self.viewGroupInfo, self.viewParameter, self.viewMessage, self.viewMessageValue]
+        view_list = [self.viewGroup, self.viewGroupInfo, 
+                    self.viewParameter, self.viewMessage, 
+                    self.viewMessageValue, self.viewVariable, 
+                    self.viewTitle]
         
         self.viewGroup.setModel(self.model_group)
         self.viewGroupInfo.setModel(self.model_group_info)
@@ -42,8 +58,15 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewMessage.setModel(self.model_msg)
         self.viewMessageValue.setModel(self.model_proxy_msg_values)
         self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
+        
+        self.viewVariable.setModel(self.model_proxy_vari)
+        self.model_proxy_vari.setSourceModel(self.model_vari)
+        
+        self.viewTitle.setModel(self.model_proxy_title)
+        self.model_proxy_title.setSourceModel(self.model_title)
 
-        # row 를 구분하기 위해서 번갈아 가면서 음영을 넣도록 함 
+
+        # 모든 view 기본 설정  
         for item in view_list:
             item.setAlternatingRowColors(True)
             item.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -51,17 +74,15 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             item.setDragDropMode(QAbstractItemView.InternalMove)
             item.setDefaultDropAction(Qt.MoveAction)
             item.setSelectionMode(QAbstractItemView.SingleSelection)
-            
-        parameter_view_eater = ve.ParameterViewKeyEater(self)
+            headerView = item.horizontalHeader()
+            # headerView.setStretchLastSection(True)
+            headerView.setSectionResizeMode(QHeaderView.ResizeToContents)
+           
 
-        self.viewParameter.installEventFilter(parameter_view_eater)
-        parameter_view_eater.sig_copy_clicked.connect(self.parameterViewCopyed)
-        parameter_view_eater.sig_paste_clicked.connect(self.parameterViewPasted)
-        parameter_view_eater.sig_insert_clicked.connect(self.parameterViewInserted)
-        parameter_view_eater.sig_delete_clicked.connect(self.parameterViewDeleted)
         
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
+        # print(util.whoami() )
         row = index.row()
         grp_name = self.model_group.item(row, 0 ).text() 
         grp_name = grp_name.split('_')[1]
@@ -71,6 +92,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # 클립 보드 삭제 
         clipboard = QApplication.clipboard()
         clipboard.clear()
+        pass
+     
+    @pyqtSlot(QModelIndex)
+    def onViewMessageClicked(self, index):
+        # print(util.whoami() )
+        row = index.row()
+        msg_name = self.model_msg.item(row, 0).text()
+        regx = QRegExp(msg_name.strip() )
+        self.model_proxy_msg_values.setFilterKeyColumn(0)
+        self.model_proxy_msg_values.setFilterRegExp(regx)
+         
         pass
 
     def readDataFromFile(self):
@@ -91,29 +123,50 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             pass
                         pass
                     elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
+                        msg_list = [] 
                         for item in rd.read_para_msg(contents):
+                            msg_info = [item[0], item[1], item[2]]
+                            if( msg_info not in msg_list ):
+                                msg_list.append(msg_info) 
                             self.addRowToModel(self.model_msg_values, item)
-                            print(item)
-                            # self.addRowToModel()
-                        # print(item)
+                            pass
+                        for msg_info in msg_list:
+                            self.addRowToModel(self.model_msg, msg_info)
+                            
+                    elif( filename.lower() == rd.KPD_PARA_VARI_HEADER_FILE):
+                        for item in rd.read_kpd_para_vari(contents):
+                            self.addRowToModel(self.model_vari, item)
                         pass
+                    elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE):
+                        for item in rd.read_basic_title(contents):
+                            # 항상 add title 보다 앞서야 하므로 
+                            self.addRowToModel(self.model_title, item, editing = False)
+                            
+                    elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE ):
+                        for item in rd.read_add_title(contents):
+                            self.addRowToModel(self.model_title, item)
                     pass
                     pass
         pass
         
         
-    def addRowToModel(self, model, datas):
+    def addRowToModel(self, model, datas, editing = True):
         item_list = []
         for data in datas:
             item = QStandardItem(data)
+            if( not editing ):
+                item.setBackground(QColor(Qt.darkGray) )
+            item.setEditable(editing)
             item_list.append(item)            
         model.appendRow(item_list)
         pass
-    def insertRowToModel(self, model, datas, insert_index):
+    def insertRowToModel(self, model, datas, insert_index, editing = True):
         item_list = []
         for data in datas:
             item = QStandardItem(data)
+            item.setEditable(editing)
             item_list.append(item)
+
         # rowCount 는 1부터 시작 insert_index 는 0 부터  시작 
         if( insert_index+ 1 >= model.rowCount() ):
             model.appendRow(item_list)
