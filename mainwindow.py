@@ -4,8 +4,9 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeade
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel
 import mainwindow_ui 
-import parameter_view_delegate as pmd 
+import view_delegate as cbd 
 import view_key_eater as ve
+import column_info as ci
 import read_data as rd
 import util
 
@@ -28,8 +29,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_title = QStandardItemModel()
         self.model_proxy_title = QSortFilterProxyModel(self)
-        
-        self.delegate_parameter = pmd.ParameterDelegate(self)
         
         self.initView()
         self.createConnection()
@@ -55,9 +54,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.viewGroup.setModel(self.model_group)
         self.viewGroupInfo.setModel(self.model_group_info)
+        self.model_parameters.setHorizontalHeaderLabels(ci.parameters() )
         self.model_proxy_parameters.setSourceModel(self.model_parameters)
         self.viewParameter.setModel(self.model_proxy_parameters) 
-        self.viewParameter.setItemDelegate(self.delegate_parameter)
        
         self.viewMessage.setModel(self.model_msg)
         self.viewMessageValue.setModel(self.model_proxy_msg_values)
@@ -80,7 +79,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             headerView = item.horizontalHeader()
             # headerView.setStretchLastSection(True)
             headerView.setSectionResizeMode(QHeaderView.ResizeToContents)
-
+            
+        self.initDelegate()
+            
+    def initDelegate(self):
+        cmb_title_delegate = cbd.ComboboxDelegate()
+        cmb_title_delegate.setEditable( False ) 
+        self.viewParameter.setItemDelegateForColumn(2, cmb_title_delegate)
+    pass
         
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
@@ -119,7 +125,26 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         contents = f.read()
                     if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):
                         for item in rd.read_para_table(contents):
+                            arg = item[ci.parameters().index('Attribute')]
+                            # print(util.whoami() + arg )
+                            attribute = int(arg, 16)
+                            comm_write_protect  = 'False' 
+                            read_only = 'False'
+                            no_modify_on_run = 'False'
+                            is_insert_zero_possible = 'False'
+                            if( attribute & 0x0040 ):
+                                comm_write_protect = 'True'
+                            if( attribute & 0x0008 ):
+                                read_only = 'True'
+                            if( attribute & 0x0010 ):
+                                no_modify_on_run = 'True'
+                            if( attribute & 0x0020 ):
+                                is_insert_zero_possible = 'True'
+                            item = item[:ci.parameters().index('Attribute')] + \
+                            (comm_write_protect, read_only, no_modify_on_run, is_insert_zero_possible) + \
+                            item[ci.parameters().index('Attribute')+1: ]
                             self.addRowToModel(self.model_parameters, item)
+                            
                         for item in rd.read_grp_info(contents):
                             self.addRowToModel(self.model_group, item)
                             pass
@@ -147,7 +172,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE ):
                         for item in rd.read_add_title(contents):
                             self.addRowToModel(self.model_title, item)
-                    pass
                     pass
         pass
         
