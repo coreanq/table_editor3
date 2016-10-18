@@ -14,14 +14,16 @@ KPD_PARA_TABLE_SRC_FILE = 'kpdpara_table.c'
 KPD_PARA_VARI_HEADER_FILE = 'kpdpara_vari.h'
 KPD_PARA_MSG_SRC_FILE =  'kpdpara_msg.c'
 KPD_PARA_MSG_HEADER_FILE = 'kpdpara_msg.h'
-parsing_files = (  KPD_BASIC_TITLE_SRC_FILE,
-                            KPD_ADD_TITLE_SRC_FILE,
-                            # KPD_ADD_TITLE_HEADER_FILE: None,
-                            KPD_ENUM_TITLE_HEADER_FILE,
-                            KPD_PARA_TABLE_SRC_FILE,
-                            KPD_PARA_VARI_HEADER_FILE,
-                            KPD_PARA_MSG_SRC_FILE,
-                            # KPD_PARA_MSG_HEADER_FILE: None
+
+# 먼저 파싱해야 될 파일부터 리스트를 먼저 써둔다. 
+parsing_files = (   KPD_BASIC_TITLE_SRC_FILE,
+                    KPD_ADD_TITLE_SRC_FILE,
+                    KPD_PARA_VARI_HEADER_FILE,
+                    KPD_PARA_MSG_SRC_FILE,
+                    # KPD_ADD_TITLE_HEADER_FILE: None,
+                    # KPD_ENUM_TITLE_HEADER_FILE,
+                    KPD_PARA_TABLE_SRC_FILE,
+                    # KPD_PARA_MSG_HEADER_FILE: None
 )               
 
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
@@ -47,7 +49,7 @@ re_parse_title_params = re.compile(r'([^,{}\n;]+)')
 re_parse_title_comment = re.compile(r'\/\/([0-9]+)[^\n\"]+\"([^\n]+)\"(T_[^\n]+)')
 
 re_parse_kpd_declaration = re.compile(r'extern ([A-Z_a-z0-9]+)\s+\/\/')
-re_parse_kpd_vari_define = re.compile(r'#define K_(K_[A-Z_0-9]+)\s+([0-9]+)')
+re_parse_kpd_vari_define = re.compile(r'#define (K_[A-Z_0-9]+)\s+([0-9]+)')
 re_parse_kpd_vari = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*\/\/([^\n]*)?')
 
 # re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
@@ -134,7 +136,7 @@ def read_kpd_para_vari(contents):
         find_list  = re_parse_kpd_vari_define.findall(line)
         if( len(find_list) ):
             # [('K_AWAOCONST', '2')]
-            defines_dict[find_list[0][0]] = para_col_info_for_file(find_list[0][1])
+            defines_dict[find_list[0][0]] = find_list[0][1]
             continue
         find_list = re_parse_kpd_vari.findall(line)
         if( len(find_list) ):
@@ -194,11 +196,10 @@ def read_basic_title(contents):
                 # //0    "English        "T_Language
                 # group1  group2           group3
                 if( comment_search_obj ):
-                    comment_list = comment_search_obj.group(1), comment_search_obj.group(3), comment_search_obj.group(2)
+                    comment_list = comment_search_obj.group(2), comment_search_obj.group(3), comment_search_obj.group(1)
 
                 data_string = ''.join(find_list)
                 data_string= data_string.replace('0x', '')
-                # (0, 'T_UMarrMCn', 'UmarrMcn', 55264D094D434020202020202020')
                 yield (*comment_list, data_string) 
     pass
 
@@ -220,13 +221,11 @@ def read_add_title(contents):
                 comment_list = []
                 # //0    "English        "T_Language
                 # group1  group2           group3
-
                 if( comment_search_obj ):
-                    comment_list = comment_search_obj.group(1), comment_search_obj.group(3), comment_search_obj.group(2)
+                    comment_list = comment_search_obj.group(2), comment_search_obj.group(3), comment_search_obj.group(1)
 
                 data_string = ''.join(find_list)
                 data_string= data_string.replace('0x', '')
-                # (0, 'T_UMarrMCn', 'UmarrMcn', 55264D094D434020202020202020')
                 yield (*comment_list, data_string) 
     pass
 
@@ -260,8 +259,12 @@ def test():
                         # print(item)
                 elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE ):
                     for item in read_add_title(contents):
-                        print(item)
+                        # print(item)
+                        pass
                     pass
+                elif( filename.lower() == KPD_PARA_VARI_HEADER_FILE):
+                    for item in read_kpd_para_vari(contents):
+                        print(item)
                 pass
 
 if __name__ == '__main__':

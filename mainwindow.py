@@ -63,18 +63,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
         
         self.viewVariable.setModel(self.model_proxy_vari)
+        self.model_vari.setHorizontalHeaderLabels(ci.variable_col_info() )
         self.model_proxy_vari.setSourceModel(self.model_vari)
         
         self.viewTitle.setModel(self.model_proxy_title)
+        self.model_title.setHorizontalHeaderLabels(ci.title_col_info() )
         self.model_proxy_title.setSourceModel(self.model_title)
 
         # 모든 view 기본 설정  
         for item in view_list:
             item.setAlternatingRowColors(True)
             item.setSelectionBehavior(QAbstractItemView.SelectRows)
-            item.setDragEnabled(True)
-            item.setDragDropMode(QAbstractItemView.InternalMove)
-            item.setDefaultDropAction(Qt.MoveAction)
+            # item.setDragEnabled(True)
+            # item.setDragDropMode(QAbstractItemView.InternalMove)
+            # item.setDefaultDropAction(Qt.MoveAction)
             item.setSelectionMode(QAbstractItemView.SingleSelection)
             headerView = item.horizontalHeader()
             # headerView.setStretchLastSection(True)
@@ -83,9 +85,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.initDelegate()
             
     def initDelegate(self):
-        cmb_title_delegate = cbd.ComboboxDelegate()
-        cmb_title_delegate.setEditable( False ) 
-        self.viewParameter.setItemDelegateForColumn(ci.para_col_info_for_view().index('Code TITLE'), cmb_title_delegate)
+        delegate = cbd.ComboboxDelegate()
+        print(id(delegate))
+        delegate.setEditable( False ) 
+        delegate.setModel(self.model_title)
+        col_info = ci.para_col_info_for_view()
+        self.viewParameter.setItemDelegateForColumn(col_info.index('Code TITLE'), delegate)
+        
+        delegate = cbd.ComboboxDelegate()
+        print(id(delegate) )
+        delegate.setEditable( True )
+        delegate.setModel(self.model_vari)
+        col_info = ci.para_col_info_for_view()
+        self.viewParameter.setItemDelegateForColumn(col_info.index('Para 변수'), delegate)
+        
     pass
         
     @pyqtSlot(QModelIndex)
@@ -113,99 +126,100 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
          
         pass
     def searchTitlefromEnumName(self, enumName):
-        items = self.model_title.findItems(enumName, column = ci.title_col_info().index('Enum 이름'))
+        col_info = ci.title_col_info()
+        items = self.model_title.findItems(enumName, column =col_info.index('Enum 이름'))
         for item in items:
-            return item.text()
+            row = item.row()
+            return self.model_title.item(row, col_info.index('Title')).text() 
         return ("Error")
         pass
 
     def readDataFromFile(self):
-        TARGET_DIR = r'D:\download\1'
-        for root, directories, filenames in os.walk(TARGET_DIR):
+        target_dir = r'D:\download\1'
             # print(root, directories, filenames)
-            for filename in filenames:
-                if( filename.lower() in rd.parsing_files):
-                    contents = ""
-                    filePath = root + os.sep + filename
-                    with open(filePath, 'r', encoding='utf8') as f:
-                        contents = f.read()
-                    if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):
-                        for items in rd.read_para_table(contents):
-                            col_info = ci.para_col_info_for_file()
-                            arg = items[col_info.index('Attribute')] 
-                            attribute  = int(arg, 16)
-                            comm_write_protect  = 'False' 
-                            read_only = 'False'
-                            no_modify_on_run = 'False'
-                            is_insert_zero_possible = 'False'
-                            if( attribute & 0x0040 ):
-                                comm_write_protect = 'True'
-                            if( attribute & 0x0008 ):
-                                read_only = 'True'
-                            if( attribute & 0x0010 ):
-                                no_modify_on_run = 'True'
-                            if( attribute & 0x0020 ):
-                                is_insert_zero_possible = 'True'
-                                
-                            title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
+        for filename in rd.parsing_files:
+            file_path = target_dir + os.sep + filename 
+            if( os.path.exists(file_path) ):
+                contents = ""
+                with open(file_path, 'r', encoding='utf8') as f:
+                    contents = f.read()
+                if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):
+                    for items in rd.read_para_table(contents):
+                        col_info = ci.para_col_info_for_file()
+                        arg = items[col_info.index('Attribute')] 
+                        attribute  = int(arg, 16)
+                        comm_write_protect  = 'False' 
+                        read_only = 'False'
+                        no_modify_on_run = 'False'
+                        is_insert_zero_possible = 'False'
+                        if( attribute & 0x0040 ):
+                            comm_write_protect = 'True'
+                        if( attribute & 0x0008 ):
+                            read_only = 'True'
+                        if( attribute & 0x0010 ):
+                            no_modify_on_run = 'True'
+                        if( attribute & 0x0020 ):
+                            is_insert_zero_possible = 'True'
                             
-                            try : 
-                                view_col_list = [ items[col_info.index('Group')],  
-                                                items[col_info.index('Code#')],  
-                                                title, 
-                                                items[col_info.index('AtValue')], 
-                                                items[col_info.index('ParaVari')],
-                                                items[col_info.index('KpdFunc')],
-                                                items[col_info.index('DefaultVal')],
-                                                items[col_info.index('MaxVal')],
-                                                items[col_info.index('MinVal')],
-                                                items[col_info.index('Msg')],
-                                                items[col_info.index('Unit')],
-                                                comm_write_protect,
-                                                read_only, 
-                                                no_modify_on_run,
-                                                is_insert_zero_possible,
-                                                items[col_info.index('ShowVari')],
-                                                items[col_info.index('ShowVal')],
-                                                '', # TODO eep주소 
-                                                '', # TODO 통신주소 
-                                                items[col_info.index('MaxEDS')],
-                                                items[col_info.index('MinEDS')],
-                                                items[col_info.index('Comment')]
-                                ]
-                                self.addRowToModel(self.model_parameters, view_col_list)
-                            except IndexError:
-                                print('error occur')
-                                print(items)
-                            
-                        for item in rd.read_grp_info(contents):
-                            self.addRowToModel(self.model_group, item)
-                            pass
+                        title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
+                        
+                        try : 
+                            view_col_list = [ items[col_info.index('Group')],  
+                                            items[col_info.index('Code#')],  
+                                            title, 
+                                            items[col_info.index('AtValue')], 
+                                            items[col_info.index('ParaVari')],
+                                            items[col_info.index('KpdFunc')],
+                                            items[col_info.index('DefaultVal')],
+                                            items[col_info.index('MaxVal')],
+                                            items[col_info.index('MinVal')],
+                                            items[col_info.index('Msg')],
+                                            items[col_info.index('Unit')],
+                                            comm_write_protect,
+                                            read_only, 
+                                            no_modify_on_run,
+                                            is_insert_zero_possible,
+                                            items[col_info.index('ShowVari')],
+                                            items[col_info.index('ShowVal')],
+                                            '', # TODO eep주소 
+                                            '', # TODO 통신주소 
+                                            items[col_info.index('MaxEDS')],
+                                            items[col_info.index('MinEDS')],
+                                            items[col_info.index('Comment')]
+                            ]
+                            self.addRowToModel(self.model_parameters, view_col_list)
+                        except IndexError:
+                            print('error occur')
+                            print(items)
+                        
+                    for item in rd.read_grp_info(contents):
+                        self.addRowToModel(self.model_group, item)
                         pass
-                    elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
-                        msg_list = [] 
-                        for item in rd.read_para_msg(contents):
-                            msg_info = [item[0], item[1], item[2]]
-                            if( msg_info not in msg_list ):
-                                msg_list.append(msg_info) 
-                            self.addRowToModel(self.model_msg_values, item)
-                            pass
-                        for msg_info in msg_list:
-                            self.addRowToModel(self.model_msg, msg_info)
-                            
-                    elif( filename.lower() == rd.KPD_PARA_VARI_HEADER_FILE):
-                        for item in rd.read_kpd_para_vari(contents):
-                            self.addRowToModel(self.model_vari, item)
-                        pass
-                    elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE):
-                        for item in rd.read_basic_title(contents):
-                            # 항상 add title 보다 앞서야 하므로 
-                            self.addRowToModel(self.model_title, item, editing = False)
-
-                    elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE ):
-                        for item in rd.read_add_title(contents):
-                            self.addRowToModel(self.model_title, item)
                     pass
+                elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
+                    msg_list = [] 
+                    for item in rd.read_para_msg(contents):
+                        msg_info = [item[0], item[1], item[2]]
+                        if( msg_info not in msg_list ):
+                            msg_list.append(msg_info) 
+                        self.addRowToModel(self.model_msg_values, item)
+                        pass
+                    for msg_info in msg_list:
+                        self.addRowToModel(self.model_msg, msg_info)
+                        
+                elif( filename.lower() == rd.KPD_PARA_VARI_HEADER_FILE):
+                    for item in rd.read_kpd_para_vari(contents):
+                        self.addRowToModel(self.model_vari, item)
+                    pass
+                elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE):
+                    for item in rd.read_basic_title(contents):
+                        # 항상 add title 보다 앞서야 하므로 
+                        self.addRowToModel(self.model_title, item, editing = False)
+
+                elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE ):
+                    for item in rd.read_add_title(contents):
+                        self.addRowToModel(self.model_title, item)
+                pass
         pass
         
     def addRowToModel(self, model, datas, editing = True):

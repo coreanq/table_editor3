@@ -45,12 +45,17 @@ _parameters_view_columns_info = [
     '최소 EDS',
     '설명'
 ]
-
+# combobox 등에 사용되기 위해서는 0번째 컬럼이 무조건 keycolumn 이여야함  
 _title_columns_info = [
-   'Title Index',
-   'Enum 이름',
    'Title',
+   'Enum 이름',
+   'Title Index',
    'Data'
+]
+_variable_columns_info = [
+    'Variable',
+    'Type',
+    'Description'
 ]
 
 def para_col_info_for_file():
@@ -61,3 +66,6 @@ def para_col_info_for_view():
     
 def title_col_info():
     return _title_columns_info
+    
+def variable_col_info():
+    return _variable_columns_info
