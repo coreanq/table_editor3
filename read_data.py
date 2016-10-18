@@ -27,7 +27,7 @@ parsing_files = (  KPD_BASIC_TITLE_SRC_FILE,
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
 re_parse_params = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
-re_parse_comment = re.compile(r'"([^\n]+)"(\[EDS[^:]*:([0-9]*),([0-9 ]*)\])?\/\/([^\n]*)')
+re_parse_comment = re.compile(r'"([^\n]+)"(\[EDS :([-0-9]*)[,]?([-0-9 ]*)\]?\/\/([^\n]*))*')
 
 re_extract_grp_info = re.compile(r'(?P<group_info_data>S_GROUP_X_TYPE t_astGrpInfo[^;]+\}\;)') # 한개의 그룹 정보 뽑아냄 
 re_check_grp_info = re.compile(r'{(?P<grp_info>[^\n]+)},')
@@ -42,16 +42,17 @@ re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
 re_extract_basic_title_vari = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
 re_extract_add_title_vari = re.compile(r'WORD g_awAddTitleEng[^;]+};')
-re_check_title = re.compile(r'{([^{},]+[,]?)+}[^\n]+')
-re_parse_title = re.compile(r'{([^{}]+)}(\/\/[^\n]+(T_[^\n]+))')
-
-re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
-re_check_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+')
-re_parse_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+(\/\/[^\n]+)')
+re_check_title = re.compile(r'{(?P<parameters>[^\n]+)}(?P<comment>\/\/[^\n]+)')
+re_parse_title_params = re.compile(r'([^,{}\n;]+)')
+re_parse_title_comment = re.compile(r'\/\/([0-9]+)[^\n\"]+\"([^\n]+)\"(T_[^\n]+)')
 
 re_parse_kpd_declaration = re.compile(r'extern ([A-Z_a-z0-9]+)\s+\/\/')
 re_parse_kpd_vari_define = re.compile(r'#define K_(K_[A-Z_0-9]+)\s+([0-9]+)')
 re_parse_kpd_vari = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*\/\/([^\n]*)?')
+
+# re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
+# re_check_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+')
+# re_parse_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+(\/\/[^\n]+)')
 
 def read_para_table(contents):
     find_list = []
@@ -67,12 +68,13 @@ def read_para_table(contents):
                 data_part =  search_line_obj.group('parameters')
                 comment_part = search_line_obj.group('comment')
                 find_list = re_parse_params.findall(data_part)
-                # ,// "Cmd Frequency "[EDS :60000,]//20110519 whko modified MISRA 0-3635
+                # // "Cmd Frequency "[EDS :60000,]//20110519 whko modified MISRA 0-3635
+                #     (group1)       group(2)(group(3)group(4))    group(5)
                 comment_search_obj = re_parse_comment.search(comment_part) # return 값이 list 의 tuple 이 들어 있는 형식이므로 
                 comment_list = [] 
                 if( comment_search_obj ):
-                    # title, eds_max, eds_min, comment
-                    comment_list = comment_search_obj.group(1), comment_search_obj.group(3), comment_search_obj.group(4), comment_search_obj.group(5)
+                    # eds_max, eds_min, comment
+                    comment_list = comment_search_obj.group(3), comment_search_obj.group(4), comment_search_obj.group(5)
                 # (WORD)blahblah
                 # item[0] item[1]
                 yield (group_name, *[item[1].strip() for item in find_list], *comment_list )
@@ -132,7 +134,7 @@ def read_kpd_para_vari(contents):
         find_list  = re_parse_kpd_vari_define.findall(line)
         if( len(find_list) ):
             # [('K_AWAOCONST', '2')]
-            defines_dict[find_list[0][0]] = int(find_list[0][1])
+            defines_dict[find_list[0][0]] = para_col_info_for_file(find_list[0][1])
             continue
         find_list = re_parse_kpd_vari.findall(line)
         if( len(find_list) ):
@@ -148,28 +150,28 @@ def read_kpd_para_vari(contents):
             continue
     pass
 
-def read_enum_title(contents):
-    find_list =  []
-    search_file_obj = re_extract_enum_title.search(contents)
-    if( search_file_obj ):
-        search_string = search_file_obj.string[search_file_obj.start(0):]
-        # print(search_string )
-        buf = io.StringIO(search_string) 
-        for line in buf.readlines():
-            search_line_obj = re_check_enum_title.search(line)
-            if(search_line_obj):
-                searched_line =  search_line_obj.string[search_line_obj.start(0):]
-                # print(searched_line)
-                # example
-                #,T_LangBankEmpty               //94
-                # (group0        )              (group1)
-                find_list = re_parse_enum_title.findall(searched_line)
-                if( len(find_list) ):
-                    # ('T_nnn5kW4', '//1065')
-                    yield (find_list[0][0], find_list[0][1] ) 
-    else: 
-        yield None
-    pass
+# def read_enum_title(contents):
+#     find_list =  []
+#     search_file_obj = re_extract_enum_title.search(contents)
+#     if( search_file_obj ):
+#         search_string = search_file_obj.string[search_file_obj.start(0):]
+#         # print(search_string )
+#         buf = io.StringIO(search_string) 
+#         for line in buf.readlines():
+#             search_line_obj = re_check_enum_title.search(line)
+#             if(search_line_obj):
+#                 searched_line =  search_line_obj.string[search_line_obj.start(0):]
+#                 # print(searched_line)
+#                 # example
+#                 #,T_LangBankEmpty               //94
+#                 # (group0        )              (group1)
+#                 find_list = re_parse_enum_title.findall(searched_line)
+#                 if( len(find_list) ):
+#                     # ('T_nnn5kW4', '//1065')
+#                     yield (find_list[0][0], find_list[0][1] ) 
+#     else: 
+#         yield None
+#     pass
 
 
 
@@ -183,16 +185,21 @@ def read_basic_title(contents):
         for line in buf.readlines():
             search_line_obj = re_check_title.search(line)
             if(search_line_obj):
-                searched_line =  search_line_obj.string[search_line_obj.start(0):]
-                # print(searched_line)
-                find_list = re_parse_title.findall(searched_line)
-                # example
+                data_part = search_line_obj.group('parameters')
+                comment_part = search_line_obj.group('comment')
+                find_list = re_parse_title_params.findall(data_part)
                 #  {0x45,0x6E,0x67,0x6C,0x69,0x73,0x68,0x20,0x20,0x20,0x20,0x20,0x20,0x20}//0    "English        "T_Language
-                #   (group0                                                              )(group1                 (group2  ))
-                if( len(find_list) ):
-                    temp_string = find_list[0][0].replace('0x', '')
-                    # ('T_UMarrMCn', ,'UmarrMcn', 55264D094D434020202020202020')
-                    yield (find_list[0][2], bytes.fromhex(temp_string.replace(',', '')).decode('utf8'), temp_string ) 
+                comment_search_obj = re_parse_title_comment.search(comment_part)
+                comment_list = []
+                # //0    "English        "T_Language
+                # group1  group2           group3
+                if( comment_search_obj ):
+                    comment_list = comment_search_obj.group(1), comment_search_obj.group(3), comment_search_obj.group(2)
+
+                data_string = ''.join(find_list)
+                data_string= data_string.replace('0x', '')
+                # (0, 'T_UMarrMCn', 'UmarrMcn', 55264D094D434020202020202020')
+                yield (*comment_list, data_string) 
     pass
 
 def read_add_title(contents):
@@ -205,15 +212,22 @@ def read_add_title(contents):
         for line in buf.readlines():
             search_line_obj = re_check_title.search(line)
             if(search_line_obj):
-                searched_line =  search_line_obj.string[search_line_obj.start(0):]
-                # print(searched_line)
-                find_list = re_parse_title.findall(searched_line)
+                data_part = search_line_obj.group('parameters')
+                comment_part = search_line_obj.group('comment')
+                find_list = re_parse_title_params.findall(data_part)
                 #  {0x45,0x6E,0x67,0x6C,0x69,0x73,0x68,0x20,0x20,0x20,0x20,0x20,0x20,0x20}//0    "English        "T_Language
-                #   (group0                                                              )(group1                 (group2  ))
-                if( len(find_list) ):
-                    temp_string = find_list[0][0].replace('0x', '')
-                    # ('T_UMarrMCn', ,'UmarrMcn', 55264D094D434020202020202020')
-                    yield (find_list[0][2], bytes.fromhex(temp_string.replace(',', '')).decode('utf8'), temp_string)
+                comment_search_obj = re_parse_title_comment.search(comment_part)
+                comment_list = []
+                # //0    "English        "T_Language
+                # group1  group2           group3
+
+                if( comment_search_obj ):
+                    comment_list = comment_search_obj.group(1), comment_search_obj.group(3), comment_search_obj.group(2)
+
+                data_string = ''.join(find_list)
+                data_string= data_string.replace('0x', '')
+                # (0, 'T_UMarrMCn', 'UmarrMcn', 55264D094D434020202020202020')
+                yield (*comment_list, data_string) 
     pass
 
 
@@ -238,9 +252,15 @@ def test():
                     pass
                 elif( filename.lower() == KPD_PARA_MSG_SRC_FILE):
                     for item in read_para_msg(contents):
-                        print(item)
+                        # print(item)
                         pass
-                    # print(item)
+                elif( filename.lower() == KPD_BASIC_TITLE_SRC_FILE):
+                    for item in read_basic_title(contents):
+                        pass 
+                        # print(item)
+                elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE ):
+                    for item in read_add_title(contents):
+                        print(item)
                     pass
                 pass
 

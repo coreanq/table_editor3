@@ -54,7 +54,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.viewGroup.setModel(self.model_group)
         self.viewGroupInfo.setModel(self.model_group_info)
-        self.model_parameters.setHorizontalHeaderLabels(ci.parameters() )
+        self.model_parameters.setHorizontalHeaderLabels(ci.para_col_info_for_view() )
         self.model_proxy_parameters.setSourceModel(self.model_parameters)
         self.viewParameter.setModel(self.model_proxy_parameters) 
        
@@ -85,7 +85,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def initDelegate(self):
         cmb_title_delegate = cbd.ComboboxDelegate()
         cmb_title_delegate.setEditable( False ) 
-        self.viewParameter.setItemDelegateForColumn(2, cmb_title_delegate)
+        self.viewParameter.setItemDelegateForColumn(ci.para_col_info_for_view().index('Code TITLE'), cmb_title_delegate)
     pass
         
     @pyqtSlot(QModelIndex)
@@ -112,6 +112,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_proxy_msg_values.setFilterRegExp(regx)
          
         pass
+    def searchTitlefromEnumName(self, enumName):
+        items = self.model_title.findItems(enumName, column = ci.title_col_info().index('Enum 이름'))
+        for item in items:
+            return item.text()
+        return ("Error")
+        pass
 
     def readDataFromFile(self):
         TARGET_DIR = r'D:\download\1'
@@ -124,10 +130,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     with open(filePath, 'r', encoding='utf8') as f:
                         contents = f.read()
                     if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):
-                        for item in rd.read_para_table(contents):
-                            arg = item[ci.parameters().index('Attribute')]
-                            # print(util.whoami() + arg )
-                            attribute = int(arg, 16)
+                        for items in rd.read_para_table(contents):
+                            col_info = ci.para_col_info_for_file()
+                            arg = items[col_info.index('Attribute')] 
+                            attribute  = int(arg, 16)
                             comm_write_protect  = 'False' 
                             read_only = 'False'
                             no_modify_on_run = 'False'
@@ -140,10 +146,37 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 no_modify_on_run = 'True'
                             if( attribute & 0x0020 ):
                                 is_insert_zero_possible = 'True'
-                            item = item[:ci.parameters().index('Attribute')] + \
-                            (comm_write_protect, read_only, no_modify_on_run, is_insert_zero_possible) + \
-                            item[ci.parameters().index('Attribute')+1: ]
-                            self.addRowToModel(self.model_parameters, item)
+                                
+                            title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
+                            
+                            try : 
+                                view_col_list = [ items[col_info.index('Group')],  
+                                                items[col_info.index('Code#')],  
+                                                title, 
+                                                items[col_info.index('AtValue')], 
+                                                items[col_info.index('ParaVari')],
+                                                items[col_info.index('KpdFunc')],
+                                                items[col_info.index('DefaultVal')],
+                                                items[col_info.index('MaxVal')],
+                                                items[col_info.index('MinVal')],
+                                                items[col_info.index('Msg')],
+                                                items[col_info.index('Unit')],
+                                                comm_write_protect,
+                                                read_only, 
+                                                no_modify_on_run,
+                                                is_insert_zero_possible,
+                                                items[col_info.index('ShowVari')],
+                                                items[col_info.index('ShowVal')],
+                                                '', # TODO eep주소 
+                                                '', # TODO 통신주소 
+                                                items[col_info.index('MaxEDS')],
+                                                items[col_info.index('MinEDS')],
+                                                items[col_info.index('Comment')]
+                                ]
+                                self.addRowToModel(self.model_parameters, view_col_list)
+                            except IndexError:
+                                print('error occur')
+                                print(items)
                             
                         for item in rd.read_grp_info(contents):
                             self.addRowToModel(self.model_group, item)
@@ -174,7 +207,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             self.addRowToModel(self.model_title, item)
                     pass
         pass
-        
         
     def addRowToModel(self, model, datas, editing = True):
         item_list = []
