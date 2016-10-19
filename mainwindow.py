@@ -2,7 +2,7 @@ import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel, QStringListModel
 import mainwindow_ui 
 import view_delegate as cbd 
 import view_key_eater as ve
@@ -29,6 +29,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_title = QStandardItemModel()
         self.model_proxy_title = QSortFilterProxyModel(self)
+
+        self.delegate_view = cbd.ViewDelegate(self)
         
         self.initView()
         self.createConnection()
@@ -85,22 +87,64 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.initDelegate()
             
     def initDelegate(self):
-        delegate = cbd.ComboboxDelegate()
-        print(id(delegate))
-        delegate.setEditable( False ) 
-        delegate.setModel(self.model_title)
+        # delegate 는 하나만 사용 가능 
+        delegate = self.delegate_view
         col_info = ci.para_col_info_for_view()
-        self.viewParameter.setItemDelegateForColumn(col_info.index('Code TITLE'), delegate)
+
+        col_index = col_info.index('Code TITLE')
+        delegate.setEditable(col_index,  False ) 
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, self.model_title)
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+
+        col_index = col_info.index('Para 변수') 
+        delegate.setEditable(col_index,  True )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, self.model_vari)
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+
+        col_index = col_info.index('최대값')
+        delegate.setEditable(col_index, True )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, self.model_vari)
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+
+        col_index = col_info.index('최소값')
+        delegate.setEditable(col_index, True )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, self.model_vari)
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+
+        col_index = col_info.index('보임변수')
+        delegate.setEditable(col_index, True )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, self.model_vari)
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+
+        col_index = col_info.index('통신쓰기금지')
+        delegate.setEditable(col_index, False )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, QStringListModel(['True', 'False']))
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
         
-        delegate = cbd.ComboboxDelegate()
-        print(id(delegate) )
-        delegate.setEditable( True )
-        delegate.setModel(self.model_vari)
-        col_info = ci.para_col_info_for_view()
-        self.viewParameter.setItemDelegateForColumn(col_info.index('Para 변수'), delegate)
+        col_index = col_info.index('읽기전용')
+        delegate.setEditable(col_index, False )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, QStringListModel(['True', 'False']))
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
         
-    pass
-        
+        col_index = col_info.index('운전중변경불가')
+        delegate.setEditable(col_index, False )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, QStringListModel(['True', 'False']))
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+
+        col_index = col_info.index('0 입력가능')
+        delegate.setEditable(col_index, False )
+        delegate.setEditorType(col_index, 'combobox')
+        delegate.setModel(col_index, QStringListModel(['True', 'False']))
+        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        pass
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
         # print(util.whoami() )

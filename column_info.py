@@ -22,7 +22,7 @@ _parameters_file_columns_info = [
 ]
 # table view 에서 보여지는 column 의 정보 
 _parameters_view_columns_info = [
-    'Group',
+    'Group', 
     'Code#',
     'Code TITLE',
     'AtValue',
@@ -56,6 +56,9 @@ _variable_columns_info = [
     'Variable',
     'Type',
     'Description'
+]
+_msg_columns_info = [
+    
 ]
 
 def para_col_info_for_file():

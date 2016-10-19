@@ -20,10 +20,7 @@ parsing_files = (   KPD_BASIC_TITLE_SRC_FILE,
                     KPD_ADD_TITLE_SRC_FILE,
                     KPD_PARA_VARI_HEADER_FILE,
                     KPD_PARA_MSG_SRC_FILE,
-                    # KPD_ADD_TITLE_HEADER_FILE: None,
-                    # KPD_ENUM_TITLE_HEADER_FILE,
                     KPD_PARA_TABLE_SRC_FILE,
-                    # KPD_PARA_MSG_HEADER_FILE: None
 )               
 
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
@@ -102,7 +99,7 @@ def read_para_msg(contents):
                 comment_search_obj = re_parse_msg_comment.search(comment_part)
                 if( comment_search_obj ):
                     comment = comment_search_obj.group(1)
-                yield (msg_name,msg_info, msg_info_comment,  *[item.strip() for item in find_list], comment.strip())
+                yield (msg_name, msg_info, msg_info_comment,  *[item.strip() for item in find_list], comment.strip())
     pass               
     
 def read_grp_info(contents):
