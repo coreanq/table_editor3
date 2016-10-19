@@ -81,7 +81,7 @@ class ViewDelegate(QStyledItemDelegate):
             pass
         elif( editor_type == 'combobox' ):
             text = editor.currentText()
-        print(type(model))
+        # print(type(model))
         model.setData(index, text, Qt.EditRole)
         pass
         

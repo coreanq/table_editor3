@@ -45,6 +45,8 @@ _parameters_view_columns_info = [
     '최소 EDS',
     '설명'
 ]
+
+# read_data 시 yield 되는 tuple 의 index 정보를 나타냄  
 # combobox 등에 사용되기 위해서는 0번째 컬럼이 무조건 keycolumn 이여야함  
 _title_columns_info = [
    'Title',
@@ -57,8 +59,21 @@ _variable_columns_info = [
     'Type',
     'Description'
 ]
-_msg_columns_info = [
-    
+_msg_values_columns_info = [
+    'MsgName',
+    'MsgInfo',
+    'TitleIndex', 
+    'AtValue' 
+]
+_msg_info_columns_info = [
+    'MsgName',
+    'MsgComment'
+]
+
+_group_columns_info = [
+    'GroupName', 
+    'Hidden Vari', 
+    'Hidden Value'
 ]
 
 def para_col_info_for_file():
@@ -72,3 +87,12 @@ def title_col_info():
     
 def variable_col_info():
     return _variable_columns_info
+
+def msg_values_col_info():
+    return _msg_values_columns_info 
+
+def msg_info_col_info():
+    return _msg_info_columns_info
+
+def group_col_info():
+    return _group_columns_info

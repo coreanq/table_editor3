@@ -16,7 +16,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
         self.model_group = QStandardItemModel(self)
-        self.model_group_info = QStandardItemModel(self)
         self.model_parameters = QStandardItemModel(self)
         self.model_proxy_parameters = QSortFilterProxyModel(self)
         
@@ -30,7 +29,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_title = QStandardItemModel()
         self.model_proxy_title = QSortFilterProxyModel(self)
 
-        self.delegate_view = cbd.ViewDelegate(self)
+        #delegate 선언 
+        self.delegate_parameters_view = cbd.ViewDelegate(self)
+        self.delegate_msg_view = cbd.ViewDelegate(self)
+        self.delegate_group_view = cbd.ViewDelegate(self)
+        
         
         self.initView()
         self.createConnection()
@@ -38,7 +41,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     def createConnection(self):
         self.viewGroup.clicked.connect(self.onViewGroupClicked)  
-        self.viewMessage.clicked.connect(self.onViewMessageClicked)
+        self.viewMessageInfo.clicked.connect(self.onViewMessageInfoClicked)
         
         parameter_view_eater = ve.ParameterViewKeyEater(self)
         self.viewParameter.installEventFilter(parameter_view_eater)
@@ -49,20 +52,26 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         pass
     def initView(self):
-        view_list = [self.viewGroup, self.viewGroupInfo, 
-                    self.viewParameter, self.viewMessage, 
+        view_list = [self.viewGroup,  
+                    self.viewParameter, self.viewMessageInfo, 
                     self.viewMessageValue, self.viewVariable, 
                     self.viewTitle]
         
+        
         self.viewGroup.setModel(self.model_group)
-        self.viewGroupInfo.setModel(self.model_group_info)
         self.model_parameters.setHorizontalHeaderLabels(ci.para_col_info_for_view() )
+        self.model_group.setHorizontalHeaderLabels(ci.group_col_info() )
         self.model_proxy_parameters.setSourceModel(self.model_parameters)
         self.viewParameter.setModel(self.model_proxy_parameters) 
+        self.viewParameter.setColumnHidden( ci.para_col_info_for_view().index('Group'), True)
        
-        self.viewMessage.setModel(self.model_msg)
+        self.viewMessageInfo.setModel(self.model_msg)
         self.viewMessageValue.setModel(self.model_proxy_msg_values)
+        self.model_msg_values.setHorizontalHeaderLabels(ci.msg_values_col_info())
+        self.model_msg.setHorizontalHeaderLabels(ci.msg_info_col_info() )
         self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
+        self.viewMessageValue.setColumnHidden(ci.msg_values_col_info().index('MsgName'), True)
+        self.viewMessageValue.setColumnHidden(ci.msg_values_col_info().index('MsgInfo'), True)
         
         self.viewVariable.setModel(self.model_proxy_vari)
         self.model_vari.setHorizontalHeaderLabels(ci.variable_col_info() )
@@ -71,6 +80,15 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewTitle.setModel(self.model_proxy_title)
         self.model_title.setHorizontalHeaderLabels(ci.title_col_info() )
         self.model_proxy_title.setSourceModel(self.model_title)
+
+        # filter 값을 이상한 값으로 넣어 처음에는 아무 리스트가 안나타나게 함 
+        proxy_list = [  self.model_proxy_msg_values, self.model_proxy_parameters, 
+                        # self.model_proxy_title, self.model_proxy_vari  
+        ]  
+        for proxy in proxy_list:
+            regx = QRegExp("!@#$") 
+            proxy.setFilterKeyColumn(0)
+            proxy.setFilterRegExp(regx)
 
         # 모든 view 기본 설정  
         for item in view_list:
@@ -81,76 +99,81 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             # item.setDefaultDropAction(Qt.MoveAction)
             item.setSelectionMode(QAbstractItemView.SingleSelection)
             headerView = item.horizontalHeader()
-            # headerView.setStretchLastSection(True)
+            headerView.setStretchLastSection(True)
             headerView.setSectionResizeMode(QHeaderView.ResizeToContents)
             
         self.initDelegate()
             
     def initDelegate(self):
         # delegate 는 하나만 사용 가능 
-        delegate = self.delegate_view
+        # parameters view delegate 설정 
+        delegate = self.delegate_parameters_view
         col_info = ci.para_col_info_for_view()
-
+        view = self.viewParameter
         col_index = col_info.index('Code TITLE')
+
         delegate.setEditable(col_index,  False ) 
         delegate.setEditorType(col_index, 'combobox')
         delegate.setModel(col_index, self.model_title)
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        view.setItemDelegateForColumn(col_index, delegate)
 
-        col_index = col_info.index('Para 변수') 
-        delegate.setEditable(col_index,  True )
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, self.model_vari)
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        col_indexes = [ col_info.index('Para 변수'), 
+                        col_info.index('최대값'),
+                        col_info.index('최소값'),
+                        col_info.index('보임변수')
+        ]
+        for col in col_indexes:
+            delegate.setEditable(col, True )
+            delegate.setEditorType(col, 'combobox')
+            delegate.setModel(col, self.model_vari)
+            view.setItemDelegateForColumn(col, delegate)
+            header_view = view.horizontalHeader()
+            header_view.setSectionResizeMode(col, QHeaderView.Fixed)
+            view.setColumnWidth(col, 200)
 
-        col_index = col_info.index('최대값')
-        delegate.setEditable(col_index, True )
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, self.model_vari)
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        col_indexes = [ col_info.index('통신쓰기금지'), 
+                        col_info.index('읽기전용'),
+                        col_info.index('운전중변경불가'),
+                        col_info.index('0 입력가능')
+        ]
 
-        col_index = col_info.index('최소값')
-        delegate.setEditable(col_index, True )
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, self.model_vari)
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        for col in col_indexes:
+            delegate.setEditable(col, False )
+            delegate.setEditorType(col, 'combobox')
+            delegate.setModel(col, QStringListModel(['True', 'False']))
+            self.viewParameter.setItemDelegateForColumn(col, delegate)
 
-        col_index = col_info.index('보임변수')
-        delegate.setEditable(col_index, True )
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, self.model_vari)
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        # msg view delegate 설정 
+        delegate = self.delegate_msg_view
+        col_info = ci.msg_values_col_info()
+        view = self.viewMessageValue
+        col_index = col_info.index('TitleIndex')
 
-        col_index = col_info.index('통신쓰기금지')
-        delegate.setEditable(col_index, False )
+        delegate.setEditable(col_index,  False ) 
         delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, QStringListModel(['True', 'False']))
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        delegate.setModel(col_index, self.model_title)
+        view.setItemDelegateForColumn(col_index, delegate)
         
-        col_index = col_info.index('읽기전용')
-        delegate.setEditable(col_index, False )
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, QStringListModel(['True', 'False']))
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
-        
-        col_index = col_info.index('운전중변경불가')
-        delegate.setEditable(col_index, False )
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, QStringListModel(['True', 'False']))
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        # group view delegate 설정 
+        delegate = self.delegate_group_view
+        col_info = ci.group_col_info()
+        view = self.viewGroup
 
-        col_index = col_info.index('0 입력가능')
-        delegate.setEditable(col_index, False )
+        col_index = col_info.index('Hidden Vari')
+        delegate.setEditable(col_index,  True ) 
         delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, QStringListModel(['True', 'False']))
-        self.viewParameter.setItemDelegateForColumn(col_index, delegate)
+        delegate.setModel(col_index, self.model_vari)
+        view.setItemDelegateForColumn(col_index, delegate)
+        header_view = self.viewGroup.horizontalHeader()
+        header_view.setSectionResizeMode(col_index, QHeaderView.Fixed)
+        view.setColumnWidth(col_index, 200)
         pass
+
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
         # print(util.whoami() )
         row = index.row()
         grp_name = self.model_group.item(row, 0 ).text() 
-        grp_name = grp_name.split('_')[1]
         regx = QRegExp(grp_name.strip()) 
         self.model_proxy_parameters.setFilterKeyColumn(0)
         self.model_proxy_parameters.setFilterRegExp(regx)
@@ -160,7 +183,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
      
     @pyqtSlot(QModelIndex)
-    def onViewMessageClicked(self, index):
+    def onViewMessageInfoClicked(self, index):
         # print(util.whoami() )
         row = index.row()
         msg_name = self.model_msg.item(row, 0).text()
@@ -225,8 +248,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             is_insert_zero_possible,
                                             items[col_info.index('ShowVari')],
                                             items[col_info.index('ShowVal')],
-                                            '', # TODO eep주소 
-                                            '', # TODO 통신주소 
+                                            '', # TODO: eep주소 
+                                            '', # TODO: 통신주소 
                                             items[col_info.index('MaxEDS')],
                                             items[col_info.index('MinEDS')],
                                             items[col_info.index('Comment')]
@@ -242,14 +265,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     pass
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
                     msg_list = [] 
-                    for item in rd.read_para_msg(contents):
-                        msg_info = [item[0], item[1], item[2]]
+                    col_info = ci.msg_values_col_info()
+                    title_index = col_info.index('TitleIndex')
+                    for items in rd.read_para_msg(contents):
+                        msg_info = [items[col_info.index('MsgName')], items[col_info.index('MsgInfo')]] 
+
                         if( msg_info not in msg_list ):
                             msg_list.append(msg_info) 
-                        self.addRowToModel(self.model_msg_values, item)
+                        title = self.searchTitlefromEnumName(items[title_index])
+                        insert_list = *items[:title_index], title,  *items[title_index +1: ]
+                        self.addRowToModel(self.model_msg_values, insert_list)
                         pass
-                    for msg_info in msg_list:
-                        self.addRowToModel(self.model_msg, msg_info)
+
+                    for item in msg_list:
+                        self.addRowToModel(self.model_msg, item)
                         
                 elif( filename.lower() == rd.KPD_PARA_VARI_HEADER_FILE):
                     for item in rd.read_kpd_para_vari(contents):

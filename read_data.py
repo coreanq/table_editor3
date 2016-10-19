@@ -99,7 +99,7 @@ def read_para_msg(contents):
                 comment_search_obj = re_parse_msg_comment.search(comment_part)
                 if( comment_search_obj ):
                     comment = comment_search_obj.group(1)
-                yield (msg_name, msg_info, msg_info_comment,  *[item.strip() for item in find_list], comment.strip())
+                yield (msg_name, msg_info_comment,  *[item.strip() for item in find_list])
     pass               
     
 def read_grp_info(contents):
@@ -116,7 +116,7 @@ def read_grp_info(contents):
                 for item in find_list:
                     result.append(item[1])
                 # {T_MAK     ,GRP_MAK_CODE_TOTAL  ,(WORD*)&g_wMakGrpShow    ,0x01      },
-                yield result[0], result[2], result[3]
+                yield result[0].replace('T_', ''), result[2].strip(), result[3]
     
 
 
