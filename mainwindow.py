@@ -94,13 +94,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         for item in view_list:
             item.setAlternatingRowColors(True)
             item.setSelectionBehavior(QAbstractItemView.SelectRows)
-            # item.setDragEnabled(True)
-            # item.setDragDropMode(QAbstractItemView.InternalMove)
-            # item.setDefaultDropAction(Qt.MoveAction)
             item.setSelectionMode(QAbstractItemView.SingleSelection)
-            headerView = item.horizontalHeader()
-            headerView.setStretchLastSection(True)
-            headerView.setSectionResizeMode(QHeaderView.ResizeToContents)
+            horizontalHeaderView  = item.horizontalHeader()
+            horizontalHeaderView.setStretchLastSection(True)
+            horizontalHeaderView.setSectionResizeMode(QHeaderView.ResizeToContents)
+            # row drag & drop 을 위해서는 headerView 를 설정해야함 view 자체에서는 안됨 
+            verticalHeaderView = item.verticalHeader()
+            verticalHeaderView.setSectionsMovable(True)
+            verticalHeaderView.setDragEnabled(True)
+            verticalHeaderView.setDragDropMode(QAbstractItemView.InternalMove)
+            
+            
             
         self.initDelegate()
             
