@@ -8,20 +8,26 @@ import io
 
 KPD_BASIC_TITLE_SRC_FILE='kpd_tbl_msg_eng.c'
 KPD_ADD_TITLE_SRC_FILE = 'addtitle_eng.c'
-KPD_ADD_TITLE_HEADER_FILE = 'addtitle_eng.h'
-KPD_ENUM_TITLE_HEADER_FILE = 'kpd_title_enum.h'
-KPD_PARA_TABLE_SRC_FILE = 'kpdpara_table.c'
 KPD_PARA_VARI_HEADER_FILE = 'kpdpara_vari.h'
 KPD_PARA_MSG_SRC_FILE =  'kpdpara_msg.c'
+KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'kpdpara_structunit.h'
+KPD_PARA_TABLE_SRC_FILE = 'kpdpara_table.c'
+
 KPD_PARA_MSG_HEADER_FILE = 'kpdpara_msg.h'
+KPD_ADD_TITLE_HEADER_FILE = 'addtitle_eng.h'
+KPD_ENUM_TITLE_HEADER_FILE = 'kpd_title_enum.h'
 
 # 먼저 파싱해야 될 파일부터 리스트를 먼저 써둔다. 
 parsing_files = (   KPD_BASIC_TITLE_SRC_FILE,
                     KPD_ADD_TITLE_SRC_FILE,
                     KPD_PARA_VARI_HEADER_FILE,
                     KPD_PARA_MSG_SRC_FILE,
-                    KPD_PARA_TABLE_SRC_FILE,
+                    KPD_PARA_STRUCT_UNIT_HEADER_FILE,
+                    KPD_PARA_TABLE_SRC_FILE
 )               
+
+re_extract_kpd_para_unit = re.compile(r'(?P<para_unit>{[^{}]*(U_[^,=]+[,]?)+[^{}]*})')
+re_parse_kpd_para_unit_params = re.compile(r'(U_[^,= ]+)')
 
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
@@ -52,6 +58,15 @@ re_parse_kpd_vari = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*\/\/(
 # re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
 # re_check_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+')
 # re_parse_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+(\/\/[^\n]+)')
+
+def read_kpd_para_struct_unit(contents):
+    search_obj = re_extract_kpd_para_unit.search(contents)
+    if( search_obj ):
+        data_part = search_obj.group('para_unit')
+        find_list = re_parse_kpd_para_unit_params.findall(data_part)
+        yield find_list 
+    pass
+        
 
 def read_para_table(contents):
     find_list = []
@@ -261,7 +276,12 @@ def test():
                     pass
                 elif( filename.lower() == KPD_PARA_VARI_HEADER_FILE):
                     for item in read_kpd_para_vari(contents):
-                        print(item)
+                        # print(item)
+                        pass
+                elif( filename.lower() == KPD_PARA_STRUCT_UNIT_HEADER_FILE ):
+                    for item in read_kpd_para_struct_unit(contents):
+                        print(item) 
+                        pass
                 pass
 
 if __name__ == '__main__':

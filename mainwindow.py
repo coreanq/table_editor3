@@ -34,8 +34,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.delegate_msg_view = cbd.ViewDelegate(self)
         self.delegate_group_view = cbd.ViewDelegate(self)
         
-        
+        self.model_kpd_para_unit = QStandardItemModel()
+
+        self.readDataFromFile() 
         self.initView()
+        self.initDelegate()
         self.createConnection()
         pass
 
@@ -43,13 +46,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewGroup.clicked.connect(self.onViewGroupClicked)  
         self.viewMessageInfo.clicked.connect(self.onViewMessageInfoClicked)
         
+        # ctrl + c, ctrl + v, insert, delete 누를 시 
         parameter_view_eater = ve.ParameterViewKeyEater(self)
         self.viewParameter.installEventFilter(parameter_view_eater)
-        parameter_view_eater.sig_copy_clicked.connect(self.parameterViewCopyed)
-        parameter_view_eater.sig_paste_clicked.connect(self.parameterViewPasted)
-        parameter_view_eater.sig_insert_clicked.connect(self.parameterViewInserted)
-        parameter_view_eater.sig_delete_clicked.connect(self.parameterViewDeleted)
-        
+        parameter_view_eater.sig_copy_clicked.connect(self.onParameterViewCopyed)
+        parameter_view_eater.sig_paste_clicked.connect(self.onParameterViewPasted)
+        parameter_view_eater.sig_insert_clicked.connect(self.onParameterViewInserted)
+        parameter_view_eater.sig_delete_clicked.connect(self.onParameterViewDeleted)
+
+        # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
+        self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
+        self.model_parameters.dataChanged.connect(self.onModelParameterDataChanged)
+
         pass
     def initView(self):
         view_list = [self.viewGroup,  
@@ -81,6 +89,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_title.setHorizontalHeaderLabels(ci.title_col_info() )
         self.model_proxy_title.setSourceModel(self.model_title)
 
+
         # filter 값을 이상한 값으로 넣어 처음에는 아무 리스트가 안나타나게 함 
         proxy_list = [  self.model_proxy_msg_values, self.model_proxy_parameters, 
                         # self.model_proxy_title, self.model_proxy_vari  
@@ -103,75 +112,101 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             verticalHeaderView.setSectionsMovable(True)
             verticalHeaderView.setDragEnabled(True)
             verticalHeaderView.setDragDropMode(QAbstractItemView.InternalMove)
-            
-            
-            
-        self.initDelegate()
-            
+
+    def setCmbDelegateAttribute(self, model, view, delegate, columns = [], editable = False, width = 0):
+        for col_index in columns:
+            delegate.setEditable(col_index,  editable ) 
+            delegate.setEditorType(col_index, 'combobox')
+            delegate.setModel(col_index, model)
+            view.setItemDelegateForColumn(col_index, delegate)
+            if( width != 0 ):
+                header_view = view.horizontalHeader()
+                header_view.setSectionResizeMode(col_index, QHeaderView.Fixed)
+                view.setColumnWidth(col_index, width )
+        pass 
+        
     def initDelegate(self):
         # delegate 는 하나만 사용 가능 
         # parameters view delegate 설정 
+        model = self.model_title
+        view = self.viewParameter
         delegate = self.delegate_parameters_view
         col_info = ci.para_col_info_for_view()
-        view = self.viewParameter
         col_index = col_info.index('Code TITLE')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150)
 
-        delegate.setEditable(col_index,  False ) 
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, self.model_title)
-        view.setItemDelegateForColumn(col_index, delegate)
+        model = self.model_kpd_para_unit
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
+        col_index = col_info.index('단위')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = False,  width = 150)
 
+        model = self.model_vari
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
         col_indexes = [ col_info.index('Para 변수'), 
                         col_info.index('최대값'),
                         col_info.index('최소값'),
                         col_info.index('보임변수')
         ]
-        for col in col_indexes:
-            delegate.setEditable(col, True )
-            delegate.setEditorType(col, 'combobox')
-            delegate.setModel(col, self.model_vari)
-            view.setItemDelegateForColumn(col, delegate)
-            header_view = view.horizontalHeader()
-            header_view.setSectionResizeMode(col, QHeaderView.Fixed)
-            view.setColumnWidth(col, 200)
+        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = True,  width = 150)
 
+        model = QStringListModel( ['True', 'False']) 
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
         col_indexes = [ col_info.index('통신쓰기금지'), 
                         col_info.index('읽기전용'),
                         col_info.index('운전중변경불가'),
                         col_info.index('0 입력가능')
         ]
-
-        for col in col_indexes:
-            delegate.setEditable(col, False )
-            delegate.setEditorType(col, 'combobox')
-            delegate.setModel(col, QStringListModel(['True', 'False']))
-            self.viewParameter.setItemDelegateForColumn(col, delegate)
+        self.setCmbDelegateAttribute(model, view, delegate, col_indexes )
 
         # msg view delegate 설정 
-        delegate = self.delegate_msg_view
+        model = self.model_title
+        view  = self.viewMessageValue
+        delegate = self.delegate_msg_view  
         col_info = ci.msg_values_col_info()
-        view = self.viewMessageValue
         col_index = col_info.index('TitleIndex')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150)
 
-        delegate.setEditable(col_index,  False ) 
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, self.model_title)
-        view.setItemDelegateForColumn(col_index, delegate)
-        
         # group view delegate 설정 
-        delegate = self.delegate_group_view
+        model = self.model_vari
+        view  = self.viewGroup
+        delegate = self.delegate_group_view  
         col_info = ci.group_col_info()
-        view = self.viewGroup
-
         col_index = col_info.index('Hidden Vari')
-        delegate.setEditable(col_index,  True ) 
-        delegate.setEditorType(col_index, 'combobox')
-        delegate.setModel(col_index, self.model_vari)
-        view.setItemDelegateForColumn(col_index, delegate)
-        header_view = self.viewGroup.horizontalHeader()
-        header_view.setSectionResizeMode(col_index, QHeaderView.Fixed)
-        view.setColumnWidth(col_index, 200)
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = True , width = 150)
         pass
+       
+    # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
+    # unit 컬럼이나 form/msg 컬럼을 더블 클릭하는 두개의 경우에 대해서 동작해야함 
+    def initParameterMessageDelegate(self, proxy_index): 
+        col_info = ci.para_col_info_for_view()
+        model = self.model_parameters
+        proxy_model = self.model_proxy_parameters
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
+        delegate_model = None
+        row_source_index = proxy_model.mapToSource(proxy_index)
+
+
+        unit_col_index = col_info.index('단위')
+        form_msg_col_index = col_info.index('폼메시지')
+
+        unit_data = model.item(row_source_index.row() , unit_col_index).text()
+
+        if( unit_data == 'U_DATAMSG' or unit_data == 'U_RPM_CHG_DATAMSG'):
+            delegate_model = self.model_msg
+        elif( unit_data == 'U_HZ_RPM'):
+            delegate_model = ci.unit_with_msg()[unit_data]
+        elif( unit_data == 'U_B'):
+            delegate_model = ci.unit_with_msg()[unit_data]
+        else: 
+            delegate_model = ci.unit_with_msg()['Other']
+        self.setCmbDelegateAttribute(delegate_model, view, delegate, [form_msg_col_index], editable = False,  width = 150)
+
+        pass 
+
 
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
@@ -244,7 +279,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             items[col_info.index('DefaultVal')],
                                             items[col_info.index('MaxVal')],
                                             items[col_info.index('MinVal')],
-                                            items[col_info.index('Msg')],
+                                            items[col_info.index('Msg')].replace('MSG_', ''),
                                             items[col_info.index('Unit')],
                                             comm_write_protect,
                                             read_only, 
@@ -263,8 +298,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             print('error occur')
                             print(items)
                         
-                    for item in rd.read_grp_info(contents):
-                        self.addRowToModel(self.model_group, item)
+                    for items in rd.read_grp_info(contents):
+                        self.addRowToModel(self.model_group, items)
                         pass
                     pass
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
@@ -285,23 +320,28 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         self.addRowToModel(self.model_msg, item)
                         
                 elif( filename.lower() == rd.KPD_PARA_VARI_HEADER_FILE):
-                    for item in rd.read_kpd_para_vari(contents):
-                        self.addRowToModel(self.model_vari, item)
+                    for items in rd.read_kpd_para_vari(contents):
+                        self.addRowToModel(self.model_vari, items)
                     pass
                 elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE):
-                    for item in rd.read_basic_title(contents):
+                    for items in rd.read_basic_title(contents):
                         # 항상 add title 보다 앞서야 하므로 
-                        self.addRowToModel(self.model_title, item, editing = False)
+                        self.addRowToModel(self.model_title, items, editing = False)
+                    pass
+                elif ( filename.lower() == rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE):
+                    for items in rd.read_kpd_para_struct_unit(contents):
+                        for item in items:
+                            self.model_kpd_para_unit.appendRow(QStandardItem(item))
 
                 elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE ):
-                    for item in rd.read_add_title(contents):
-                        self.addRowToModel(self.model_title, item)
+                    for items in rd.read_add_title(contents):
+                        self.addRowToModel(self.model_title, items)
                 pass
         pass
         
-    def addRowToModel(self, model, datas, editing = True):
+    def addRowToModel(self, model, data_list, editing = True):
         item_list = []
-        for data in datas:
+        for data in data_list:
             item = QStandardItem(data)
             if( not editing ):
                 item.setBackground(QColor(Qt.darkGray) )
@@ -325,9 +365,25 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             model.insertRow(insert_index + 1, item_list)
             pass
         pass
+
+    @pyqtSlot(QModelIndex)
+    def onViewParameterDoubleClicked(self,index):
+        self.initParameterMessageDelegate(index) 
+        pass
+
+    @pyqtSlot(QModelIndex, QModelIndex)
+    def onModelParameterDataChanged(self, topLeft, bottomRight):
+        # unit 의 데이터가 변한 경우 Msg 에 띄울 combobox list 가 변해야 하므로 
+        col_info = ci.para_col_info_for_view()
+        top_row_index = topLeft.row()
+        top_col_index = topLeft.column()
+        bottom_row_index = topLeft.row()
+        bottom_col_index = topLeft.column()
+          
+        pass 
         
     @pyqtSlot()
-    def parameterViewCopyed(self):
+    def onParameterViewCopyed(self):
         clipboard = QApplication.clipboard()
         model = self.model_parameters
         filter_model = self.model_proxy_parameters
@@ -344,7 +400,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
         
     @pyqtSlot()
-    def parameterViewPasted(self):
+    def onParameterViewPasted(self):
         clipboard = QApplication.clipboard()
         model = self.model_parameters
         filter_model = self.model_proxy_parameters
@@ -366,7 +422,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass 
         
     @pyqtSlot()
-    def parameterViewInserted(self):
+    def onParameterViewInserted(self):
         model = self.model_parameters
         filter_model = self.model_proxy_parameters
         s_model = self.viewParameter.selectionModel()
@@ -392,7 +448,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.insertRowToModel(model, row_items, insert_index)
         pass
 
-    def parameterViewDeleted(self):
+    def onParameterViewDeleted(self):
         model = self.model_parameters
         filter_model = self.model_proxy_parameters
         s_model = self.viewParameter.selectionModel()
@@ -416,6 +472,5 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
     form = MainWindow()
-    form.readDataFromFile()
     form.show()
     sys.exit(app.exec_())

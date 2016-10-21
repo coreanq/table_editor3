@@ -1,5 +1,6 @@
 import os
 import sys
+from PyQt5.QtCore import QStringListModel
 # file 을 읽고 파싱 후  올라오는 column 정보 
 _parameters_file_columns_info = [ 
     'Group',
@@ -76,6 +77,16 @@ _group_columns_info = [
     'Hidden Value'
 ]
 
+# unit 에 따른 msg 리스트 정의 
+_unit_with_msg = {
+    'U_HZ_RPM': QStringListModel(['F_NOT_TITLE_CHANGE', 'F_TITLE_CHANGE', 'F_NOT_TITLE_CHANGE_SIG', 'F_TITLE_CHANGE_SIG']),
+    'U_B':QStringListModel([ 'F_BIT'+ str(cnt) for cnt in range(2, 17) ] ),  
+    'Other': QStringListModel([ *['F_DEX' + str(cnt) for cnt in range(0, 5)],  
+                                *['F_SIG' + str(cnt) for cnt in range(0, 5)],  
+                                'F_HEX4', 'F_HEX8', 'F_TIME_MIN', 'F_TWO',   
+                                'F_YMDHM', 'F_RYMDHM', 'F_VER'] )
+}
+
 def para_col_info_for_file():
     return _parameters_file_columns_info
     
@@ -96,3 +107,6 @@ def msg_info_col_info():
 
 def group_col_info():
     return _group_columns_info
+
+def unit_with_msg():
+    return _unit_with_msg
