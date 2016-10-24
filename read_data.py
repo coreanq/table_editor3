@@ -131,7 +131,7 @@ def read_grp_info(contents):
                 for item in find_list:
                     result.append(item[1])
                 # {T_MAK     ,GRP_MAK_CODE_TOTAL  ,(WORD*)&g_wMakGrpShow    ,0x01      },
-                yield result[0].replace('T_', ''), result[2].strip(), result[3]
+                yield result[0].replace('T_', '').strip(), result[2].strip(), result[3].strip()
     
 
 

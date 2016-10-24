@@ -15,11 +15,16 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
+
         self.model_group = QStandardItemModel(self)
+        self.model_proxy_group = QSortFilterProxyModel(self)
+
         self.model_parameters = QStandardItemModel(self)
         self.model_proxy_parameters = QSortFilterProxyModel(self)
         
-        self.model_msg = QStandardItemModel(self)
+        self.model_msg_info = QStandardItemModel(self)
+        self.model_proxy_msg_info = QSortFilterProxyModel(self)
+
         self.model_msg_values = QStandardItemModel(self)
         self.model_proxy_msg_values = QSortFilterProxyModel(self)
         
@@ -44,51 +49,80 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     def createConnection(self):
         self.viewGroup.clicked.connect(self.onViewGroupClicked)  
-        self.viewMessageInfo.clicked.connect(self.onViewMessageInfoClicked)
+        self.viewMsgInfo.clicked.connect(self.onViewMsgInfoClicked)
         
         # ctrl + c, ctrl + v, insert, delete 누를 시 
-        parameter_view_eater = ve.ParameterViewKeyEater(self)
+        parameter_view_eater = ve.ViewKeyEater(self)
         self.viewParameter.installEventFilter(parameter_view_eater)
         parameter_view_eater.sig_copy_clicked.connect(self.onParameterViewCopyed)
         parameter_view_eater.sig_paste_clicked.connect(self.onParameterViewPasted)
         parameter_view_eater.sig_insert_clicked.connect(self.onParameterViewInserted)
         parameter_view_eater.sig_delete_clicked.connect(self.onParameterViewDeleted)
 
+        group_view_eater = ve.ViewKeyEater(self)
+        self.viewGroup.installEventFilter(group_view_eater)
+        group_view_eater.sig_copy_clicked.connect(self.onGroupViewCopyed)
+        group_view_eater.sig_paste_clicked.connect(self.onGroupViewPasted)
+        group_view_eater.sig_insert_clicked.connect(self.onGroupViewInserted)
+        group_view_eater.sig_delete_clicked.connect(self.onGroupViewDeleted)
+
+        msg_info_view_eater = ve.ViewKeyEater(self)
+        self.viewMsgInfo.installEventFilter(msg_info_view_eater)
+        msg_info_view_eater.sig_copy_clicked.connect(self.onMsgInfoViewCopyed)
+        msg_info_view_eater.sig_paste_clicked.connect(self.onMsgInfoViewPasted)
+        msg_info_view_eater.sig_insert_clicked.connect(self.onMsgInfoViewInserted)
+        msg_info_view_eater.sig_delete_clicked.connect(self.onMsgInfoViewDeleted)
+
+        msg_value_view_eater = ve.ViewKeyEater(self)
+        self.viewMsgValue.installEventFilter(msg_value_view_eater)
+        msg_value_view_eater.sig_copy_clicked.connect(self.onMsgValueViewCopyed)
+        msg_value_view_eater.sig_paste_clicked.connect(self.onMsgValueViewPasted)
+        msg_value_view_eater.sig_insert_clicked.connect(self.onMsgValueViewInserted)
+        msg_value_view_eater.sig_delete_clicked.connect(self.onMsgValueViewDeleted)
+
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
         self.model_parameters.dataChanged.connect(self.onModelParameterDataChanged)
-
         pass
+
     def initView(self):
         view_list = [self.viewGroup,  
-                    self.viewParameter, self.viewMessageInfo, 
-                    self.viewMessageValue, self.viewVariable, 
+                    self.viewParameter, self.viewMsgInfo, 
+                    self.viewMsgValue, self.viewVariable, 
                     self.viewTitle]
-        
-        
-        self.viewGroup.setModel(self.model_group)
-        self.model_parameters.setHorizontalHeaderLabels(ci.para_col_info_for_view() )
+
+        # group view init 
+        self.model_proxy_group.setSourceModel(self.model_group)
+        self.viewGroup.setModel(self.model_proxy_group)
         self.model_group.setHorizontalHeaderLabels(ci.group_col_info() )
+
+        # prameter view init
         self.model_proxy_parameters.setSourceModel(self.model_parameters)
         self.viewParameter.setModel(self.model_proxy_parameters) 
+        self.model_parameters.setHorizontalHeaderLabels(ci.para_col_info_for_view() )
         self.viewParameter.setColumnHidden( ci.para_col_info_for_view().index('Group'), True)
        
-        self.viewMessageInfo.setModel(self.model_msg)
-        self.viewMessageValue.setModel(self.model_proxy_msg_values)
-        self.model_msg_values.setHorizontalHeaderLabels(ci.msg_values_col_info())
-        self.model_msg.setHorizontalHeaderLabels(ci.msg_info_col_info() )
+        # msg info view init 
+        self.model_proxy_msg_info.setSourceModel(self.model_msg_info) 
+        self.viewMsgInfo.setModel(self.model_proxy_msg_info)
+        self.model_msg_info.setHorizontalHeaderLabels(ci.msg_info_col_info() )
+
+        # msg value view init 
         self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
-        self.viewMessageValue.setColumnHidden(ci.msg_values_col_info().index('MsgName'), True)
-        self.viewMessageValue.setColumnHidden(ci.msg_values_col_info().index('MsgInfo'), True)
+        self.viewMsgValue.setModel(self.model_proxy_msg_values)
+        self.model_msg_values.setHorizontalHeaderLabels(ci.msg_values_col_info())
+        self.viewMsgValue.setColumnHidden(ci.msg_values_col_info().index('MsgName'), True)
+        self.viewMsgValue.setColumnHidden(ci.msg_values_col_info().index('MsgInfo'), True)
         
+        # vari view init
+        self.model_proxy_vari.setSourceModel(self.model_vari)
         self.viewVariable.setModel(self.model_proxy_vari)
         self.model_vari.setHorizontalHeaderLabels(ci.variable_col_info() )
-        self.model_proxy_vari.setSourceModel(self.model_vari)
         
+        # title view init 
+        self.model_proxy_title.setSourceModel(self.model_title)
         self.viewTitle.setModel(self.model_proxy_title)
         self.model_title.setHorizontalHeaderLabels(ci.title_col_info() )
-        self.model_proxy_title.setSourceModel(self.model_title)
-
 
         # filter 값을 이상한 값으로 넣어 처음에는 아무 리스트가 안나타나게 함 
         proxy_list = [  self.model_proxy_msg_values, self.model_proxy_parameters, 
@@ -163,7 +197,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         # msg view delegate 설정 
         model = self.model_title
-        view  = self.viewMessageValue
+        view  = self.viewMsgValue
         delegate = self.delegate_msg_view  
         col_info = ci.msg_values_col_info()
         col_index = col_info.index('TitleIndex')
@@ -180,7 +214,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
        
     # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
     # unit 컬럼이나 form/msg 컬럼을 더블 클릭하는 두개의 경우에 대해서 동작해야함 
-    def initParameterMessageDelegate(self, proxy_index): 
+    def initParameterMsgDelegate(self, proxy_index): 
         col_info = ci.para_col_info_for_view()
         model = self.model_parameters
         proxy_model = self.model_proxy_parameters
@@ -196,7 +230,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         unit_data = model.item(row_source_index.row() , unit_col_index).text()
 
         if( unit_data == 'U_DATAMSG' or unit_data == 'U_RPM_CHG_DATAMSG'):
-            delegate_model = self.model_msg
+            delegate_model = self.model_msg_info
         elif( unit_data == 'U_HZ_RPM'):
             delegate_model = ci.unit_with_msg()[unit_data]
         elif( unit_data == 'U_B'):
@@ -222,10 +256,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
      
     @pyqtSlot(QModelIndex)
-    def onViewMessageInfoClicked(self, index):
+    def onViewMsgInfoClicked(self, index):
         # print(util.whoami() )
         row = index.row()
-        msg_name = self.model_msg.item(row, 0).text()
+        msg_name = self.model_msg_info.item(row, 0).text()
         regx = QRegExp(msg_name.strip() )
         self.model_proxy_msg_values.setFilterKeyColumn(0)
         self.model_proxy_msg_values.setFilterRegExp(regx)
@@ -240,6 +274,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         return ("Error")
         pass
 
+    # read_para_table 에서는 단순히 파일을 파싱해서 올려주는 역할만 하고 
+    # 올라온 데이터에 대한 수정은 상위단에서 수행하도록 함 
     def readDataFromFile(self):
         target_dir = r'D:\download\1'
             # print(root, directories, filenames)
@@ -317,7 +353,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         pass
 
                     for item in msg_list:
-                        self.addRowToModel(self.model_msg, item)
+                        self.addRowToModel(self.model_msg_info, item)
                         
                 elif( filename.lower() == rd.KPD_PARA_VARI_HEADER_FILE):
                     for items in rd.read_kpd_para_vari(contents):
@@ -368,7 +404,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     @pyqtSlot(QModelIndex)
     def onViewParameterDoubleClicked(self,index):
-        self.initParameterMessageDelegate(index) 
+        self.initParameterMsgDelegate(index) 
         pass
 
     @pyqtSlot(QModelIndex, QModelIndex)
@@ -381,93 +417,129 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         bottom_col_index = topLeft.column()
           
         pass 
+    
+
+    def viewRowCopy(self, view):
+        clipboard = QApplication.clipboard()
+        view_model = view.model()
+        selection_model = view.selectionModel()
+        row_indexes = selection_model.selectedRows()
+        rows = [] 
+
+        # 한줄만 선택 
+        for row_index in row_indexes:
+            row_data = ','.join(view_model.data(row_index.sibling(row_index.row(), column)) for column in range(view_model.columnCount() )) 
+            rows.append(row_data)
+
+        clipboard.setText( '\n'.join(rows))
+        # print('\n'.join(rows))
+        pass
+
+    def viewRowPaste(self, view, source_model):
+        clipboard = QApplication.clipboard()
+        view_model = view.model() 
+        selection_model = view.selectionModel()
+        row_indexes = selection_model.selectedRows()
+
+        # 한줄만 선택 
+        for row_index in row_indexes:
+            source_index = None
+            if( source_model == view_model ):
+                source_index = row_index
+            else :
+                source_index = view_model.mapToSource( row_index ) 
+            insert_row = source_index.row() 
+            for row in clipboard.text().split('\n'):
+                row_items = row.split(',')
+                self.insertRowToModel(source_model, row_items, insert_row)
+                break
+        pass
+
+    def viewRowInsert(self, view, source_model):
+        view_model = view.model() 
+        selection_model = view.selectionModel()
+        row_indexes = selection_model.selectedRows()
+        key_name = view_model.filterRegExp().pattern() 
+
+        # 한줄만 선택 
+        for row_index in row_indexes:
+            source_index = None
+            if( source_model == view_model ):
+                source_index = row_index
+            else :
+                source_index = view_model.mapToSource( row_index ) 
+            insert_row = source_index.row() 
+
+            row_items = [''] * view_model.columnCount()
+            row_items[0] = key_name
+            self.insertRowToModel(source_model, row_items, insert_row)
+            break
+        pass
+
+    def viewRowDelete(self, view):
+        view_model = view.model()
+        selection_model = view.selectionModel()
+        row_indexes = selection_model.selectedRows()
+
+        # 한줄만 선택 
+        for row_index in row_indexes:
+            view_model.removeRow(row_index.row())
+            break
+        pass
         
     @pyqtSlot()
     def onParameterViewCopyed(self):
-        clipboard = QApplication.clipboard()
-        model = self.model_parameters
-        filter_model = self.model_proxy_parameters
-        s_model = self.viewParameter.selectionModel()
-        row_indexes = []
-        if(s_model.hasSelection() ):
-            row_indexes = s_model.selectedRows()
-        # 한개만 선택됨  
-        for row_index in row_indexes:
-            source_index = filter_model.mapToSource( row_index )
-            row_data =  ','.join(model.item( source_index.row() , i).text() for i in range(model.columnCount() ) )
-            print(row_data)
-            clipboard.setText(row_data)
-        pass
-        
+        self.viewRowCopy(self.viewParameter)
     @pyqtSlot()
     def onParameterViewPasted(self):
-        clipboard = QApplication.clipboard()
-        model = self.model_parameters
-        filter_model = self.model_proxy_parameters
-        s_model = self.viewParameter.selectionModel()
-        row_indexes = []
-        
-        insert_index = 0  
-        if(s_model.hasSelection() ):
-            row_indexes = s_model.selectedRows()
-            # 한개만 선택됨 
-            for row_index in row_indexes:
-                source_index = filter_model.mapToSource( row_index )
-                insert_index = source_index.row() 
-        else:
-            insert_index = model.rowCount()
-        datas = clipboard.text().split(',')
-        self.insertRowToModel(model, datas, insert_index)
-        print(datas)
-        pass 
-        
+        self.viewRowPaste(self.viewParameter, self.model_parameters)
     @pyqtSlot()
     def onParameterViewInserted(self):
-        model = self.model_parameters
-        filter_model = self.model_proxy_parameters
-        s_model = self.viewParameter.selectionModel()
-        row_indexes = []
-        
-        insert_index = 0  
-        if(s_model.hasSelection() ):
-            row_indexes = s_model.selectedRows()
-            # 한개만 선택됨 
-            for row_index in row_indexes:
-                source_index = filter_model.mapToSource( row_index )
-                insert_index = source_index.row() 
-        else:
-            insert_index = model.rowCount()
-        grp_name = filter_model.filterRegExp().pattern() 
-        row_items = []
-        for i in range(model.columnCount() ) :
-            item = ''
-            if( i == 0 ):
-                item = grp_name
-            row_items.append(item)
-        
-        self.insertRowToModel(model, row_items, insert_index)
-        pass
-
+        self.viewRowInsert(self.viewParameter, self.model_parameters)
+    @pyqtSlot()
     def onParameterViewDeleted(self):
-        model = self.model_parameters
-        filter_model = self.model_proxy_parameters
-        s_model = self.viewParameter.selectionModel()
-        row_indexes = []
-        
-        delete_index = 0  
-        if(s_model.hasSelection() ):
-            row_indexes = s_model.selectedRows()
-            # 한개만 선택됨 
-            for row_index in row_indexes:
-                source_index = filter_model.mapToSource( row_index )
-                delete_index = source_index.row() 
-            model.removeRow(delete_index)
-        else:
-            pass
-            
-    def groupViewCopyed(self):
-        pass
+        self.viewRowDelete( self.viewParameter)
 
+
+    @pyqtSlot()
+    def onGroupViewCopyed(self):
+        self.viewRowCopy(self.viewGroup)
+    @pyqtSlot()
+    def onGroupViewPasted(self):
+        self.viewRowPaste(self.viewGroup, self.model_group)
+    @pyqtSlot()
+    def onGroupViewInserted(self):
+        self.viewRowInsert(self.viewGroup, self.model_group)
+    @pyqtSlot()
+    def onGroupViewDeleted(self):
+        self.viewRowDelete( self.viewGroup)
+            
+    @pyqtSlot()
+    def onMsgInfoViewCopyed(self):
+        self.viewRowCopy(self.viewMsgInfo)
+    @pyqtSlot()
+    def onMsgInfoViewPasted(self):
+        self.viewRowPaste(self.viewMsgInfo, self.model_msg_info)
+    @pyqtSlot()
+    def onMsgInfoViewInserted(self):
+        self.viewRowInsert(self.viewMsgInfo, self.model_msg_info)
+    @pyqtSlot()
+    def onMsgInfoViewDeleted(self):
+        self.viewRowDelete( self.viewMsgInfo)
+
+
+    @pyqtSlot()
+    def onMsgValueViewCopyed(self):
+        self.viewRowCopy(self.viewMsgValue)
+    @pyqtSlot()
+    def onMsgValueViewPasted(self):
+        self.viewRowPaste(self.viewMsgValue, self.model_msg_values)
+    @pyqtSlot()
+    def onMsgValueViewInserted(self):
+        self.viewRowInsert(self.viewMsgValue, self.model_msg_values)
+    @pyqtSlot()
+    def onMsgValueViewDeleted(self):
+        self.viewRowDelete( self.viewMsgValue)
 
 if __name__ == '__main__': 
     app = QApplication(sys.argv)

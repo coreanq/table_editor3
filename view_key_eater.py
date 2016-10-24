@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt, QEvent, QObject
         
-class ParameterViewKeyEater(QObject):
+class ViewKeyEater(QObject):
     sig_copy_clicked = pyqtSignal()
     sig_paste_clicked = pyqtSignal()
     sig_insert_clicked = pyqtSignal()
@@ -30,14 +30,14 @@ class ParameterViewKeyEater(QObject):
                 return True
             else:
                 print(event.text() )
-                return super(ParameterViewKeyEater, self).eventFilter(receiver, event)
+                return super(ViewKeyEater, self).eventFilter(receiver, event)
         else:
-            return super(ParameterViewKeyEater, self).eventFilter(receiver, event)
+            return super(ViewKeyEater, self).eventFilter(receiver, event)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     form = QMainWindow()
-    form.installEventFilter(ParameterViewKeyEater(form))
+    form.installEventFilter(ViewKeyEater(form))
     form.show()
     sys.exit(app.exec_())
 

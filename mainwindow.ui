@@ -52,7 +52,7 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tabParameter">
        <attribute name="title">
@@ -108,7 +108,7 @@
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
-           <widget class="QTableView" name="viewMessageInfo">
+           <widget class="QTableView" name="viewMsgInfo">
             <property name="maximumSize">
              <size>
               <width>400</width>
@@ -117,7 +117,7 @@
             </property>
            </widget>
           </widget>
-          <widget class="QTableView" name="viewMessageValue"/>
+          <widget class="QTableView" name="viewMsgValue"/>
          </widget>
         </item>
        </layout>
