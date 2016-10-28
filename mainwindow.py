@@ -3,6 +3,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel, QStringListModel
+import json
 import mainwindow_ui 
 import view_delegate as cbd 
 import view_key_eater as ve
@@ -79,6 +80,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         msg_value_view_eater.sig_paste_clicked.connect(self.onMsgValueViewPasted)
         msg_value_view_eater.sig_insert_clicked.connect(self.onMsgValueViewInserted)
         msg_value_view_eater.sig_delete_clicked.connect(self.onMsgValueViewDeleted)
+
+        msg_value_view_eater = ve.ViewKeyEater(self)
+        self.viewTitle.installEventFilter(msg_value_view_eater)
+        msg_value_view_eater.sig_copy_clicked.connect(self.onTitleViewCopyed)
+        msg_value_view_eater.sig_paste_clicked.connect(self.onTitleViewPasted)
+        msg_value_view_eater.sig_insert_clicked.connect(self.onTitleViewInserted)
+        msg_value_view_eater.sig_delete_clicked.connect(self.onTitleViewDeleted)
 
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
@@ -417,25 +425,26 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         bottom_col_index = topLeft.column()
           
         pass 
-    
 
-    def viewRowCopy(self, view):
+    def viewRowCopy(self, subject, view):
         clipboard = QApplication.clipboard()
         view_model = view.model()
         selection_model = view.selectionModel()
         row_indexes = selection_model.selectedRows()
-        rows = [] 
+        data_dict = {}
 
-        # 한줄만 선택 
+        # ' "subject" : [ 'item1, item2...', 'item1, item2...' ] '
         for row_index in row_indexes:
             row_data = ','.join(view_model.data(row_index.sibling(row_index.row(), column)) for column in range(view_model.columnCount() )) 
-            rows.append(row_data)
-
-        clipboard.setText( '\n'.join(rows))
+            previous_data = data_dict.get(subject,[])
+            previous_data.append(row_data)
+            data_dict[subject] = previous_data
+        # print(json.dumps(data_dict, indent= 4 ))
+        clipboard.setText(json.dumps(data_dict))
         # print('\n'.join(rows))
         pass
 
-    def viewRowPaste(self, view, source_model):
+    def viewRowPaste(self, subject, view, source_model):
         clipboard = QApplication.clipboard()
         view_model = view.model() 
         selection_model = view.selectionModel()
@@ -449,9 +458,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             else :
                 source_index = view_model.mapToSource( row_index ) 
             insert_row = source_index.row() 
-            for row in clipboard.text().split('\n'):
-                row_items = row.split(',')
-                self.insertRowToModel(source_model, row_items, insert_row)
+            dict_result = json.loads(clipboard.text())
+
+            for key, lists in dict_result.items():
+                if( key == subject ):
+                    for row in lists:
+                        row_items = row.split(',')
+                        self.insertRowToModel(source_model, row_items, insert_row)
                 break
         pass
 
@@ -489,10 +502,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
     @pyqtSlot()
     def onParameterViewCopyed(self):
-        self.viewRowCopy(self.viewParameter)
+        self.viewRowCopy('parameter', self.viewParameter )
     @pyqtSlot()
     def onParameterViewPasted(self):
-        self.viewRowPaste(self.viewParameter, self.model_parameters)
+        self.viewRowPaste('parameter', self.viewParameter, model_parameters)
     @pyqtSlot()
     def onParameterViewInserted(self):
         self.viewRowInsert(self.viewParameter, self.model_parameters)
@@ -503,10 +516,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     @pyqtSlot()
     def onGroupViewCopyed(self):
-        self.viewRowCopy(self.viewGroup)
+        self.viewRowCopy('group', self.viewGroup)
     @pyqtSlot()
     def onGroupViewPasted(self):
-        self.viewRowPaste(self.viewGroup, self.model_group)
+        self.viewRowPaste('group', self.viewGroup, self.model_group)
     @pyqtSlot()
     def onGroupViewInserted(self):
         self.viewRowInsert(self.viewGroup, self.model_group)
@@ -516,10 +529,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             
     @pyqtSlot()
     def onMsgInfoViewCopyed(self):
-        self.viewRowCopy(self.viewMsgInfo)
+        self.viewRowCopy('msg_info', self.viewMsgInfo)
     @pyqtSlot()
     def onMsgInfoViewPasted(self):
-        self.viewRowPaste(self.viewMsgInfo, self.model_msg_info)
+        self.viewRowPaste('msg_info', self.viewMsgInfo, self.model_msg_info)
     @pyqtSlot()
     def onMsgInfoViewInserted(self):
         self.viewRowInsert(self.viewMsgInfo, self.model_msg_info)
@@ -527,19 +540,37 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def onMsgInfoViewDeleted(self):
         self.viewRowDelete( self.viewMsgInfo)
 
-
     @pyqtSlot()
     def onMsgValueViewCopyed(self):
-        self.viewRowCopy(self.viewMsgValue)
+        self.viewRowCopy('msg_value', self.viewMsgValue)
     @pyqtSlot()
     def onMsgValueViewPasted(self):
-        self.viewRowPaste(self.viewMsgValue, self.model_msg_values)
+        self.viewRowPaste('msg_value', self.viewMsgValue, self.model_msg_values)
     @pyqtSlot()
     def onMsgValueViewInserted(self):
         self.viewRowInsert(self.viewMsgValue, self.model_msg_values)
     @pyqtSlot()
     def onMsgValueViewDeleted(self):
         self.viewRowDelete( self.viewMsgValue)
+
+    @pyqtSlot()
+    def onTitleViewCopyed(self):
+        self.viewRowCopy('title', self.viewTitle)
+        pass
+    @pyqtSlot()
+    def onTitleViewPasted(self):
+        self.viewRowPaste('title', self.viewTitle, self.model_title)
+        pass
+    @pyqtSlot()
+    def onTitleViewInserted(self):
+        self.viewRowInsert(self.viewTitle, self.model_title)
+        pass
+    @pyqtSlot()
+    def onTitleViewDeleted(self):
+        self.viewRowDelete(self.viewTitle)
+        pass
+
+
 
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
