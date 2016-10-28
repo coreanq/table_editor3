@@ -50,12 +50,14 @@ _parameters_view_columns_info = [
 # read_data 시 yield 되는 tuple 의 index 정보를 나타냄  
 # combobox 등에 사용되기 위해서는 0번째 컬럼이 무조건 keycolumn 이여야함  
 _title_columns_info = [
+   'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
    'Title',
    'Enum 이름',
    'Title Index',
    'Data'
 ]
 _variable_columns_info = [
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
     'Variable',
     'Type',
     'Description'
@@ -67,11 +69,13 @@ _msg_values_columns_info = [
     'AtValue' 
 ]
 _msg_info_columns_info = [
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
     'MsgName',
     'MsgComment'
 ]
 
 _group_columns_info = [
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
     'GroupName', 
     'Hidden Vari', 
     'Hidden Value'

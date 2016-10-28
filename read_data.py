@@ -130,8 +130,8 @@ def read_grp_info(contents):
                 result = []
                 for item in find_list:
                     result.append(item[1])
-                # {T_MAK     ,GRP_MAK_CODE_TOTAL  ,(WORD*)&g_wMakGrpShow    ,0x01      },
-                yield result[0].replace('T_', '').strip(), result[2].strip(), result[3].strip()
+                # {dummy_key, T_MAK     ,GRP_MAK_CODE_TOTAL  ,(WORD*)&g_wMakGrpShow    ,0x01      },
+                yield '', result[0].replace('T_', '').strip(), result[2].strip(), result[3].strip()
     
 
 
@@ -159,8 +159,8 @@ def read_kpd_para_vari(contents):
                 array_footer = '['+ str(defines_dict[find_list[0][2]]) + ']'
             except KeyError:
                 array_footer = ""  
-            # ('k_wUnlmtCarrFreqSel': ['WORD', '//변수설명'] )
-            yield (find_list[0][0] + array_footer, vari_type, find_list[0][3]) 
+            # ('dummy_key', 'k_wUnlmtCarrFreqSel': ['WORD', '//변수설명'] )
+            yield ('', find_list[0][0] + array_footer, vari_type, find_list[0][3]) 
             continue
     pass
 
@@ -212,7 +212,7 @@ def read_basic_title(contents):
 
                 data_string = ''.join(find_list)
                 data_string= data_string.replace('0x', '')
-                yield (*comment_list, data_string) 
+                yield ('', *comment_list, data_string) 
     pass
 
 def read_add_title(contents):
@@ -238,7 +238,7 @@ def read_add_title(contents):
 
                 data_string = ''.join(find_list)
                 data_string= data_string.replace('0x', '')
-                yield (*comment_list, data_string) 
+                yield ('', *comment_list, data_string) 
     pass
 
 

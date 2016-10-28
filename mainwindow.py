@@ -88,6 +88,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         msg_value_view_eater.sig_insert_clicked.connect(self.onTitleViewInserted)
         msg_value_view_eater.sig_delete_clicked.connect(self.onTitleViewDeleted)
 
+        msg_value_view_eater = ve.ViewKeyEater(self)
+        self.viewVariable.installEventFilter(msg_value_view_eater)
+        msg_value_view_eater.sig_copy_clicked.connect(self.onVariableViewCopyed)
+        msg_value_view_eater.sig_paste_clicked.connect(self.onVariableViewPasted)
+        msg_value_view_eater.sig_insert_clicked.connect(self.onVariableViewInserted)
+        msg_value_view_eater.sig_delete_clicked.connect(self.onVariableViewDeleted)
+
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
         self.model_parameters.dataChanged.connect(self.onModelParameterDataChanged)
@@ -100,37 +107,53 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     self.viewTitle]
 
         # group view init 
+        col_info = ci.group_col_info()
+        view = self.viewGroup
         self.model_proxy_group.setSourceModel(self.model_group)
-        self.viewGroup.setModel(self.model_proxy_group)
-        self.model_group.setHorizontalHeaderLabels(ci.group_col_info() )
+        self.model_group.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_group)
+        view.setColumnHidden(col_info.index('Dummy Key'), True)
 
         # prameter view init
+        col_info = ci.para_col_info_for_view()
+        view = self.viewParameter
         self.model_proxy_parameters.setSourceModel(self.model_parameters)
-        self.viewParameter.setModel(self.model_proxy_parameters) 
-        self.model_parameters.setHorizontalHeaderLabels(ci.para_col_info_for_view() )
-        self.viewParameter.setColumnHidden( ci.para_col_info_for_view().index('Group'), True)
+        self.model_parameters.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_parameters) 
+        view.setColumnHidden( col_info.index('Group'), True)
        
         # msg info view init 
+        col_info = ci.msg_info_col_info()
+        view = self.viewMsgInfo
         self.model_proxy_msg_info.setSourceModel(self.model_msg_info) 
-        self.viewMsgInfo.setModel(self.model_proxy_msg_info)
-        self.model_msg_info.setHorizontalHeaderLabels(ci.msg_info_col_info() )
+        self.model_msg_info.setHorizontalHeaderLabels(col_info )
+        view.setModel(self.model_proxy_msg_info)
+        view.setColumnHidden( col_info.index('Dummy Key'), True)
 
         # msg value view init 
+        col_info = ci.msg_values_col_info()
+        view = self.viewMsgValue
         self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
-        self.viewMsgValue.setModel(self.model_proxy_msg_values)
-        self.model_msg_values.setHorizontalHeaderLabels(ci.msg_values_col_info())
-        self.viewMsgValue.setColumnHidden(ci.msg_values_col_info().index('MsgName'), True)
-        self.viewMsgValue.setColumnHidden(ci.msg_values_col_info().index('MsgInfo'), True)
+        self.model_msg_values.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_msg_values)
+        view.setColumnHidden(col_info.index('MsgName'), True)
+        view.setColumnHidden(col_info.index('MsgInfo'), True)
         
         # vari view init
+        col_info = ci.variable_col_info()
+        view = self.viewVariable
         self.model_proxy_vari.setSourceModel(self.model_vari)
-        self.viewVariable.setModel(self.model_proxy_vari)
-        self.model_vari.setHorizontalHeaderLabels(ci.variable_col_info() )
-        
+        self.model_vari.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_vari)
+        view.setColumnHidden(col_info.index('Dummy Key'), True)
+
         # title view init 
+        col_info = ci.title_col_info()
+        view = self.viewTitle
         self.model_proxy_title.setSourceModel(self.model_title)
-        self.viewTitle.setModel(self.model_proxy_title)
-        self.model_title.setHorizontalHeaderLabels(ci.title_col_info() )
+        self.model_title.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_title)
+        view.setColumnHidden(col_info.index('Dummy Key'), True)
 
         # filter 값을 이상한 값으로 넣어 처음에는 아무 리스트가 안나타나게 함 
         proxy_list = [  self.model_proxy_msg_values, self.model_proxy_parameters, 
@@ -254,21 +277,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def onViewGroupClicked(self, index):
         # print(util.whoami() )
         row = index.row()
-        grp_name = self.model_group.item(row, 0 ).text() 
-        regx = QRegExp(grp_name.strip()) 
+        col_info = ci.group_col_info()
+        key_name = self.model_group.item(row, col_info.index('GroupName')).text() 
+        regx = QRegExp(key_name.strip()) 
         self.model_proxy_parameters.setFilterKeyColumn(0)
         self.model_proxy_parameters.setFilterRegExp(regx)
-        # 클립 보드 삭제 
-        clipboard = QApplication.clipboard()
-        clipboard.clear()
         pass
      
     @pyqtSlot(QModelIndex)
     def onViewMsgInfoClicked(self, index):
         # print(util.whoami() )
         row = index.row()
-        msg_name = self.model_msg_info.item(row, 0).text()
-        regx = QRegExp(msg_name.strip() )
+        col_info = ci.msg_info_col_info()
+        key_name = self.model_msg_info.item(row, col_info.index('MsgName')).text()
+        regx = QRegExp(key_name.strip() )
         self.model_proxy_msg_values.setFilterKeyColumn(0)
         self.model_proxy_msg_values.setFilterRegExp(regx)
          
@@ -351,7 +373,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     col_info = ci.msg_values_col_info()
                     title_index = col_info.index('TitleIndex')
                     for items in rd.read_para_msg(contents):
-                        msg_info = [items[col_info.index('MsgName')], items[col_info.index('MsgInfo')]] 
+                        msg_info = ['', items[col_info.index('MsgName')], items[col_info.index('MsgInfo')]] 
 
                         if( msg_info not in msg_list ):
                             msg_list.append(msg_info) 
@@ -388,7 +410,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         for data in data_list:
             item = QStandardItem(data)
             if( not editing ):
-                item.setBackground(QColor(Qt.darkGray) )
+                item.setBackground(QColor(Qt.lightGray) )
+                item.setFlags(Qt.NoItemFlags)
             item.setEditable(editing)
             item_list.append(item)            
         model.appendRow(item_list)
@@ -449,6 +472,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view_model = view.model() 
         selection_model = view.selectionModel()
         row_indexes = selection_model.selectedRows()
+        key_name = view_model.filterRegExp().pattern() 
 
         # 한줄만 선택 
         for row_index in row_indexes:
@@ -464,6 +488,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 if( key == subject ):
                     for row in lists:
                         row_items = row.split(',')
+                        row_items[0] = key_name
                         self.insertRowToModel(source_model, row_items, insert_row)
                 break
         pass
@@ -505,7 +530,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowCopy('parameter', self.viewParameter )
     @pyqtSlot()
     def onParameterViewPasted(self):
-        self.viewRowPaste('parameter', self.viewParameter, model_parameters)
+        self.viewRowPaste('parameter', self.viewParameter, self.model_parameters)
     @pyqtSlot()
     def onParameterViewInserted(self):
         self.viewRowInsert(self.viewParameter, self.model_parameters)
@@ -569,6 +594,26 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def onTitleViewDeleted(self):
         self.viewRowDelete(self.viewTitle)
         pass
+
+    @pyqtSlot()
+    def onVariableViewCopyed(self):
+        self.viewRowCopy('variable', self.viewVariable)
+        pass 
+    @pyqtSlot()
+    def onVariableViewPasted(self):
+        self.viewRowPaste('variable', self.viewVariable, self.model_vari)
+        pass
+    @pyqtSlot()
+    def onVariableViewInserted(self):
+        self.viewRowInsert(self.viewVariable, self.model_vari)
+        pass
+    @pyqtSlot()
+    def onVariableViewDeleted(self):
+        self.viewRowDelete(self.viewVariable)
+        pass
+
+
+    
 
 
 
