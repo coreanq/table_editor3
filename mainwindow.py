@@ -178,11 +178,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             verticalHeaderView.setDragEnabled(True)
             verticalHeaderView.setDragDropMode(QAbstractItemView.InternalMove)
 
-    def setCmbDelegateAttribute(self, model, view, delegate, columns = [], editable = False, width = 0):
+    def setCmbDelegateAttribute(self, model, view, delegate, columns = [], editable = False, 
+        width = 0, cmb_model_column = 0):
         for col_index in columns:
             delegate.setEditable(col_index,  editable ) 
             delegate.setEditorType(col_index, 'combobox')
             delegate.setModel(col_index, model)
+            delegate.setModelColumn(col_index, cmb_model_column)
             view.setItemDelegateForColumn(col_index, delegate)
             if( width != 0 ):
                 header_view = view.horizontalHeader()
@@ -198,7 +200,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         delegate = self.delegate_parameters_view
         col_info = ci.para_col_info_for_view()
         col_index = col_info.index('Code TITLE')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150)
+        cmb_model_column_index = ci.title_col_info().index('Title')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
+                cmb_model_column = cmb_model_column_index )
 
         model = self.model_kpd_para_unit
         view  = self.viewParameter
@@ -214,7 +218,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         col_info.index('최소값'),
                         col_info.index('보임변수')
         ]
-        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = True,  width = 150)
+        cmb_model_column_index = ci.variable_col_info().index('Variable')
+        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = True,  
+                width = 150, cmb_model_column = cmb_model_column_index)
 
         model = QStringListModel( ['True', 'False']) 
         view  = self.viewParameter
@@ -232,7 +238,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         delegate = self.delegate_msg_view  
         col_info = ci.msg_values_col_info()
         col_index = col_info.index('TitleIndex')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150)
+        cmb_model_column_index = ci.title_col_info().index('Title')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
+                cmb_model_column = cmb_model_column_index)
 
         # group view delegate 설정 
         model = self.model_vari
@@ -240,7 +248,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         delegate = self.delegate_group_view  
         col_info = ci.group_col_info()
         col_index = col_info.index('Hidden Vari')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = True , width = 150)
+        cmb_model_column_index = ci.variable_col_info().index('Variable')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = True , 
+                width = 150, cmb_model_column = cmb_model_column_index  )
         pass
        
     # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
@@ -254,21 +264,24 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         delegate_model = None
         row_source_index = proxy_model.mapToSource(proxy_index)
 
-
         unit_col_index = col_info.index('단위')
         form_msg_col_index = col_info.index('폼메시지')
 
         unit_data = model.item(row_source_index.row() , unit_col_index).text()
+        cmb_model_column_index  = 0 
 
         if( unit_data == 'U_DATAMSG' or unit_data == 'U_RPM_CHG_DATAMSG'):
+            # 생성되는 cmb box 의 모델의 참조 column index 를 정해줌 
             delegate_model = self.model_msg_info
+            cmb_model_column_index = ci.msg_info_col_info().index('MsgName')
         elif( unit_data == 'U_HZ_RPM'):
             delegate_model = ci.unit_with_msg()[unit_data]
         elif( unit_data == 'U_B'):
             delegate_model = ci.unit_with_msg()[unit_data]
         else: 
             delegate_model = ci.unit_with_msg()['Other']
-        self.setCmbDelegateAttribute(delegate_model, view, delegate, [form_msg_col_index], editable = False,  width = 150)
+        self.setCmbDelegateAttribute(delegate_model, view, delegate, [form_msg_col_index], 
+                editable = False,  width = 150, cmb_model_column = cmb_model_column_index)
 
         pass 
 
@@ -537,7 +550,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot()
     def onParameterViewDeleted(self):
         self.viewRowDelete( self.viewParameter)
-
 
     @pyqtSlot()
     def onGroupViewCopyed(self):

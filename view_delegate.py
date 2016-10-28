@@ -13,9 +13,14 @@ class ViewDelegate(QStyledItemDelegate):
         self.cols_info = {}
         pass
 
+    # { column :  {'model_colunm': 2, 'validator': ...} }
     def setEditorType(self, col, editor):
         self.cols_info.setdefault(col, {})['editor_type'] =  editor
         pass 
+    # combobox 에서 모델로 삼을 column index 를 정해줌 
+    def setModelColumn(self, col, cmb_model_column):
+        self.cols_info.setdefault(col, {})['cmb_model_column'] = cmb_model_column
+        pass
 
     def setModel(self, col, model):
         self.cols_info.setdefault(col, {} )['model'] = model
@@ -39,6 +44,7 @@ class ViewDelegate(QStyledItemDelegate):
         model = col_info_dict.get('model', QStandardItemModel() )
         editable = col_info_dict.get('editable', False ) 
         editor_type = col_info_dict.get('editor_type', 'none')
+        cmb_model_column = col_info_dict.get('cmb_model_column', 0)
         editor =  None
 
         if( editor_type == 'lineedit' ):
@@ -48,6 +54,8 @@ class ViewDelegate(QStyledItemDelegate):
             editor = QComboBox(parent)
             editor.setModel(model)
             editor.setEditable(editable) 
+            editor.setModelColumn(cmb_model_column)
+
             pass
         return editor
 
