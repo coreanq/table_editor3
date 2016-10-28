@@ -14,7 +14,7 @@
         },
         {
             "taskName": "makercc",
-            "args": ["pyrcc5.exe", "main.qrc", "-o", "qml_rc.py"]
+            "args": ["pyrcc5.exe", "resource.qrc", "-o", "resource.py"]
         },
         {
             "taskName": "makeui",

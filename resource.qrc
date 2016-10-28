@@ -1,0 +1,16 @@
+<RCC>
+  <qresource>
+    <file>base/AddTitle_Eng.c</file>
+    <file>base/AddTitle_Eng.H</file>
+    <file>base/KFunc_Head.H</file>
+    <file>base/KPD_TBL_MSG_ENG.C</file>
+    <file>base/KPD_Title_Enum.H</file>
+    <file>base/KpdPara_GrpIdx.H</file>
+    <file>base/KpdPara_Msg.c</file>
+    <file>base/KpdPara_Msg.H</file>
+    <file>base/KpdPara_Table.c</file>
+    <file>base/KpdPara_Table.H</file>
+    <file>base/KpdPara_Vari.c</file>
+    <file>base/KpdPara_Vari.H</file>
+  </qresource>
+</RCC>
