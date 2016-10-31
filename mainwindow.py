@@ -9,7 +9,7 @@ import view_delegate as cbd
 import view_key_eater as ve
 import column_info as ci
 import read_data as rd
-import resource as rsc
+import resource_rc as rsc
 import util
 
 

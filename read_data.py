@@ -234,7 +234,9 @@ def read_add_title(contents):
                 # //0    "English        "T_Language
                 # group1  group2           group3
                 if( comment_search_obj ):
-                    comment_list = comment_search_obj.group(2), comment_search_obj.group(3), comment_search_obj.group(1)
+                    comment_list =  comment_search_obj.group(2).strip(),\
+                                    comment_search_obj.group(3).strip(),\
+                                    comment_search_obj.group(1).strip()
 
                 data_string = ''.join(find_list)
                 data_string= data_string.replace('0x', '')
@@ -243,7 +245,7 @@ def read_add_title(contents):
 
 
 # 파일 이름 별로 파싱 루틴을 다르게 적용하지만 실제로 파일에 관계 없이 동작하도록 해야함. 
-def test():
+def test_read():
     TARGET_DIR = r'D:\download\1'
     for root, directories, filenames in os.walk(TARGET_DIR):
         # print(root, directories, filenames)
@@ -284,6 +286,24 @@ def test():
                         pass
                 pass
 
+def test_write():
+    import resource
+    from PyQt5.QtCore import QFile, QIODevice
+    TARGET_DIR  = r'd:\download\result' 
+    # qrc 내에 있는 파일에 접근할 수 있는 것은 QFile 만 가능함 
+    file = QFile(r':/base/' + KPD_ADD_TITLE_SRC_FILE)
+    print(file.open(QIODevice.ReadOnly))
+    contents = bytearray(file.readAll()).decode('utf8')
+
+    for item in read_add_title(contents):
+        print(item)
+    
+    # with open(r':/base/'+ KPD_ADD_TITLE_SRC_FILE, 'r', encoding='utf8') as f:
+    #     contents = f.read()
+    #     print(contents)
+
+   
 if __name__ == '__main__':
-    test() 
+    # test_read() 
+    test_write()
     print('finished')
