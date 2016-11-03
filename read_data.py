@@ -46,7 +46,7 @@ re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
 
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
 re_extract_basic_title_vari = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
-re_extract_add_title_vari = re.compile(r'WORD g_awAddTitleEng[^;]+};')
+re_extract_add_title_vari = re.compile(r'const WORD g_awAddTitleEng[^;]+};')
 re_check_title = re.compile(r'{(?P<parameters>[^\n]+)}(?P<comment>\/\/[^\n]+)')
 re_parse_title_params = re.compile(r'([^,{}\n;]+)')
 re_parse_title_comment = re.compile(r'\/\/([0-9]+)[^\n\"]+\"([^\n]+)\"(T_[^\n]+)')

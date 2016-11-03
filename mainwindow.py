@@ -2,7 +2,9 @@ import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel, QStringListModel
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
+                         QRegExp, Qt, QItemSelectionModel, QStringListModel, \
+                         QIODevice, QFile
 import json
 import mainwindow_ui 
 import view_delegate as cbd 
@@ -625,8 +627,51 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowDelete(self.viewVariable)
         pass
 
+    def make_add_title_eng(self ):
+        TARGET_DIR = r"d:\download\result"
+        col_info = ci.title_col_info()
+        file_contents =  ''
+        
+        search_string = ''
+        replace_string = ''
 
-    
+        base_template= r'''
+        const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {\n{0}};
+        '''
+
+        file = QFile(':/base/addtitle_eng.c')
+        if( file.open(QIODevice.ReadOnly) ):
+            contents = bytearray(file.readAll()).decode('utf8')
+            search_file_obj = rd.re_extract_add_title_vari.search(contents)
+            if( search_file_obj ):
+                search_string = search_file_obj.string[search_file_obj.start(0):]
+                print(search_string)
+        
+        model = self.model_title
+        row = model.rowCount()
+        col = model.columnCount()
+
+        for row_index in range(row):
+            row_items = []
+            for col_index in range(col):
+                item = model.item(row_index, col_index)
+                row_items.append(item.text()) 
+
+            title = row_items[col_info.index('Title')]
+            enum_name = row_items[col_info.index('Enum 이름')]
+            title_index = row_items[col_info.index('Title Index')]
+            data = row_items[col_info.index('Data')]
+            if( int(title_index) < 1000):
+                continue
+
+            print(r'{{0}}//{1:<5}"{2:<20}"{3}'.format(data, title_index, title, enum_name))
+
+            data
+
+            pass
+        else:
+            return
+        pass
 
 
 
@@ -634,4 +679,5 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     form = MainWindow()
     form.show()
+    form.make_add_title_eng()
     sys.exit(app.exec_())

@@ -18,6 +18,7 @@ class ViewKeyEater(QObject):
                 return True
             elif( event.key() == Qt.Key_V and QApplication.keyboardModifiers() == Qt.ControlModifier ):
                 self.sig_paste_clicked.emit()
+                
                 # print("control-v Key pressed")
                 return True
             elif( event.key() == Qt.Key_Insert):
