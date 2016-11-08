@@ -628,13 +628,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowDelete(self.viewVariable)
         pass
 
-    def make_add_title_eng(self ):
+    def make_add_title_eng(self):
         col_info = ci.title_col_info()
         file_contents =  ''
         
-        search_string = ''
-        replace_string = ''
-
         base_template= r'const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{\n{0}\n}};'
         re_base_search_string =  re.compile(r'const WORD g_awAddTitleEng\[TOTAL_ADD_TITLE\]\[ADD_TITLE_SIZE\] = {([^;]*)};')
         model = self.model_title
@@ -642,6 +639,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         col = model.columnCount()
 
         rows = []
+        total_add_title = 0
+        add_title_size = 0
 
         for row_index in range(row):
             row_items = []
@@ -655,9 +654,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             data = row_items[col_info.index('Data')]
             if( int(title_index) < 1000):
                 continue
-            
+            total_add_title = total_add_title + 1   
             re_split = re.compile(r'[a-z0-9A-Z]{4,4}')
             find_list = re_split.findall(data)
+            add_title_size = len(find_list)
             find_merge = ','.join('0x'+item for item in find_list )
             rows.append(r'{{{0}}},//{1:<5}"{2:<20}"{3}'.format(find_merge, title_index, title, enum_name))
         # print('\n'.join(rows))
@@ -674,6 +674,87 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         TARGET_DIR = r"d:\download\1\result"
         with open(TARGET_DIR + os.path.sep + 'addtitle_eng.c_temp', 'w') as f:
+            f.write(file_contents)
+        pass
+        header= \
+        r'''#ifndef ADD_TITLE_ENG_H
+#define ADD_TITLE_ENG_H
+    
+
+#define TOTAL_ADD_TITLE       {0} 
+#define ADD_TITLE_SIZE        {1} 
+extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];
+
+#endif   //ADD_TITLE_ENG_H 
+'''
+
+        file_contents = header.format(total_add_title, add_title_size)
+        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.h_temp', 'w') as f:
+            f.write(file_contents)
+        pass
+    def make_kpdpara_vari(self):
+        col_info = ci.variable_col_info()
+        model = self.model_title
+        row = model.rowCount()
+        col = model.columnCount()
+
+        file_contents =  ''
+        
+        base_header_template= r'''/***********************************************
+// TABLE EDITOR 3 : 인버터 파라메터 변수 선언
+***********************************************/
+{0}
+    
+#ifndef KPD_PARA_VARI_H
+#define KPD_PARA_VARI_'''
+
+        rows = []
+
+        for row_index in range(row):
+            row_items = []
+            for col_index in range(col):
+                item = model.item(row_index, col_index)
+                row_items.append(item.text()) 
+
+            variable = row_items[col_info.index('Variable')]
+            var_type = row_items[con_info.index('Type')]
+            description = row_item[col_info.index('Description')]
+
+            re_split = re.compile(r'[a-z0-9A-Z]{4,4}')
+            find_list = re_split.findall(data)
+            add_title_size = len(find_list)
+            find_merge = ','.join('0x'+item for item in find_list )
+            rows.append(r'{{{0}}},//{1:<5}"{2:<20}"{3}'.format(find_merge, title_index, title, enum_name))
+        # print('\n'.join(rows))
+
+        result = base_template.format('\n'.join(rows))
+        # print(result)
+
+        qfile_obj = QFile(':/base/addtitle_eng.c')
+        if( qfile_obj.open(QIODevice.ReadOnly) ):
+            file_contents = bytearray(qfile_obj.readAll()).decode('utf8')
+
+        # print(re_base_search_string.findall(contents))
+        file_contents = re.sub(re_base_search_string, result, file_contents)
+
+        TARGET_DIR = r"d:\download\1\result"
+        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.c_temp', 'w') as f:
+            f.write(file_contents)
+        pass
+        header= \
+        r'''#ifndef ADD_TITLE_ENG_H
+#define ADD_TITLE_ENG_H
+    
+
+#define TOTAL_ADD_TITLE       {0} 
+#define ADD_TITLE_SIZE        {1} 
+extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];
+
+#endif   //ADD_TITLE_ENG_H 
+'''
+
+        file_contents = header.format(total_add_title, add_title_size)
+        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.h_temp', 'w') as f:
             f.write(file_contents)
 
         pass
