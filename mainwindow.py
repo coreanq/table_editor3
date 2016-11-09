@@ -630,10 +630,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     def make_add_title_eng(self):
         col_info = ci.title_col_info()
-        file_contents =  ''
-        
-        base_template= r'const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{\n{0}\n}};'
-        re_base_search_string =  re.compile(r'const WORD g_awAddTitleEng\[TOTAL_ADD_TITLE\]\[ADD_TITLE_SIZE\] = {([^;]*)};')
         model = self.model_title
         row = model.rowCount()
         col = model.columnCount()
@@ -641,6 +637,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         rows = []
         total_add_title = 0
         add_title_size = 0
+        enum_list = []
 
         for row_index in range(row):
             row_items = []
@@ -652,63 +649,98 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             enum_name = row_items[col_info.index('Enum 이름')]
             title_index = row_items[col_info.index('Title Index')]
             data = row_items[col_info.index('Data')]
+
+            # enum_list 생성용  for kpd_title_enum.h
+            if( int(title_index) == 1000):
+                enum_list.append('T_TotalDefaultTitleSize')
+                enum_list.append(r'{0:<32} = START_ADD_TITLE_INDEX//{1}'.format(enum_name, title_index))
+            else:
+                enum_list.append(r'{0:<32}//{1}'.format(enum_name, title_index))
+
             if( int(title_index) < 1000):
                 continue
+
             total_add_title = total_add_title + 1   
+            # hex data 4개씩 짜름 
             re_split = re.compile(r'[a-z0-9A-Z]{4,4}')
             find_list = re_split.findall(data)
             add_title_size = len(find_list)
             find_merge = ','.join('0x'+item for item in find_list )
-            rows.append(r'{{{0}}},//{1:<5}"{2:<20}"{3}'.format(find_merge, title_index, title, enum_name))
+            rows.append(r'{{{0}}}//{1:<5}"{2:<20}"{3}'.format(find_merge, title_index, title, enum_name))
         # print('\n'.join(rows))
 
-        result = base_template.format('\n'.join(rows))
-        # print(result)
-
-        qfile_obj = QFile(':/base/addtitle_eng.c')
-        if( qfile_obj.open(QIODevice.ReadOnly) ):
-            file_contents = bytearray(qfile_obj.readAll()).decode('utf8')
-
-        # print(re_base_search_string.findall(contents))
-        file_contents = re.sub(re_base_search_string, result, file_contents)
+        
+        src_template= \
+'''//================================================
+//이 프로그램은 ADD Title용              
+//================================================
+#include "BaseDefine.H"
+#include "AddTitle_Eng.H"\n\n\
+const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ \n 
+ {0}
+}};
+'''
+        file_contents = src_template.format('\n,'.join(rows))
 
         TARGET_DIR = r"d:\download\1\result"
         with open(TARGET_DIR + os.path.sep + 'addtitle_eng.c_temp', 'w') as f:
             f.write(file_contents)
         pass
-        header= \
-        r'''#ifndef ADD_TITLE_ENG_H
-#define ADD_TITLE_ENG_H
-    
 
+        header_template= \
+'''#ifndef ADD_TITLE_ENG_H
+#define ADD_TITLE_ENG_H\n\n
 #define TOTAL_ADD_TITLE       {0} 
 #define ADD_TITLE_SIZE        {1} 
-extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];
-
+extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 #endif   //ADD_TITLE_ENG_H 
 '''
 
-        file_contents = header.format(total_add_title, add_title_size)
+        file_contents = header_template.format(total_add_title, add_title_size)
         with open(TARGET_DIR + os.path.sep + 'addtitle_eng.h_temp', 'w') as f:
             f.write(file_contents)
         pass
+
+
+        kpd_title_enum_header_template= \
+'''#ifndef KPD_TITLE_ENUM_H
+#define KPD_TITLE_ENUM_H
+    
+/***********************************************
+   Keypad Title을 사용하기 위한 Enum정의        
+***********************************************/
+#define START_ADD_TITLE_INDEX 1000
+    
+enum{{ 
+ {0}
+}};
+{1}
+#endif
+'''
+        enum_list.append('T_TotalAddTitleSize')
+        if( total_add_title ):
+            have_add_title = '#define HAVE_ADD_TITLE	//Add Title이 존재할때만 Define 된다.'
+        else:
+            have_add_title = ''
+        file_contents = kpd_title_enum_header_template.format('\n ,'.join(enum_list), have_add_title)
+        with open(TARGET_DIR + os.path.sep + 'kpd_title_enum.h_temp', 'w') as f:
+            f.write(file_contents)
+        pass
+
+
+
+    
+
+
     def make_kpdpara_vari(self):
         col_info = ci.variable_col_info()
-        model = self.model_title
+        model = self.model_vari
         row = model.rowCount()
         col = model.columnCount()
 
-        file_contents =  ''
-        
-        base_header_template= r'''/***********************************************
-// TABLE EDITOR 3 : 인버터 파라메터 변수 선언
-***********************************************/
-{0}
-    
-#ifndef KPD_PARA_VARI_H
-#define KPD_PARA_VARI_'''
-
-        rows = []
+        define_list = []
+        var_list = []
+        var_type = ''
 
         for row_index in range(row):
             row_items = []
@@ -717,47 +749,60 @@ extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];
                 row_items.append(item.text()) 
 
             variable = row_items[col_info.index('Variable')]
-            var_type = row_items[con_info.index('Type')]
-            description = row_item[col_info.index('Description')]
+            var_type = row_items[col_info.index('Type')]
+            description = row_items[col_info.index('Description')]
 
-            re_split = re.compile(r'[a-z0-9A-Z]{4,4}')
-            find_list = re_split.findall(data)
-            add_title_size = len(find_list)
-            find_merge = ','.join('0x'+item for item in find_list )
-            rows.append(r'{{{0}}},//{1:<5}"{2:<20}"{3}'.format(find_merge, title_index, title, enum_name))
-        # print('\n'.join(rows))
+            re_split = re.compile(r'(k_[a-z0-9A-Z]+)(\[([0-9_A-Z]+)\])?')
+            find_list = re_split.findall(variable)
+            for var_name, dummy, var_arr_cnt in find_list:
+                if( len(var_arr_cnt) ):
+                    define_list.append(r'#define {0:<32}{1}'.format(var_name.upper(), var_arr_cnt ))
+                    variable = re.sub(r'\[([0-9]+)\]', '[' + var_name.upper() + ']', variable )
+                var_list.append('{0:<62}//{1}'.format(variable, description))
 
-        result = base_template.format('\n'.join(rows))
-        # print(result)
 
-        qfile_obj = QFile(':/base/addtitle_eng.c')
-        if( qfile_obj.open(QIODevice.ReadOnly) ):
-            file_contents = bytearray(qfile_obj.readAll()).decode('utf8')
-
-        # print(re_base_search_string.findall(contents))
-        file_contents = re.sub(re_base_search_string, result, file_contents)
-
-        TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.c_temp', 'w') as f:
-            f.write(file_contents)
-        pass
-        header= \
-        r'''#ifndef ADD_TITLE_ENG_H
-#define ADD_TITLE_ENG_H
-    
-
-#define TOTAL_ADD_TITLE       {0} 
-#define ADD_TITLE_SIZE        {1} 
-extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];
-
-#endif   //ADD_TITLE_ENG_H 
+        header_template= \
+'''/***********************************************
+// TABLE EDITOR 3 : 인버터 파라메터 변수 선언
+***********************************************/\n\n
+#ifndef KPD_PARA_VARI_H
+#define KPD_PARA_VARI_H\n
+{0}\n\n\n
+extern {1}                          //{1} TYPE의 변수들
+{2}
+;    
+\n\n\n
+#endif    //KPD_PARA_VARI_H
 '''
 
-        file_contents = header.format(total_add_title, add_title_size)
-        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.h_temp', 'w') as f:
+        file_contents = header_template.format('\n'.join(define_list), var_type, '\n,'.join(var_list)) 
+        # print(var_list)
+        # print(define_list)
+        # print(file_contents)
+        TARGET_DIR = r"d:\download\1\result"
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.h_temp', 'w') as f:
             f.write(file_contents)
-
         pass
+
+
+        src_template = \
+'''
+/***********************************************
+// TABLE EDITOR 3 : 인버터 파라메터 변수 선언
+***********************************************/
+    
+    
+#include "BaseDefine.H"
+#include "KpdPara_Vari.H"
+{0}                          //{0} TYPE의 변수들 
+{1}
+;
+'''
+        file_contents = src_template.format(var_type, '\n,'.join(var_list)) 
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.c_temp', 'w') as f:
+            f.write(file_contents)
+        pass
+    
 
 
 
@@ -765,5 +810,6 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     form = MainWindow()
     form.show()
+    # form.make_kpdpara_vari()
     form.make_add_title_eng()
     sys.exit(app.exec_())
