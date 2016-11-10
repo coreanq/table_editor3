@@ -65,7 +65,7 @@ _variable_columns_info = [
 _msg_values_columns_info = [
     'MsgName',
     'MsgInfo',
-    'TitleIndex', 
+    'Title', 
     'AtValue' 
 ]
 _msg_info_columns_info = [

@@ -241,7 +241,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view  = self.viewMsgValue
         delegate = self.delegate_msg_view  
         col_info = ci.msg_values_col_info()
-        col_index = col_info.index('TitleIndex')
+        col_index = col_info.index('Title')
         cmb_model_column_index = ci.title_col_info().index('Title')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
                 cmb_model_column = cmb_model_column_index)
@@ -388,7 +388,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
                     msg_list = [] 
                     col_info = ci.msg_values_col_info()
-                    title_index = col_info.index('TitleIndex')
+                    title_index = col_info.index('Title')
                     for items in rd.read_para_msg(contents):
                         msg_info = ['', items[col_info.index('MsgName')], items[col_info.index('MsgInfo')]] 
 
@@ -727,11 +727,6 @@ enum{{
             f.write(file_contents)
         pass
 
-
-
-    
-
-
     def make_kpdpara_vari(self):
         col_info = ci.variable_col_info()
         model = self.model_vari
@@ -802,6 +797,78 @@ extern {1}                          //{1} TYPE의 변수들
         with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.c_temp', 'w') as f:
             f.write(file_contents)
         pass
+
+
+    def make_kpdpara_msg(self):
+        col_info = ci.msg_values_col_info()
+        model = self.model_msg_values
+        row = model.rowCount()
+        col = model.columnCount()
+
+        msg_name_count_list  = []
+        msg_vars = [] 
+        lines = []
+        count = 0
+        msg_var_template = \
+'''static const S_MSG_TYPE t_ast{0}[MSG_COUNT_{1}] = {{                        //MSG_{2:<20}//{3}
+     {4}
+}};
+'''
+        old_msg_name, old_msg_comment = '', '' 
+        for row_index in range(row):
+            row_items = []
+            for col_index in range(col):
+                item = model.item(row_index, col_index)
+                row_items.append(item.text()) 
+
+            msg_name = row_items[col_info.index('MsgName')]
+            msg_comment = row_items[col_info.index('MsgInfo')]
+            title_name = row_items[col_info.index('Title')]
+            at_value = row_items[col_info.index('AtValue')]
+
+            items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
+            for item in items:
+                enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
+            
+            if( msg_name != old_msg_name and row_index != 0):
+                msg_vars.append(
+                    msg_var_template.format(old_msg_name,
+                                            old_msg_name.upper(), 
+                                            old_msg_name, 
+                                            old_msg_comment, 
+                                            '\n\t,'.join(lines))
+                )
+                msg_name_count_list.append([old_msg_name, count])
+                count = 0
+                lines.clear()
+            old_msg_name, old_msg_comment = msg_name, msg_comment 
+            count = count + 1 
+
+            lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
+
+        header_template = \
+'''//========================================= 
+// TABLE EDITOR 3 : 인버터 Message들 저장   
+//=========================================/ 
+          
+          
+#include "BaseDefine.H"
+#include "KPD_Title_Enum.H"
+#include "KpdPara_Msg.H"
+\n\n
+static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum);
+\n\n
+{0}\n
+{1}
+'''
+        file_contents = header_template.format('\n'.join(msg_vars), 'test') 
+        # print(var_list)
+        # print(define_list)
+        # print(file_contents)
+        TARGET_DIR = r"d:\download\1\result"
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.c_temp', 'w') as f:
+            f.write(file_contents)
+        pass
     
 
 
@@ -811,5 +878,6 @@ if __name__ == '__main__':
     form = MainWindow()
     form.show()
     # form.make_kpdpara_vari()
-    form.make_add_title_eng()
+    # form.make_add_title_eng()
+    form.make_kpdpara_msg()
     sys.exit(app.exec_())
