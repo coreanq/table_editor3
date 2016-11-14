@@ -683,7 +683,7 @@ const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ \n
         file_contents = src_template.format('\n,'.join(rows))
 
         TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.c_temp', 'w') as f:
+        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.c_temp', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -723,7 +723,7 @@ enum{{
         else:
             have_add_title = ''
         file_contents = kpd_title_enum_header_template.format('\n ,'.join(enum_list), have_add_title)
-        with open(TARGET_DIR + os.path.sep + 'kpd_title_enum.h_temp', 'w') as f:
+        with open(TARGET_DIR + os.path.sep + 'kpd_title_enum.h_temp', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -775,12 +775,12 @@ extern {1}                          //{1} TYPE의 변수들
         # print(define_list)
         # print(file_contents)
         TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.h_temp', 'w') as f:
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.h_temp', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
 
-        src_template = \
+        source_template = \
 '''
 /***********************************************
 // TABLE EDITOR 3 : 인버터 파라메터 변수 선언
@@ -793,60 +793,66 @@ extern {1}                          //{1} TYPE의 변수들
 {1}
 ;
 '''
-        file_contents = src_template.format(var_type, '\n,'.join(var_list)) 
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.c_temp', 'w') as f:
+        file_contents = source_template.format(var_type, '\n,'.join(var_list)) 
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.c_temp', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
 
     def make_kpdpara_msg(self):
         col_info = ci.msg_values_col_info()
+        key_col_info = ci.msg_info_col_info()
+        key_model = self.model_msg_info
         model = self.model_msg_values
-        row = model.rowCount()
-        col = model.columnCount()
+
+        key_row = key_model.rowCount()
+        key_col = key_model.columnCount()
 
         msg_name_count_list  = []
         msg_vars = [] 
         lines = []
-        count = 0
         msg_var_template = \
 '''static const S_MSG_TYPE t_ast{0}[MSG_COUNT_{1}] = {{                        //MSG_{2:<20}//{3}
      {4}
 }};
 '''
-        old_msg_name, old_msg_comment = '', '' 
-        for row_index in range(row):
-            row_items = []
-            for col_index in range(col):
-                item = model.item(row_index, col_index)
-                row_items.append(item.text()) 
+        msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
+        msg_name, msg_comment, title_name, at_value  = '', '', '', ''
+        # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
+        for row_index in range(key_row):
+            key_msg_name = key_model.item(row_index, key_col_info.index('MsgName')).text() 
 
-            msg_name = row_items[col_info.index('MsgName')]
-            msg_comment = row_items[col_info.index('MsgInfo')]
-            title_name = row_items[col_info.index('Title')]
-            at_value = row_items[col_info.index('AtValue')]
+            find_items = model.findItems(key_msg_name, column = col_info.index('MsgName'))
 
-            items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
-            for item in items:
-                enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
+            for find_item in find_items:
+                find_row_index = find_item.row()
+
+                msg_name = model.item(find_row_index, col_info.index('MsgName')).text()
+                msg_comment = model.item(find_row_index, col_info.index('MsgInfo')).text()
+                title_name = model.item(find_row_index, col_info.index('Title')).text()
+                at_value = model.item(find_row_index, col_info.index('AtValue')).text()
+
+                title_items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
+                for item in title_items:
+                    enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
+
+                lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
+                msg_name_count =msg_name_count + 1
             
-            if( msg_name != old_msg_name and row_index != 0):
-                msg_vars.append(
-                    msg_var_template.format(old_msg_name,
-                                            old_msg_name.upper(), 
-                                            old_msg_name, 
-                                            old_msg_comment, 
-                                            '\n\t,'.join(lines))
-                )
-                msg_name_count_list.append([old_msg_name, count])
-                count = 0
-                lines.clear()
-            old_msg_name, old_msg_comment = msg_name, msg_comment 
-            count = count + 1 
+            msg_vars.append(
+                msg_var_template.format(msg_name,
+                                        msg_name.upper(), 
+                                        msg_name, 
+                                        msg_comment, 
+                                        '\n\t,'.join(lines))
+            )
+            lines.clear()
+            msg_name_count_list.append([msg_name, msg_name_count])
+            msg_name_count = 0 
+            
 
-            lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
 
-        header_template = \
+        source_template = \
 '''//========================================= 
 // TABLE EDITOR 3 : 인버터 Message들 저장   
 //=========================================/ 
@@ -859,16 +865,81 @@ extern {1}                          //{1} TYPE의 변수들
 static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum);
 \n\n
 {0}\n
-{1}
+static const S_MSG_TYPE * t_pastMsgDataTbl[MSG_TOTAL] = {{
+\t {1}
+}};
+static const WORD t_awMsgDataSize[MSG_TOTAL] = {{
+\t {2}
+}};\n
+static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum)
+{{
+	return astMsgType[wMsgNum];
+}}
+S_MSG_TYPE KpdParaGetMsgData(WORD wMsgIdx, WORD wMsgNum)
+{{
+	return KpdParaGetMsg(t_pastMsgDataTbl[wMsgIdx], wMsgNum);
+}}
+WORD KpdParaGetMsgSize(WORD wMsgIdx)
+{{
+	return t_awMsgDataSize[wMsgIdx];
+}}
+
 '''
-        file_contents = header_template.format('\n'.join(msg_vars), 'test') 
-        # print(var_list)
-        # print(define_list)
-        # print(file_contents)
+        msg_data_tbl_lines = []
+        msg_data_size_lines = []
+        msg_data_enum_lines = []
+        msg_enum_count = 0
+
+        for msg_name, msg_name_count in msg_name_count_list:
+            msg_data_tbl_lines.append('t_ast{0}'.format(msg_name))
+            msg_data_size_lines.append('MSG_COUNT_{0}'.format(msg_name.upper()))
+            msg_data_enum_lines.append('MSG_{0:<36}//{1:0>3}'.format(msg_name, msg_enum_count))
+            msg_enum_count = msg_enum_count + 1
+
+        file_contents = source_template.format(  '\n'.join(msg_vars),
+                                                 '\n\t,'.join(msg_data_tbl_lines),
+                                                 '\n\t,'.join(msg_data_size_lines) )
         TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.c_temp', 'w') as f:
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.c_temp', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
+
+        header_template =  \
+'''
+//========================================= 
+// TABLE EDITOR 3 : 인버터 Message들 저장   
+//========================================= 
+#ifndef KEYPAD_MESSAG_H
+#define KEYPAD_MESSAG_H
+      
+#include "KpdPara_StructUnit.H"
+      
+enum{{  //MSG들의 Index 값
+\t\t {0}
+}};
+\n
+{1}
+\n\n
+S_MSG_TYPE KpdParaGetMsgData(WORD wMsgIdx, WORD wMsgNum);
+WORD KpdParaGetMsgSize(WORD wMsgIdx);
+#endif  //KEYPAD_MESSAG_H
+
+'''
+        # 한라인 추가 되므로  msg_total 
+        msg_data_enum_lines.append('MSG_{0:<36}//{1:0>3}'.format('TOTAL', msg_enum_count))
+        msg_define_lines = []
+        for msg_name, msg_name_count in msg_name_count_list:
+            msg_define_lines.append('#define MSG_COUNT_{0:<30}{1}'.format(msg_name.upper(), msg_name_count))
+
+        file_contents = header_template.format(  '\n\t\t,'.join(msg_data_enum_lines),
+                                                 '\n'.join(msg_define_lines) )
+        TARGET_DIR = r"d:\download\1\result"
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.h_temp', 'w', encoding='utf8') as f:
+            f.write(file_contents)
+        pass
+
+
+
     
 
 

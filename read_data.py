@@ -38,8 +38,8 @@ re_extract_grp_info = re.compile(r'(?P<group_info_data>S_GROUP_X_TYPE t_astGrpIn
 re_check_grp_info = re.compile(r'{(?P<grp_info>[^\n]+)},')
 re_parse_grp_info = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
 
-re_extract_msg = re.compile(r'(?P<msg_data>S_MSG_TYPE t_ast(?P<msg_name>[A-Z-a-z_]+)[^\n]+\/\/(?P<msg_info>[^\n]+)\/\/(?P<msg_info_comment>[^\n]*)[^;]+\;)') # 한개의 그룹 뽑아냄 
-re_check_msg_info = re.compile(r'S_MSG_TYPE t_ast[A-Z-a-z_]+[^\n]+\/\/([^\n]+)\/\/([^\n]+)')
+re_extract_msg = re.compile(r'(?P<msg_data>S_MSG_TYPE t_ast(?P<msg_name>[A-Z-a-z_0-9]+)[^\n]+\/\/(?P<msg_info>[^\n]+)\/\/(?P<msg_info_comment>[^\n]*)[^;]+\;)') # 한개의 그룹 뽑아냄 
+re_check_msg_info = re.compile(r'S_MSG_TYPE t_ast[A-Z-a-z_0-9]+[^\n]+\/\/([^\n]+)\/\/([^\n]+)')
 re_check_msg_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
 re_parse_msg_params = re.compile(r'([^,{}\n;]+)')
 re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
