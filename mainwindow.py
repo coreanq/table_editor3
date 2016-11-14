@@ -295,7 +295,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # print(util.whoami() )
         row = index.row()
         col_info = ci.group_col_info()
-        key_name = self.model_group.item(row, col_info.index('GroupName')).text() 
+        key_name = self.model_group.item(row, col_info.index('Group')).text() 
         regx = QRegExp(key_name.strip()) 
         self.model_proxy_parameters.setFilterKeyColumn(0)
         self.model_proxy_parameters.setFilterRegExp(regx)
@@ -939,8 +939,159 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
         pass
 
 
+    def make_kfunc_head(self):
+        # col_info = ci.para_col_info_for_view()
+        # key_col_info = ci.group_col_info()
+        # key_model = self.model_group
+        # model = self.model_parameters
 
-    
+        # key_row = key_model.rowCount()
+
+        # for key_row_index in range(key_row):
+        #     group_name = key_model.item(kew_row_index, key_col_info.index('GruopName'))
+        #     find_items = model.findItems(group_name, column = col_info.index('Group'))
+
+        #     for find_item in find_items:
+        #         find_row_index = find_item.row()
+
+        #         kpd_func_name = model.item(find_row_index, col_info.index('KpdFunc')).text()
+
+        #         title_items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
+        #         for item in title_items:
+        #             enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
+
+        #         lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
+        #         msg_name_count =msg_name_count + 1
+            
+        #     msg_vars.append(
+        #         msg_var_template.format(msg_name,
+        #                                 msg_name.upper(), 
+        #                                 msg_name, 
+        #                                 msg_comment, 
+        #                                 '\n\t,'.join(lines))
+        #     )
+        #     lines.clear()
+        #     msg_name_count_list.append([msg_name, msg_name_count])
+        #     msg_name_count = 0 
+            pass
+
+    def make_kpdpara_table(self):
+        col_info = ci.para_col_info_for_view()
+        model = self.model_parameters
+        key_col_info = ci.group_col_info()
+        key_model = self.model_group
+
+        key_row = key_model.rowCount()
+        key_col = key_model.columnCount()
+
+        msg_name_count_list  = []
+        para_vars = [] 
+        lines = []
+        para_var_template = \
+'''static const S_TABLE_X_TYPE t_ast{0}grp[GRP_{1}_CODE_TOTAL] = {{
+{2}
+}};
+'''
+        msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
+        msg_name, msg_comment, title_name, at_value  = '', '', '', ''
+        # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
+        for row_index in range(key_row):
+            key_msg_name = key_model.item(row_index, key_col_info.index('Group')).text() 
+
+            find_items = model.findItems(key_msg_name, column = col_info.index('Group'))
+
+            for find_item in find_items:
+                find_row_index = find_item.row()
+
+                group_name = model.item(find_row_index, col_info.index('Group')).text()
+                code_num = model.item(find_row_index, col_info.index('Code#')).text()
+                title_name = model.item(find_row_index, col_info.index('Code TITLE')).text()
+                title_enum_name = ''
+                title_items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
+                for item in title_items:
+                    title_enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
+                
+                at_value = model.item(find_row_index, col_info.index('AtValue')).text()
+                para_vari= model.item(find_row_index, col_info.index('Para 변수')).text()
+                kpd_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
+                default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
+                max_val = model.item(find_row_index, col_info.index('최대값')).text()
+                min_val = model.item(find_row_index, col_info.index('최소값')).text()
+                form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
+                unit = model.item(find_row_index, col_info.index('단위')).text()
+                comm_write_protect = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
+                read_only = model.item(find_row_index, col_info.index('읽기전용')).text()
+                no_modify_on_run =  model.item(find_row_index, col_info.index('운전중변경불가')).text()
+                is_insert_zero_possible = model.item(find_row_index, col_info.index('0 입력가능')).text()
+                '''
+                if( attribute & 0x0040 ):
+                    comm_write_protect = 'True'
+                if( attribute & 0x0008 ):
+                    read_only = 'True'
+                if( attribute & 0x0010 ):
+                    no_modify_on_run = 'True'
+                if( attribute & 0x0020 ):
+                    is_insert_zero_possible = 'True
+                '''
+                attribute = 0x00
+                if( comm_write_protect == 'True'):
+                    attribute |= 0x0040
+                if( read_only == 'True'):
+                    attribute |= 0x0008
+                if( no_modify_on_run == 'True'):
+                    attribute |= 0x0010
+                if( is_insert_zero_possible == 'True'):
+                    attribute |= 0x0020
+
+                show_vari  =  model.item(find_row_index, col_info.index('보임변수')).text()
+                show_value = model.item(find_row_index, col_info.index('보임값')).text()
+                eep_addr = model.item(find_row_index, col_info.index('EEP 주소')).text()
+                comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
+                max_eds = model.item(find_row_index, col_info.index('최대 EDS')).text()
+                min_eds = model.item(find_row_index, col_info.index('최소 EDS')).text()
+                comment = model.item(find_row_index, col_info.index('설명')).text()
+
+                lines.append('{{{0:<5}, {1:<4}, {2:<29}, {3:<40}, {4:<40}, {5:<40}, {6:<40}, {7:<40}, {8:<40}, {9:<40},\
+                            {10:<40}, {11:<40}, {12:<40}}}//{13:>16}[EDS :{14:<6},{15:<6}]//{16}'.format \
+                            (code_num, at_value, title_enum_name, para_vari, kpd_func, default_val, max_val, min_val,
+                             form_msg, unit, str(attribute), show_vari, show_value, title_name, max_eds, min_eds, comment)
+                )
+            
+            para_vars.append(
+                para_var_template.format(key_msg_name,
+                                         key_msg_name,
+                                        '\n\t,'.join(lines))
+            )
+            lines.clear()
+
+        source_template = \
+'''// PRQA S 502, 4130, 4131, 750, 759, 1514, 3218, 1504, 1505, 1503, 2860, 2895 EOF
+
+
+/***********************************************
+//  TABLE EDITOR 3  인버터 Keypad Table
+//  Edit시 Table Edit 3 V2.00을 사용하세요      
+***********************************************/
+#include "BaseDefine.H"
+#include "KPD_Title_Enum.H"
+#include "KpdPara_GrpIdx.H"
+#include "KpdPara_Msg.H"
+#include "KpdPara_Vari.H"
+#include "KpdPara_ShowParaVari.H"
+#include "KFunc_Head.H"
+#include "KpdPara_Table.H
+{0}
+
+'''
+
+
+        file_contents = source_template.format(  '\n'.join(para_vars),
+        )
+        TARGET_DIR = r"d:\download\1\result"
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.c_temp', 'w', encoding='utf8') as f:
+            f.write(file_contents)
+        pass
+
 
 
 
@@ -950,5 +1101,6 @@ if __name__ == '__main__':
     form.show()
     # form.make_kpdpara_vari()
     # form.make_add_title_eng()
-    form.make_kpdpara_msg()
+    # form.make_kpdpara_msg()
+    form.make_kpdpara_table()
     sys.exit(app.exec_())

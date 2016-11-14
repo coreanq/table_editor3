@@ -46,9 +46,14 @@ _parameters_view_columns_info = [
     '최소 EDS',
     '설명'
 ]
+_group_columns_info = [
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
+    'Group', 
+    'Hidden Vari', 
+    'Hidden Value'
+]
 
 # read_data 시 yield 되는 tuple 의 index 정보를 나타냄  
-# combobox 등에 사용되기 위해서는 0번째 컬럼이 무조건 keycolumn 이여야함  
 _title_columns_info = [
    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
    'Title',
@@ -74,12 +79,6 @@ _msg_info_columns_info = [
     'MsgComment'
 ]
 
-_group_columns_info = [
-    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
-    'GroupName', 
-    'Hidden Vari', 
-    'Hidden Value'
-]
 
 # unit 에 따른 msg 리스트 정의 
 _unit_with_msg = {
