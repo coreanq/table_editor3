@@ -8,7 +8,7 @@ import io
 
 KPD_BASIC_TITLE_SRC_FILE='kpd_tbl_msg_eng.c'
 KPD_ADD_TITLE_SRC_FILE = 'addtitle_eng.c'
-KPD_PARA_VARI_HEADER_FILE = 'kpdpara_vari.h'
+KPD_PARA_VAR_HEADER_FILE = 'kpdpara_vari.h'
 KPD_PARA_MSG_SRC_FILE =  'kpdpara_msg.c'
 KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'kpdpara_structunit.h'
 KPD_PARA_TABLE_SRC_FILE = 'kpdpara_table.c'
@@ -20,7 +20,7 @@ KPD_ENUM_TITLE_HEADER_FILE = 'kpd_title_enum.h'
 # 먼저 파싱해야 될 파일부터 리스트를 먼저 써둔다. 
 parsing_files = (   KPD_BASIC_TITLE_SRC_FILE,
                     KPD_ADD_TITLE_SRC_FILE,
-                    KPD_PARA_VARI_HEADER_FILE,
+                    KPD_PARA_VAR_HEADER_FILE,
                     KPD_PARA_MSG_SRC_FILE,
                     KPD_PARA_STRUCT_UNIT_HEADER_FILE,
                     KPD_PARA_TABLE_SRC_FILE
@@ -29,13 +29,13 @@ parsing_files = (   KPD_BASIC_TITLE_SRC_FILE,
 re_extract_kpd_para_unit = re.compile(r'(?P<para_unit>{[^{}]*(U_[^,=]+[,]?)+[^{}]*})')
 re_parse_kpd_para_unit_params = re.compile(r'(U_[^,= ]+)')
 
-re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
+re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z0-9]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
 re_parse_params = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
-re_parse_comment = re.compile(r'"([^\n]+)"(\[EDS :([-0-9]*)[,]?([-0-9 ]*)\]?\/\/([^\n]*))*')
+re_parse_comment = re.compile(r'"([^\n]+)"((\[EDS :([-0-9]*)[,]?([-0-9 ]*)\])?\/\/([^\n]*))*')
 
 re_extract_grp_info = re.compile(r'(?P<group_info_data>S_GROUP_X_TYPE t_astGrpInfo[^;]+\}\;)') # 한개의 그룹 정보 뽑아냄 
-re_check_grp_info = re.compile(r'{(?P<grp_info>[^\n]+)},')
+re_check_grp_info = re.compile(r'{(?P<grp_info>[^\n]+)}[,]?')
 re_parse_grp_info = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
 
 re_extract_msg = re.compile(r'(?P<msg_data>S_MSG_TYPE t_ast(?P<msg_name>[A-Z-a-z_0-9]+)[^\n]+\/\/(?P<msg_info>[^\n]+)\/\/(?P<msg_info_comment>[^\n]*)[^;]+\;)') # 한개의 그룹 뽑아냄 
@@ -45,15 +45,15 @@ re_parse_msg_params = re.compile(r'([^,{}\n;]+)')
 re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
 
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
-re_extract_basic_title_vari = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
-re_extract_add_title_vari = re.compile(r'const WORD g_awAddTitleEng[^;]+};')
+re_extract_basic_title_var = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
+re_extract_add_title_var = re.compile(r'const WORD g_awAddTitleEng[^;]+};')
 re_check_title = re.compile(r'{(?P<parameters>[^\n]+)}(?P<comment>\/\/[^\n]+)')
 re_parse_title_params = re.compile(r'([^,{}\n;]+)')
 re_parse_title_comment = re.compile(r'\/\/([0-9]+)[^\n\"]+\"([^\n]+)\"(T_[^\n]+)')
 
 re_parse_kpd_declaration = re.compile(r'extern ([A-Z_a-z0-9]+)\s+\/\/')
-re_parse_kpd_vari_define = re.compile(r'#define (K_[A-Z_0-9]+)\s+([0-9]+)')
-re_parse_kpd_vari = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*\/\/([^\n]*)?')
+re_parse_kpd_var_define = re.compile(r'#define (K_[A-Z_0-9]+)\s+([0-9]+)')
+re_parse_kpd_var = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*\/\/([^\n]*)?')
 
 # re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
 # re_check_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+')
@@ -88,7 +88,7 @@ def read_para_table(contents):
                 comment_list = [] 
                 if( comment_search_obj ):
                     # eds_max, eds_min, comment
-                    comment_list = comment_search_obj.group(3), comment_search_obj.group(4), comment_search_obj.group(5)
+                    comment_list = comment_search_obj.group(4), comment_search_obj.group(5), comment_search_obj.group(6)
                 # (WORD)blahblah
                 # item[0] item[1]
                 yield (group_name, *[item[1].strip() for item in find_list], *comment_list )
@@ -135,22 +135,22 @@ def read_grp_info(contents):
     
 
 
-def read_kpd_para_vari(contents):
-    vari_type = "WORD"
+def read_kpd_para_var(contents):
+    var_type = "WORD"
     defines_dict = {}
     buf = io.StringIO(contents) 
     for line in buf.readlines():
         find_list = re_parse_kpd_declaration.findall(line)
         if( len(find_list) ):
             # extern WORD ...
-            vari_type = find_list[0]
+            var_type = find_list[0]
             continue
-        find_list  = re_parse_kpd_vari_define.findall(line)
+        find_list  = re_parse_kpd_var_define.findall(line)
         if( len(find_list) ):
             # [('K_AWAOCONST', '2')]
             defines_dict[find_list[0][0]] = find_list[0][1]
             continue
-        find_list = re_parse_kpd_vari.findall(line)
+        find_list = re_parse_kpd_var.findall(line)
         if( len(find_list) ):
             # example
             #,k_awMotNoloadCurr[K_AWMOTNOLOADCURR]              //PJW 2005/02/22
@@ -160,7 +160,7 @@ def read_kpd_para_vari(contents):
             except KeyError:
                 array_footer = ""  
             # ('dummy_key', 'k_wUnlmtCarrFreqSel': ['WORD', '//변수설명'] )
-            yield ('', find_list[0][0] + array_footer, vari_type, find_list[0][3]) 
+            yield ('', find_list[0][0] + array_footer, var_type, find_list[0][3]) 
             continue
     pass
 
@@ -191,7 +191,7 @@ def read_kpd_para_vari(contents):
 
 def read_basic_title(contents):
     find_list =  []
-    search_file_obj = re_extract_basic_title_vari.search(contents)
+    search_file_obj = re_extract_basic_title_var.search(contents)
     if( search_file_obj ):
         search_string = search_file_obj.string[search_file_obj.start(0):]
         # print(search_string )
@@ -217,7 +217,7 @@ def read_basic_title(contents):
 
 def read_add_title(contents):
     find_list =  []
-    search_file_obj = re_extract_add_title_vari.search(contents)
+    search_file_obj = re_extract_add_title_var.search(contents)
     if( search_file_obj ):
         search_string = search_file_obj.string[search_file_obj.start(0):]
         # print(search_string )
@@ -276,8 +276,8 @@ def test_read():
                         # print(item)
                         pass
                     pass
-                elif( filename.lower() == KPD_PARA_VARI_HEADER_FILE):
-                    for item in read_kpd_para_vari(contents):
+                elif( filename.lower() == KPD_PARA_VAR_HEADER_FILE):
+                    for item in read_kpd_para_var(contents):
                         # print(item)
                         pass
                 elif( filename.lower() == KPD_PARA_STRUCT_UNIT_HEADER_FILE ):
@@ -287,7 +287,6 @@ def test_read():
                 pass
 
 def test_write():
-    import resource
     from PyQt5.QtCore import QFile, QIODevice
     TARGET_DIR  = r'd:\download\result' 
     # qrc 내에 있는 파일에 접근할 수 있는 것은 QFile 만 가능함 

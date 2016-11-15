@@ -15,6 +15,16 @@ import resource_rc as rsc
 import util
 import re
 
+ATTR_BYTE = 0x0001  # byte 단위 사용 안함 
+ATTR_UP = 0x0002
+ATTR_LP = 0x0004
+ATTR_READ_ONLY = 0x0008
+ATTR_NO_CHANGE_ON_RUN =  0x0010
+ATTR_ZERO_INPUT = 0x0020
+ATTR_NO_COMM =0x0040
+ATTR_ENT = 0x0080
+ATTR_HIDDEN_CON = 0x0700
+ATTR_ADD  = 0x1000
 
 class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def __init__(self, parent=None):
@@ -33,8 +43,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_msg_values = QStandardItemModel(self)
         self.model_proxy_msg_values = QSortFilterProxyModel(self)
         
-        self.model_vari = QStandardItemModel(self)
-        self.model_proxy_vari = QSortFilterProxyModel(self)
+        self.model_var = QStandardItemModel(self)
+        self.model_proxy_var = QSortFilterProxyModel(self)
         
         self.model_title = QStandardItemModel()
         self.model_proxy_title = QSortFilterProxyModel(self)
@@ -143,12 +153,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setColumnHidden(col_info.index('MsgName'), True)
         view.setColumnHidden(col_info.index('MsgInfo'), True)
         
-        # vari view init
+        # var view init
         col_info = ci.variable_col_info()
         view = self.viewVariable
-        self.model_proxy_vari.setSourceModel(self.model_vari)
-        self.model_vari.setHorizontalHeaderLabels(col_info)
-        view.setModel(self.model_proxy_vari)
+        self.model_proxy_var.setSourceModel(self.model_var)
+        self.model_var.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_var)
         view.setColumnHidden(col_info.index('Dummy Key'), True)
 
         # title view init 
@@ -161,7 +171,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         # filter 값을 이상한 값으로 넣어 처음에는 아무 리스트가 안나타나게 함 
         proxy_list = [  self.model_proxy_msg_values, self.model_proxy_parameters, 
-                        # self.model_proxy_title, self.model_proxy_vari  
+                        # self.model_proxy_title, self.model_proxy_var  
         ]  
         for proxy in proxy_list:
             regx = QRegExp("!@#$") 
@@ -214,7 +224,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         col_index = col_info.index('단위')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = False,  width = 150)
 
-        model = self.model_vari
+        model = self.model_var
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ col_info.index('Para 변수'), 
@@ -236,6 +246,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes )
 
+        model = QStringListModel( ['AfterEnter', 'Cmd']) 
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
+        col_indexes = [ col_info.index('KPD 타입'), 
+        ]
+        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, width = 80)
+
         # msg view delegate 설정 
         model = self.model_title
         view  = self.viewMsgValue
@@ -247,11 +264,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 cmb_model_column = cmb_model_column_index)
 
         # group view delegate 설정 
-        model = self.model_vari
+        model = self.model_var
         view  = self.viewGroup
         delegate = self.delegate_group_view  
         col_info = ci.group_col_info()
-        col_index = col_info.index('Hidden Vari')
+        col_index = col_info.index('Hidden Var')
         cmb_model_column_index = ci.variable_col_info().index('Variable')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = True , 
                 width = 150, cmb_model_column = cmb_model_column_index  )
@@ -337,18 +354,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         col_info = ci.para_col_info_for_file()
                         arg = items[col_info.index('Attribute')] 
                         attribute  = int(arg, 16)
-                        comm_write_protect  = 'False' 
-                        read_only = 'False'
-                        no_modify_on_run = 'False'
-                        is_insert_zero_possible = 'False'
-                        if( attribute & 0x0040 ):
-                            comm_write_protect = 'True'
-                        if( attribute & 0x0008 ):
-                            read_only = 'True'
-                        if( attribute & 0x0010 ):
-                            no_modify_on_run = 'True'
-                        if( attribute & 0x0020 ):
-                            is_insert_zero_possible = 'True'
+
+                        no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
+                        key_pad_type = 'Cmd'
+
+                        if( attribute & ATTR_NO_COMM ):
+                            no_comm = True 
+                        if( attribute & ATTR_READ_ONLY ):
+                            read_only = True
+                        if( attribute & ATTR_NO_CHANGE_ON_RUN ):
+                            no_change_on_run = True 
+                        if( attribute & ATTR_ZERO_INPUT ):
+                            zero_input = True 
+                        if( attribute & ATTR_ENT):
+                            key_pad_type = 'AfterEnter'
                             
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         
@@ -357,18 +376,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             items[col_info.index('Code#')],  
                                             title, 
                                             items[col_info.index('AtValue')], 
-                                            items[col_info.index('ParaVari')],
+                                            items[col_info.index('ParaVar')],
                                             items[col_info.index('KpdFunc')],
                                             items[col_info.index('DefaultVal')],
                                             items[col_info.index('MaxVal')],
                                             items[col_info.index('MinVal')],
                                             items[col_info.index('Msg')].replace('MSG_', ''),
                                             items[col_info.index('Unit')],
-                                            comm_write_protect,
-                                            read_only, 
-                                            no_modify_on_run,
-                                            is_insert_zero_possible,
-                                            items[col_info.index('ShowVari')],
+                                            key_pad_type,
+                                            str(no_comm),
+                                            str(read_only), 
+                                            str(no_change_on_run),
+                                            str(zero_input),
+                                            items[col_info.index('ShowVar')],
                                             items[col_info.index('ShowVal')],
                                             '', # TODO: eep주소 
                                             '', # TODO: 통신주소 
@@ -402,9 +422,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for item in msg_list:
                         self.addRowToModel(self.model_msg_info, item)
                         
-                elif( filename.lower() == rd.KPD_PARA_VARI_HEADER_FILE):
-                    for items in rd.read_kpd_para_vari(contents):
-                        self.addRowToModel(self.model_vari, items)
+                elif( filename.lower() == rd.KPD_PARA_VAR_HEADER_FILE):
+                    for items in rd.read_kpd_para_var(contents):
+                        self.addRowToModel(self.model_var, items)
                     pass
                 elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE):
                     for items in rd.read_basic_title(contents):
@@ -617,11 +637,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass 
     @pyqtSlot()
     def onVariableViewPasted(self):
-        self.viewRowPaste('variable', self.viewVariable, self.model_vari)
+        self.viewRowPaste('variable', self.viewVariable, self.model_var)
         pass
     @pyqtSlot()
     def onVariableViewInserted(self):
-        self.viewRowInsert(self.viewVariable, self.model_vari)
+        self.viewRowInsert(self.viewVariable, self.model_var)
         pass
     @pyqtSlot()
     def onVariableViewDeleted(self):
@@ -727,9 +747,9 @@ enum{{
             f.write(file_contents)
         pass
 
-    def make_kpdpara_vari(self):
+    def make_kpdpara_var(self):
         col_info = ci.variable_col_info()
-        model = self.model_vari
+        model = self.model_var
         row = model.rowCount()
         col = model.columnCount()
 
@@ -938,43 +958,6 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
             f.write(file_contents)
         pass
 
-
-    def make_kfunc_head(self):
-        # col_info = ci.para_col_info_for_view()
-        # key_col_info = ci.group_col_info()
-        # key_model = self.model_group
-        # model = self.model_parameters
-
-        # key_row = key_model.rowCount()
-
-        # for key_row_index in range(key_row):
-        #     group_name = key_model.item(kew_row_index, key_col_info.index('GruopName'))
-        #     find_items = model.findItems(group_name, column = col_info.index('Group'))
-
-        #     for find_item in find_items:
-        #         find_row_index = find_item.row()
-
-        #         kpd_func_name = model.item(find_row_index, col_info.index('KpdFunc')).text()
-
-        #         title_items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
-        #         for item in title_items:
-        #             enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
-
-        #         lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
-        #         msg_name_count =msg_name_count + 1
-            
-        #     msg_vars.append(
-        #         msg_var_template.format(msg_name,
-        #                                 msg_name.upper(), 
-        #                                 msg_name, 
-        #                                 msg_comment, 
-        #                                 '\n\t,'.join(lines))
-        #     )
-        #     lines.clear()
-        #     msg_name_count_list.append([msg_name, msg_name_count])
-        #     msg_name_count = 0 
-            pass
-
     def make_kpdpara_table(self):
         col_info = ci.para_col_info_for_view()
         model = self.model_parameters
@@ -982,23 +965,69 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
         key_model = self.model_group
 
         key_row = key_model.rowCount()
-        key_col = key_model.columnCount()
 
-        msg_name_count_list  = []
+        # 소스용 variable template
         para_vars = [] 
-        lines = []
-        para_var_template = \
+        para_vars_lines = []
+        para_vars_template = \
 '''static const S_TABLE_X_TYPE t_ast{0}grp[GRP_{1}_CODE_TOTAL] = {{
 {2}
 }};
 '''
-        msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
-        msg_name, msg_comment, title_name, at_value  = '', '', '', ''
+        # 소스내 group info 용 template 
+        group_info_lines  = []
+        group_info_template ='{{T_{0:<10},{1:<20},{2:<25},{3:<10}}}'
+
+        table_addr_lines = [] 
+        table_addr_template = \
+'''\tcase GROUP_{0}:
+\t\tpstTable = &t_ast{0}grp[wTableIdx];
+\t\tbreak;
+'''
+
+        # 헤더용 define template
+        defines_lines = []
+        defines_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
+
+        # group index 용 
+        group_index_lines = []
+
         # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
         for row_index in range(key_row):
-            key_msg_name = key_model.item(row_index, key_col_info.index('Group')).text() 
+            # 그룹 정보 추출 
+            key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
+            key_group_hidden_var = key_model.item(row_index, key_col_info.index('Hidden Var')).text()
+            key_group_hidden_val = key_model.item(row_index, key_col_info.index('Hidden Value')).text()
+            if( 'g_' in key_group_hidden_var or 'k_' in key_group_hidden_val ):
+                key_group_hidden_var = '(WORD*)&' + key_group_hidden_var
 
-            find_items = model.findItems(key_msg_name, column = col_info.index('Group'))
+            group_info_lines.append( 
+                group_info_template.format(
+                    key_group_name.upper(), 'GRP_' + key_group_name.upper() + '_CODE_TOTAL', 
+                    key_group_hidden_var, key_group_hidden_val
+                )
+            )
+
+            table_addr_lines.append( 
+                table_addr_template.format(
+                    key_group_name.upper()
+                )
+            )
+
+            # 해당 하는 그룹의 아이템 정보를 얻음 
+            find_items = model.findItems(key_group_name, column = col_info.index('Group'))
+            per_group_item_count = len(find_items)
+
+            defines_lines.append( 
+                defines_template.format(
+                    key_group_name.upper(),
+                    per_group_item_count
+                )
+            )
+
+            group_index_lines.append( 
+                'GROUP_{0}'.format( key_group_name.upper() )
+            )
 
             for find_item in find_items:
                 find_row_index = find_item.row()
@@ -1012,38 +1041,46 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                     title_enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
                 
                 at_value = model.item(find_row_index, col_info.index('AtValue')).text()
-                para_vari= model.item(find_row_index, col_info.index('Para 변수')).text()
+                para_var= model.item(find_row_index, col_info.index('Para 변수')).text()
                 kpd_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
                 default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
                 max_val = model.item(find_row_index, col_info.index('최대값')).text()
                 min_val = model.item(find_row_index, col_info.index('최소값')).text()
                 form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
                 unit = model.item(find_row_index, col_info.index('단위')).text()
-                comm_write_protect = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
+                no_comm = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
                 read_only = model.item(find_row_index, col_info.index('읽기전용')).text()
-                no_modify_on_run =  model.item(find_row_index, col_info.index('운전중변경불가')).text()
-                is_insert_zero_possible = model.item(find_row_index, col_info.index('0 입력가능')).text()
+                no_change_on_run =  model.item(find_row_index, col_info.index('운전중변경불가')).text()
+                zero_input = model.item(find_row_index, col_info.index('0 입력가능')).text()
                 '''
-                if( attribute & 0x0040 ):
-                    comm_write_protect = 'True'
-                if( attribute & 0x0008 ):
-                    read_only = 'True'
-                if( attribute & 0x0010 ):
-                    no_modify_on_run = 'True'
-                if( attribute & 0x0020 ):
-                    is_insert_zero_possible = 'True
+                no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
+                if( attribute & ATTR_NO_COMM ):
+                    no_comm = True 
+                if( attribute & ATTR_READ_ONLY ):
+                    read_only = True
+                if( attribute & ATTR_NO_CHANGE_ON_RUN ):
+                    no_change_on_run = True 
+                if( attribute & ATTR_ZERO_INPUT ):
+                    zero_input = True 
                 '''
-                attribute = 0x00
-                if( comm_write_protect == 'True'):
-                    attribute |= 0x0040
+                attribute = 0x0000
+                if( no_comm == 'True'):
+                    attribute |= ATTR_NO_COMM
                 if( read_only == 'True'):
-                    attribute |= 0x0008
-                if( no_modify_on_run == 'True'):
-                    attribute |= 0x0010
-                if( is_insert_zero_possible == 'True'):
-                    attribute |= 0x0020
+                    attribute |= ATTR_READ_ONLY
+                if( no_change_on_run == 'True'):
+                    attribute |= ATTR_NO_CHANGE_ON_RUN
+                if( zero_input == 'True'):
+                    attribute |= ATTR_ZERO_INPUT
+                if( 'k_' in max_val ):
+                    attribute |= ATTR_UP
+                if( 'k_' in min_val ):
+                    attribute |= ATTR_LP
+                if( False ):
+                    attribute |= ATTR_ENT
+                
 
-                show_vari  =  model.item(find_row_index, col_info.index('보임변수')).text()
+                show_var  =  model.item(find_row_index, col_info.index('보임변수')).text()
                 show_value = model.item(find_row_index, col_info.index('보임값')).text()
                 eep_addr = model.item(find_row_index, col_info.index('EEP 주소')).text()
                 comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
@@ -1051,18 +1088,46 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                 min_eds = model.item(find_row_index, col_info.index('최소 EDS')).text()
                 comment = model.item(find_row_index, col_info.index('설명')).text()
 
-                lines.append('{{{0:<5}, {1:<4}, {2:<29}, {3:<40}, {4:<40}, {5:<40}, {6:<40}, {7:<40}, {8:<40}, {9:<40},\
-                            {10:<40}, {11:<40}, {12:<40}}}//{13:>16}[EDS :{14:<6},{15:<6}]//{16}'.format \
-                            (code_num, at_value, title_enum_name, para_vari, kpd_func, default_val, max_val, min_val,
-                             form_msg, unit, str(attribute), show_vari, show_value, title_name, max_eds, min_eds, comment)
+                para_var = '(WORD*)&' + para_var
+                default_val ='(WORD)' + default_val
+                if( 'k_' in max_val ) :
+                    max_val = '(LONG)&' + max_val
+                else:
+                    max_val = '(WORD)' + max_val
+
+                if( 'k_' in min_val ) :
+                    min_val = '(LONG)&' + min_val
+                else:
+                    min_val = '(WORD)' + min_val
+                   
+                if( unit == 'U_DATAMSG'):
+                    form_msg = 'MSG_' + form_msg
+                
+                eds_val = ''
+                if( max_eds or min_eds):
+                    eds_val ='[EDS :{0},{1}]'.format(max_eds, min_eds)
+
+                attribute_str = '0x{0:0>4}'.format(hex(attribute)[2:])
+
+                if( 'k_' in show_var or 'g_' in show_var ):
+                    show_var = '(WORD*)&' + show_var
+
+                format_str = '{{{0:<5},{1:<5},{2:<30},{3:<40},{4:<40},{5:<30},{6:<30},{7:<30},{8:<30},{9:<30},{10:<10},{11:<30},{12:<5}}},//"{13:<14}"{14}//{15}'
+
+                if( find_item == find_items[-1]):
+                    format_str = '{{{0:<5},{1:<5},{2:<30},{3:<40},{4:<40},{5:<30},{6:<30},{7:<30},{8:<30},{9:<30},{10:<10},{11:<30},{12:<5}}}//"{13:<14}"{14}//{15}'
+                para_vars_lines.append(format_str.format \
+                            (code_num, at_value, title_enum_name, para_var, kpd_func, default_val, max_val, min_val,
+                            form_msg, unit, attribute_str, show_var, show_value, title_name, eds_val, comment)
                 )
             
             para_vars.append(
-                para_var_template.format(key_msg_name,
-                                         key_msg_name,
-                                        '\n\t,'.join(lines))
+                para_vars_template.format(group_name,
+                                         group_name,
+                                        '\n'.join(para_vars_lines))
             )
-            lines.clear()
+            para_vars_lines.clear()
+
 
         source_template = \
 '''// PRQA S 502, 4130, 4131, 750, 759, 1514, 3218, 1504, 1505, 1503, 2860, 2895 EOF
@@ -1079,28 +1144,162 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
 #include "KpdPara_Vari.H"
 #include "KpdPara_ShowParaVari.H"
 #include "KFunc_Head.H"
-#include "KpdPara_Table.H
+#include "KpdPara_Table.H"
 {0}
+\n\n
+static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
+{1}
+}};\n\n
+const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx)
+{{
+	return &t_astGrpInfo[wGrpIdx];
+}}
 
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx)
+{{
+	const S_TABLE_X_TYPE* pstTable;
+
+	switch(wGrpIdx)
+	{{
+{2}
+	default:
+		pstTable = NULL;
+		break;
+	}}
+	return pstTable;
+}}
 '''
+        file_contents = source_template.format( '\n'.join(para_vars),
+                                                ',\n'.join(group_info_lines),
+                                                ''.join(table_addr_lines)
 
-
-        file_contents = source_template.format(  '\n'.join(para_vars),
         )
         TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.c_temp', 'w', encoding='utf8') as f:
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Table.c_temp', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
+
+        header_template = \
+'''#ifndef _KPD_TABLE_H
+#define _KPD_TABLE_H
+/***********************************************
+//  TABLE EDITOR 3  인버터 Keypad Table
+//  Edit시 Table Edit 3 V1.00을 사용하세요      
+***********************************************/
+#include "KpdPara_StructUnit.H"
+\n\n
+{0}\n\n
+const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx);
+\n\n
+#endif   //_KPD_TABLE_H
+'''
+        file_contents = header_template.format(
+            '\n'.join(defines_lines)
+        )
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_Table.h_temp', 'w', encoding='utf8') as f:
+            f.write(file_contents)
+        pass
+
+
+        group_index_template = \
+'''#ifndef KPDPARA_GRP_INDEX_H
+#define KPDPARA_GRP_INDEX_H
+\n
+enum eGrpIndex{{
+     {0}
+	,GROUP_TOTAL
+}};
+\n
+#endif   //KPDPARA_GRP_INDEX_H
+'''
+
+        file_contents = group_index_template.format(
+            '\n\t,'.join(group_index_lines)
+        )
+        with open(TARGET_DIR + os.path.sep + 'KpdPara_grpidx.h_temp', 'w', encoding='utf8') as f:
+            f.write(file_contents)
+        pass
+
+    def make_kfunc_head(self):
+        col_info = ci.para_col_info_for_view()
+        model = self.model_parameters
+        key_col_info = ci.group_col_info()
+        key_model = self.model_group
+
+        key_row = key_model.rowCount()
+
+        cmd_key_func_lines = []
+        after_enter_key_func_lines = []
+
+        # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
+        for row_index in range(key_row):
+            # 그룹 정보 추출 
+            key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
+
+            # 해당 하는 그룹의 아이템 정보를 얻음 
+            find_items = model.findItems(key_group_name, column = col_info.index('Group'))
+
+            for find_item in find_items:
+                find_row_index = find_item.row()
+
+                key_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
+                key_func = key_func.replace('KFUNC_', '') 
+                code_num = model.item(find_row_index, col_info.index('Code#')).text()
+                kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
+
+                if( key_func != 'NULL'):
+                    arg = 'KFUNC_{0:<40}'.format(key_func))
+                    /({1},{2:>2})'.format(key_func, key_group_name, code_num)
+
+                    if(kpd_type == 'AfterEnter'):
+                        if( arg not in after_enter_key_func_lines):
+                            after_enter_key_func_lines.append(arg)
+                        pass
+                    else:
+                        if( arg not in cmd_key_func_lines):
+                            cmd_key_func_lines.append(arg)
+
+        header_template = \
+'''#ifndef KFUNC_INDEX_H
+#define KFUNC_INDEX_H
+\n
+enum eKpdFuncIndex{{
+	 KFUNC_NULL
+    ,{0}
+	,KFUNC_START_AFTER_ENT_FUNC = 1000
+    ,{1}
+
+}};
+\n
+#define TOTAL_KFUNC_CMD_ENT                  {2} 
+#define TOTAL_KFUNC_AFTER_ENT                {3} 
+\n
+#endif   //KFUNC_INDEX_H
+'''
+
+        file_contents = header_template.format(
+            '\n\t,'.join(cmd_key_func_lines),
+            '\n\t,'.join(after_enter_key_func_lines),
+            len(cmd_key_func_lines),
+            len(after_enter_key_func_lines)
+        )
+        TARGET_DIR = r"d:\download\1\result"
+        with open(TARGET_DIR + os.path.sep + 'KFunc_Head.h_temp', 'w', encoding='utf8') as f:
+            f.write(file_contents)
+        pass
 
 
 
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
     form = MainWindow()
+    form.setWindowTitle('Table Editor 4')
     form.show()
-    # form.make_kpdpara_vari()
+    # form.make_kpdpara_var()
     # form.make_add_title_eng()
     # form.make_kpdpara_msg()
-    form.make_kpdpara_table()
+    # form.make_kpdpara_table()
+    form.make_kfunc_head()
     sys.exit(app.exec_())

@@ -1,16 +1,6 @@
 <RCC>
   <qresource>
-    <file>base/addtitle_eng.c</file>
-    <file>base/addtitle_eng.H</file>
     <file>base/kfunc_head.H</file>
     <file>base/kpd_tbl_msg_eng.C</file>
-    <file>base/kpd_title_enum.H</file>
-    <file>base/kpdpara_grpidx.H</file>
-    <file>base/kpdpara_msg.c</file>
-    <file>base/kpdpara_msg.H</file>
-    <file>base/kpdpara_table.c</file>
-    <file>base/kpdpara_table.H</file>
-    <file>base/kpdpara_vari.c</file>
-    <file>base/kpdpara_vari.H</file>
   </qresource>
 </RCC>

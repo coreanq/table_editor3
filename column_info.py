@@ -7,7 +7,7 @@ _parameters_file_columns_info = [
     'Code#' , 
     'AtValue',
     'TitleIndex', 
-    'ParaVari', 
+    'ParaVar', 
     'KpdFunc',
     'DefaultVal',
     'MaxVal', 
@@ -15,7 +15,7 @@ _parameters_file_columns_info = [
     'Msg',
     'Unit', 
     'Attribute', 
-    'ShowVari',
+    'ShowVar',
     'ShowVal',
     'MaxEDS', 
     'MinEDS',
@@ -34,6 +34,7 @@ _parameters_view_columns_info = [
     '최소값', 
     '폼메시지', 
     '단위', 
+    'KPD 타입', # AfterEnter, Cmd
     '통신쓰기금지', 
     '읽기전용', 
     '운전중변경불가', 
@@ -49,7 +50,7 @@ _parameters_view_columns_info = [
 _group_columns_info = [
     'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
     'Group', 
-    'Hidden Vari', 
+    'Hidden Var', 
     'Hidden Value'
 ]
 
