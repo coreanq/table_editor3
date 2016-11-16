@@ -34,6 +34,7 @@ _parameters_view_columns_info = [
     '최소값', 
     '폼메시지', 
     '단위', 
+    'Hidden Con', # 0,1,2,3
     'KPD 타입', # AfterEnter, Cmd
     '통신쓰기금지', 
     '읽기전용', 

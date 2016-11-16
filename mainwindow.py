@@ -249,8 +249,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         model = QStringListModel( ['AfterEnter', 'Cmd']) 
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
-        col_indexes = [ col_info.index('KPD 타입'), 
-        ]
+        col_indexes = [ col_info.index('KPD 타입') ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, width = 80)
 
         # msg view delegate 설정 
@@ -371,6 +370,30 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         eep_addr = hex(0x0200 + (16 * 2 * 7 * group_num) + (code_num * 2 + 16) )
         eep_addr = '0x{0}'.format( eep_addr[2:].upper() )
         return eep_addr
+    def makeHiddenCondition(self, attribute):
+        hidden_condition = '' 
+        val = (attribute & ATTR_HIDDEN_CON) >> 8
+        if( val == 0 ):
+            hidden_condition = '=='
+        elif ( val == 1 ):
+            hidden_condition = '>'
+        elif ( val == 2 ):
+            hidden_condition = '<'
+        elif( val  == 3 ) :
+            hidden_condition = '!='
+        return hidden_condition
+    
+    def hiddenConditionToValue(self, hidden_condition ):
+        value = 0
+        if( hidden_condition == '=='):
+            value = 0
+        elif ( hidden_condition == '>'):
+            value = 1
+        elif( hidden_condition == '<'):
+            value = 2
+        elif( hidden_condition == '!='):
+            value = 3
+        return value
 
     # read_para_table 에서는 단순히 파일을 파싱해서 올려주는 역할만 하고 
     # 올라온 데이터에 대한 수정은 상위단에서 수행하도록 함 
@@ -396,6 +419,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
                         key_pad_type = 'Cmd'
+                        hidden_condition = ''
 
                         if( attribute & ATTR_NO_COMM ):
                             no_comm = True 
@@ -407,7 +431,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             zero_input = True 
                         if( attribute & ATTR_ENT):
                             key_pad_type = 'AfterEnter'
-                        
+                        hidden_condition = self.makeHiddenCondition(attribute)
+
                         # 통신 주소 설정 
                         group_name = items[col_info.index('Group')]
                         code_num = int(items[col_info.index('Code#')])
@@ -437,6 +462,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             items[col_info.index('MinVal')],
                                             items[col_info.index('Msg')].replace('MSG_', ''),
                                             items[col_info.index('Unit')],
+                                            hidden_condition,
                                             key_pad_type,
                                             str(no_comm),
                                             str(read_only), 
@@ -1118,6 +1144,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                 form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
                 unit = model.item(find_row_index, col_info.index('단위')).text()
 
+                hidden_condition =  model.item(find_row_index, col_info.index('Hidden Con')).text()
                 kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
                 no_comm = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
                 read_only = model.item(find_row_index, col_info.index('읽기전용')).text()
@@ -1149,7 +1176,8 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                     attribute |= ATTR_LP
                 if( kpd_type == 'AfterEnter' ):
                     attribute |= ATTR_ENT
-                
+                hidden_val = self.hiddenConditionToValue(hidden_condition)
+                attribute |= (hidden_val << 8)
 
                 show_var  =  model.item(find_row_index, col_info.index('보임변수')).text()
                 show_value = model.item(find_row_index, col_info.index('보임값')).text()
