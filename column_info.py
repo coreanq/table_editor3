@@ -51,7 +51,7 @@ _group_columns_info = [
     'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
     'Group', 
     'Hidden Var', 
-    'Hidden Value'
+    'Hidden Val'
 ]
 
 # read_data 시 yield 되는 tuple 의 index 정보를 나타냄  

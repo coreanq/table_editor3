@@ -67,7 +67,7 @@
           <widget class="QSplitter" name="splitter">
            <property name="maximumSize">
             <size>
-             <width>400</width>
+             <width>300</width>
              <height>16777215</height>
             </size>
            </property>
@@ -77,7 +77,7 @@
            <widget class="QTableView" name="viewGroup">
             <property name="maximumSize">
              <size>
-              <width>400</width>
+              <width>300</width>
               <height>16777215</height>
              </size>
             </property>

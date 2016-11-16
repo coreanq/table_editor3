@@ -275,37 +275,62 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
        
     # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
-    # unit 컬럼이나 form/msg 컬럼을 더블 클릭하는 두개의 경우에 대해서 동작해야함 
-    def initParameterMsgDelegate(self, proxy_index): 
+    def onParameterViewUnitChanged(self, index): 
         col_info = ci.para_col_info_for_view()
         model = self.model_parameters
-        proxy_model = self.model_proxy_parameters
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         delegate_model = None
-        row_source_index = proxy_model.mapToSource(proxy_index)
 
-        unit_col_index = col_info.index('단위')
-        form_msg_col_index = col_info.index('폼메시지')
+        unit_col = col_info.index('단위')
+        form_msg_col = col_info.index('폼메시지')
 
-        unit_data = model.item(row_source_index.row() , unit_col_index).text()
-        cmb_model_column_index  = 0 
+        unit_data = model.item(index.row() , unit_col).text()
+        cmb_model_col  = 0 
 
         if( unit_data == 'U_DATAMSG' or unit_data == 'U_RPM_CHG_DATAMSG'):
             # 생성되는 cmb box 의 모델의 참조 column index 를 정해줌 
             delegate_model = self.model_msg_info
-            cmb_model_column_index = ci.msg_info_col_info().index('MsgName')
+            cmb_model_col = ci.msg_info_col_info().index('MsgName')
         elif( unit_data == 'U_HZ_RPM'):
             delegate_model = ci.unit_with_msg()[unit_data]
         elif( unit_data == 'U_B'):
             delegate_model = ci.unit_with_msg()[unit_data]
         else: 
             delegate_model = ci.unit_with_msg()['Other']
-        self.setCmbDelegateAttribute(delegate_model, view, delegate, [form_msg_col_index], 
-                editable = False,  width = 150, cmb_model_column = cmb_model_column_index)
+        self.setCmbDelegateAttribute(delegate_model, view, delegate, [form_msg_col], 
+                editable = False,  width = 150, cmb_model_column = cmb_model_col)
 
         pass 
 
+    # 통신 쓰기 금지 선택에 따라서 통신 주소가 수시로 변하기 때문에 따로 함수로 만들어 줌 
+    def onParameterViewNoCommChanged(self, index): 
+        col_info = ci.para_col_info_for_view()
+        model = self.model_parameters
+        row = index.row()
+
+        no_comm_col = col_info.index('통신쓰기금지')
+        comm_addr_col = col_info.index('통신주소')
+
+        no_comm_data = model.item(row , no_comm_col).text()
+
+        # 통신 주소 설정 
+        group_name = model.item(row, col_info.index('Group')).text()
+        code_num = model.item(row, col_info.index('Code#')).text()
+        
+        find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
+        group_num = 0 
+
+        for find_item in find_items:
+            group_num =  find_item.row()
+        
+        if( no_comm_data == 'True'):
+            comm_addr = '통신 쓰기 금지'
+        else:
+            comm_addr = hex(0x1000 + (0x0100 * int(group_num)) + int(code_num))
+            comm_addr = '0x{0}'.format( comm_addr[2:] )
+
+        model.setItem(index.row(), comm_addr_col, QStandardItem(comm_addr))
 
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
@@ -350,6 +375,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 with open(file_path, 'r', encoding='utf8') as f:
                     contents = f.read()
                 if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):
+                    # 그룹  정보 읽기 
+                    for items in rd.read_grp_info(contents):
+                        self.addRowToModel(self.model_group, items)
+                        pass
+
                     for items in rd.read_para_table(contents):
                         col_info = ci.para_col_info_for_file()
                         arg = items[col_info.index('Attribute')] 
@@ -368,9 +398,24 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             zero_input = True 
                         if( attribute & ATTR_ENT):
                             key_pad_type = 'AfterEnter'
+                        
+                        # 통신 주소 설정 
+                        group_name = items[col_info.index('Group')]
+                        code_num = items[col_info.index('Code#')]
+                        
+                        find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
+                        group_index = 0 
+
+                        for find_item in find_items:
+                            group_index  =  find_item.row()
+                        
+                        if( no_comm ):
+                            comm_addr = '통신 쓰기 금지'
+                        else:
+                            comm_addr = hex(0x1000 + (0x0100 * int(group_index)) + int(code_num))
+                            comm_addr = '0x{0}'.format( comm_addr[2:])
                             
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
-                        
                         try : 
                             view_col_list = [ items[col_info.index('Group')],  
                                             items[col_info.index('Code#')],  
@@ -391,7 +436,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             items[col_info.index('ShowVar')],
                                             items[col_info.index('ShowVal')],
                                             '', # TODO: eep주소 
-                                            '', # TODO: 통신주소 
+                                            comm_addr, 
                                             items[col_info.index('MaxEDS')],
                                             items[col_info.index('MinEDS')],
                                             items[col_info.index('Comment')]
@@ -401,10 +446,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             print('error occur')
                             print(items)
                         
-                    for items in rd.read_grp_info(contents):
-                        self.addRowToModel(self.model_group, items)
-                        pass
-                    pass
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
                     msg_list = [] 
                     col_info = ci.msg_values_col_info()
@@ -469,21 +510,40 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             model.insertRow(insert_index + 1, item_list)
             pass
         pass
-
+       
     @pyqtSlot(QModelIndex)
-    def onViewParameterDoubleClicked(self,index):
-        self.initParameterMsgDelegate(index) 
+    def onViewParameterDoubleClicked(self, index):
+        # view 에서 발생한 것은 proxy_index 
+        # unit 과 메시지를 클릭했을때 delegate 를 설정해줘야 함 
+        proxy_model = self.model_proxy_parameters
+        source_index = proxy_model.mapToSource(index) 
+
+        unit_col = ci.para_col_info_for_view().index('단위')
+        form_msg_col = ci.para_col_info_for_view().index('폼메시지')
+        if( index.column() == unit_col or index.column() == form_msg_col ):
+           self.onParameterViewUnitChanged( self.model_parameters.index(source_index.row(), unit_col )  ) 
         pass
 
     @pyqtSlot(QModelIndex, QModelIndex)
     def onModelParameterDataChanged(self, topLeft, bottomRight):
-        # unit 의 데이터가 변한 경우 Msg 에 띄울 combobox list 가 변해야 하므로 
-        col_info = ci.para_col_info_for_view()
-        top_row_index = topLeft.row()
-        top_col_index = topLeft.column()
-        bottom_row_index = topLeft.row()
-        bottom_col_index = topLeft.column()
-          
+        topx = topLeft.row()
+        topy = topLeft.column() 
+
+        bottomx = bottomRight.row()
+        bottomy = bottomRight.column()
+
+        unit_col = ci.para_col_info_for_view().index('단위')
+        no_comm_col = ci.para_col_info_for_view().index('통신쓰기금지') 
+
+        if( unit_col  in range(topy, bottomy + 1) ):
+            for row in range(topx, bottomx + 1):
+                self.onParameterViewUnitChanged( self.model_parameters.index(row, unit_col )  )
+            pass
+        if( no_comm_col in range(topy, bottomy + 1)):
+            for row in range(topx, bottomx + 1):
+                self.onParameterViewNoCommChanged( self.model_parameters.index(row, no_comm_col) )
+            pass
+
         pass 
 
     def viewRowCopy(self, subject, view):
@@ -1048,6 +1108,8 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                 min_val = model.item(find_row_index, col_info.index('최소값')).text()
                 form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
                 unit = model.item(find_row_index, col_info.index('단위')).text()
+
+                kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
                 no_comm = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
                 read_only = model.item(find_row_index, col_info.index('읽기전용')).text()
                 no_change_on_run =  model.item(find_row_index, col_info.index('운전중변경불가')).text()
@@ -1076,7 +1138,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                     attribute |= ATTR_UP
                 if( 'k_' in min_val ):
                     attribute |= ATTR_LP
-                if( False ):
+                if( kpd_type == 'AfterEnter' ):
                     attribute |= ATTR_ENT
                 
 
@@ -1107,7 +1169,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                 if( max_eds or min_eds):
                     eds_val ='[EDS :{0},{1}]'.format(max_eds, min_eds)
 
-                attribute_str = '0x{0:0>4}'.format(hex(attribute)[2:])
+                attribute_str = '0x{0:0>4}'.format(hex(attribute)[2:].upper())
 
                 if( 'k_' in show_var or 'g_' in show_var ):
                     show_var = '(WORD*)&' + show_var
@@ -1241,24 +1303,21 @@ enum eGrpIndex{{
             # 해당 하는 그룹의 아이템 정보를 얻음 
             find_items = model.findItems(key_group_name, column = col_info.index('Group'))
 
+            key_func_list = [] # 중복 제거를 위해 사용 
             for find_item in find_items:
                 find_row_index = find_item.row()
 
                 key_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
-                key_func = key_func.replace('KFUNC_', '') 
                 code_num = model.item(find_row_index, col_info.index('Code#')).text()
                 kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
 
-                if( key_func != 'NULL'):
-                    arg = 'KFUNC_{0:<40}'.format(key_func))
-                    /({1},{2:>2})'.format(key_func, key_group_name, code_num)
-
-                    if(kpd_type == 'AfterEnter'):
-                        if( arg not in after_enter_key_func_lines):
+                if('NULL' not in key_func):
+                    if( key_func not in key_func_list ):
+                        key_func_list.append(key_func)
+                        arg = '{0:<40}//({1},{2:>2})'.format(key_func, key_group_name, code_num)
+                        if(kpd_type == 'AfterEnter'):
                             after_enter_key_func_lines.append(arg)
-                        pass
-                    else:
-                        if( arg not in cmd_key_func_lines):
+                        else:
                             cmd_key_func_lines.append(arg)
 
         header_template = \
@@ -1300,6 +1359,6 @@ if __name__ == '__main__':
     # form.make_kpdpara_var()
     # form.make_add_title_eng()
     # form.make_kpdpara_msg()
-    # form.make_kpdpara_table()
-    form.make_kfunc_head()
+    form.make_kpdpara_table()
+    # form.make_kfunc_head()
     sys.exit(app.exec_())
