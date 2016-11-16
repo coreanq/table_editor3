@@ -316,7 +316,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         # 통신 주소 설정 
         group_name = model.item(row, col_info.index('Group')).text()
-        code_num = model.item(row, col_info.index('Code#')).text()
+        code_num = int(model.item(row, col_info.index('Code#')).text())
         
         find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
         group_num = 0 
@@ -327,10 +327,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         if( no_comm_data == 'True'):
             comm_addr = '통신 쓰기 금지'
         else:
-            comm_addr = hex(0x1000 + (0x0100 * int(group_num)) + int(code_num))
-            comm_addr = '0x{0}'.format( comm_addr[2:] )
+            comm_addr = self.makeAddrValue(group_num, code_num)
 
         model.setItem(index.row(), comm_addr_col, QStandardItem(comm_addr))
+        pass
 
     @pyqtSlot(QModelIndex)
     def onViewGroupClicked(self, index):
@@ -361,7 +361,16 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             row = item.row()
             return self.model_title.item(row, col_info.index('Title')).text() 
         return ("Error")
-        pass
+
+    def makeAddrValue(self, group_num, code_num ):
+        comm_addr = hex(0x1000 + (0x0100 * group_num) + code_num)
+        comm_addr = '0x{0}'.format( comm_addr[2:].upper() )
+        return comm_addr
+
+    def makeEEPAddrValue(self, group_num, code_num ):
+        eep_addr = hex(0x0200 + (16 * 2 * 7 * group_num) + (code_num * 2 + 16) )
+        eep_addr = '0x{0}'.format( eep_addr[2:].upper() )
+        return eep_addr
 
     # read_para_table 에서는 단순히 파일을 파싱해서 올려주는 역할만 하고 
     # 올라온 데이터에 대한 수정은 상위단에서 수행하도록 함 
@@ -401,19 +410,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         
                         # 통신 주소 설정 
                         group_name = items[col_info.index('Group')]
-                        code_num = items[col_info.index('Code#')]
+                        code_num = int(items[col_info.index('Code#')])
                         
                         find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
-                        group_index = 0 
+                        group_num = 0 
 
                         for find_item in find_items:
-                            group_index  =  find_item.row()
+                            group_num  =  find_item.row()
                         
                         if( no_comm ):
                             comm_addr = '통신 쓰기 금지'
                         else:
-                            comm_addr = hex(0x1000 + (0x0100 * int(group_index)) + int(code_num))
-                            comm_addr = '0x{0}'.format( comm_addr[2:])
+                            comm_addr = self.makeAddrValue(group_num, code_num)
+                        eep_addr = self.makeEEPAddrValue(group_num, code_num)
                             
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         try : 
@@ -435,7 +444,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             str(zero_input),
                                             items[col_info.index('ShowVar')],
                                             items[col_info.index('ShowVal')],
-                                            '', # TODO: eep주소 
+                                            eep_addr,
                                             comm_addr, 
                                             items[col_info.index('MaxEDS')],
                                             items[col_info.index('MinEDS')],
@@ -1057,7 +1066,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
             # 그룹 정보 추출 
             key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
             key_group_hidden_var = key_model.item(row_index, key_col_info.index('Hidden Var')).text()
-            key_group_hidden_val = key_model.item(row_index, key_col_info.index('Hidden Value')).text()
+            key_group_hidden_val = key_model.item(row_index, key_col_info.index('Hidden Val')).text()
             if( 'g_' in key_group_hidden_var or 'k_' in key_group_hidden_val ):
                 key_group_hidden_var = '(WORD*)&' + key_group_hidden_var
 
