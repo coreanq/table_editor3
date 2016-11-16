@@ -1,6 +1,6 @@
 <RCC>
   <qresource>
-    <file>base/kfunc_head.H</file>
+    <file>base/KpdPara_StructUnit.H</file>
     <file>base/kpd_tbl_msg_eng.C</file>
   </qresource>
 </RCC>

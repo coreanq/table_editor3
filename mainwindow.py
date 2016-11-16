@@ -1,6 +1,7 @@
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView,  \
+                            QAction, QFileDialog
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
                          QRegExp, Qt, QItemSelectionModel, QStringListModel, \
@@ -56,7 +57,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_kpd_para_unit = QStandardItemModel()
 
-        self.readDataFromFile() 
         self.initView()
         self.initDelegate()
         self.createConnection()
@@ -112,7 +112,45 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
         self.model_parameters.dataChanged.connect(self.onModelParameterDataChanged)
-        pass
+
+        self.menuFile.triggered[QAction].connect(self.onMenuFileActionTriggered)
+        self.menuEdit.triggered[QAction].connect(self.onMenuEditActionTriggered)
+        self.menuAbout.triggered[QAction].connect(self.onMenuAboutActionTriggered)
+
+
+    @pyqtSlot(QAction)
+    def onMenuFileActionTriggered(self, action):
+        print(action.text())
+        action_type = action.text()
+
+        current_path = os.getcwd()
+        if( action_type == 'Open'):
+            selected_dir = QFileDialog.getExistingDirectory(
+                                            self, 
+                                            caption = 'Open', 
+                                            directory = current_path, 
+                                            options = QFileDialog.ShowDirsOnly
+                                            )
+            
+            if( os.path.isdir(selected_dir) ):
+                if( self.readDataFromFile(selected_dir) ):
+                    self.lineSourcePath.setText(selected_dir)
+            pass
+        elif( action_type == 'Save'):
+            pass
+        elif( action_type =='Save As'):
+            pass
+        elif( action_type == 'Exit'):
+            pass
+       
+
+    @pyqtSlot(QAction)
+    def onMenuEditActionTriggered(self, action):
+        print(action.text())
+
+    @pyqtSlot(QAction)
+    def onMenuAboutActionTriggered(self, action):
+        print(action.text())
 
     def initView(self):
         view_list = [self.viewGroup,  
@@ -397,9 +435,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     # read_para_table 에서는 단순히 파일을 파싱해서 올려주는 역할만 하고 
     # 올라온 데이터에 대한 수정은 상위단에서 수행하도록 함 
-    def readDataFromFile(self):
-        target_dir = r'D:\download\1'
-            # print(root, directories, filenames)
+    def readDataFromFile(self, source_path):
+        target_dir = source_path
+        source_file_list = []
+        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
+        for (dirpath, dirnames, filenames) in os.walk(target_dir):
+            source_file_list = filenames
+            # root folder 만 확인할것이므로 바로 break 
+            break
+        source_file_list = [ file.lower() for file in source_file_list ]
+
+        if( all ( x in source_file_list for x in rd.parsing_files) == False):
+            print(source_file_list)
+            return False
+
         for filename in rd.parsing_files:
             file_path = target_dir + os.sep + filename 
             if( os.path.exists(file_path) ):
@@ -516,6 +565,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for items in rd.read_add_title(contents):
                         self.addRowToModel(self.model_title, items)
                 pass
+        return True
         pass
         
     def addRowToModel(self, model, data_list, editing = True):
@@ -1396,6 +1446,6 @@ if __name__ == '__main__':
     # form.make_kpdpara_var()
     # form.make_add_title_eng()
     # form.make_kpdpara_msg()
-    form.make_kpdpara_table()
+    # form.make_kpdpara_table()
     # form.make_kfunc_head()
     sys.exit(app.exec_())
