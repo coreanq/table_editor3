@@ -208,32 +208,20 @@
    <property name="text">
     <string>Copy</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+C</string>
-   </property>
   </action>
   <action name="actionPaste">
    <property name="text">
     <string>Paste</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+V</string>
    </property>
   </action>
   <action name="actionInsert">
    <property name="text">
     <string>Insert</string>
    </property>
-   <property name="shortcut">
-    <string>Ins</string>
-   </property>
   </action>
   <action name="actionDelete">
    <property name="text">
     <string>Delete</string>
-   </property>
-   <property name="shortcut">
-    <string>Del</string>
    </property>
   </action>
   <action name="actionFind">

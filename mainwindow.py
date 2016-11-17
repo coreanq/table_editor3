@@ -1,18 +1,20 @@
 import os
+import shutil
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView,  \
-                            QAction, QFileDialog
+                            QAction, QFileDialog, QMessageBox
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
                          QRegExp, Qt, QItemSelectionModel, QStringListModel, \
                          QIODevice, QFile
+import datetime
 import json
 import mainwindow_ui 
 import view_delegate as cbd 
 import view_key_eater as ve
 import column_info as ci
 import read_data as rd
-import resource_rc as rsc
+import resource_rc
 import util
 import re
 
@@ -60,6 +62,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.initView()
         self.initDelegate()
         self.createConnection()
+        self.setWindowTitle('TableEditor4')
         pass
 
     def createConnection(self):
@@ -120,9 +123,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     @pyqtSlot(QAction)
     def onMenuFileActionTriggered(self, action):
-        print(action.text())
         action_type = action.text()
-
         current_path = os.getcwd()
         if( action_type == 'Open'):
             selected_dir = QFileDialog.getExistingDirectory(
@@ -137,16 +138,100 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     self.lineSourcePath.setText(selected_dir)
             pass
         elif( action_type == 'Save'):
+            source_path = self.lineSourcePath.text()
+
+            # 모든 파일이 제대로 존재 하는지 확인 
+            # Save 할때는 상관이 없지만 기존 파일 백업 생성할때 문제 발생할 수 있으므로 그렇게 함 
+            if( self.check_if_has_all_file(source_path) == False ):
+                return
+            self.make_bakcup_file(source_path)
+            self.make_base_file(source_path)
+            self.make_model_to_file(source_path)
+            QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
             pass
+
         elif( action_type =='Save As'):
+            selected_dir = QFileDialog.getExistingDirectory(
+                                            self, 
+                                            caption = 'Open', 
+                                            directory = current_path, 
+                                            options = QFileDialog.ShowDirsOnly
+                                            )
+            
+            if( os.path.isdir(selected_dir) ):
+                if( self.check_if_has_any_file(selected_dir) == True):
+                    QMessageBox.critical(self, '오류', '타겟 폴더에 중요 파일이 존재합니다')
+                else:
+                    self.make_base_file(selected_dir)
+                    self.make_model_to_file(selected_dir)
             pass
+
         elif( action_type == 'Exit'):
+            exit()
             pass
        
 
     @pyqtSlot(QAction)
     def onMenuEditActionTriggered(self, action):
-        print(action.text())
+        widget = self.focusWidget()
+        obj_name = widget.objectName()
+        action_type = action.text()
+        if( action_type == 'Copy'):
+            if( obj_name == 'viewGroup' ):
+                self.onGroupViewCopyed()
+            elif( obj_name == 'viewParameter'):
+                self.onParameterViewCopyed()
+            elif( obj_name == 'viewMsgInfo'):
+                self.onMsgInfoViewCopyed()
+            elif( obj_name == 'viewMsgValue'):
+                self.onMsgValueViewCopyed()
+            elif( obj_name == 'viewVariable'):
+                self.onVariableViewCopyed()
+            elif( obj_name == 'viewTitle'):
+                self.onTitleViewCopyed()
+            pass
+        elif( action_type == 'Paste'):
+            if( obj_name == 'viewGroup' ):
+                self.onGroupViewPasted()
+            elif( obj_name == 'viewParameter'):
+                self.onParameterViewPasted()
+            elif( obj_name == 'viewMsgInfo'):
+                self.onMsgInfoViewPasted()
+            elif( obj_name == 'viewMsgValue'):
+                self.onMsgValueViewPasted()
+            elif( obj_name == 'viewVariable'):
+                self.onVariableViewPasted()
+            elif( obj_name == 'viewTitle'):
+                self.onTitleViewPasted()
+            pass
+        elif( action_type == 'Insert'):
+            if( obj_name == 'viewGroup' ):
+                self.onGroupViewInserted()
+            elif( obj_name == 'viewParameter'):
+                self.onParameterViewInserted()
+            elif( obj_name == 'viewMsgInfo'):
+                self.onMsgInfoViewInserted()
+            elif( obj_name == 'viewMsgValue'):
+                self.onMsgValueViewInserted()
+            elif( obj_name == 'viewVariable'):
+                self.onVariableViewInserted()
+            elif( obj_name == 'viewTitle'):
+                self.onTitleViewInserted()
+            pass
+        elif( action_type == 'Delete'):
+            if( obj_name == 'viewGroup' ):
+                self.onGroupViewDeleted()
+            elif( obj_name == 'viewParameter'):
+                self.onParameterViewDeleted()
+            elif( obj_name == 'viewMsgInfo'):
+                self.onMsgInfoViewDeleted()
+            elif( obj_name == 'viewMsgValue'):
+                self.onMsgValueViewDeleted()
+            elif( obj_name == 'viewVariable'):
+                self.onVariableViewDeleted()
+            elif( obj_name == 'viewTitle'):
+                self.onTitleViewDeleted()
+            pass
 
     @pyqtSlot(QAction)
     def onMenuAboutActionTriggered(self, action):
@@ -433,20 +518,91 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             value = 3
         return value
 
-    # read_para_table 에서는 단순히 파일을 파싱해서 올려주는 역할만 하고 
-    # 올라온 데이터에 대한 수정은 상위단에서 수행하도록 함 
-    def readDataFromFile(self, source_path):
+    def make_base_file(self, source_path):
+        #기본 키패드 title 파일이나, struct_unit 파일은 내부에서 리소스로 가지고 있다가 만들어줌 
+        filelist = [rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE, 
+                    rd.KPD_BASIC_TITLE_SRC_FILE]
+
+        for file in filelist:
+            resource_file_path = r':/base/' + file 
+            source_file_path = source_path + os.path.sep + file 
+            resource_fd = QFile(resource_file_path)
+            contents = ''
+            if( resource_fd.open(QFile.ReadOnly) == True ):
+                contents = bytes(resource_fd.readAll()).decode('utf8')
+
+                resource_fd.close()
+            else:
+                print(resource_fd.errorString())
+            
+            with open(source_file_path, 'w', encoding= 'utf8') as f:
+                f.write(str(contents))
+        pass
+    def make_model_to_file(self, source_path):
+        self.make_kpdpara_var(source_path)
+        self.make_add_title_eng(source_path)
+        self.make_kpdpara_msg(source_path)
+        self.make_kpdpara_table(source_path)
+        self.make_kfunc_head(source_path)
+        pass
+
+    # 날짜시간으로 된 폴더 하나 생성하고 거기에 backup 파일 다 넣음 
+    def make_bakcup_file(self, source_path):
+        time_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
+        target_path = source_path + os.path.sep + time_str
+
+        if( not os.path.exists(target_path) ):
+            os.mkdir(target_path)
+        
+        for file in rd.make_files:
+            source_file_path = source_path + os.path.sep + file
+            target_file_path = target_path + os.path.sep + file
+            shutil.move(source_file_path, target_file_path)
+
+        pass
+
+    def check_if_has_any_file(self, source_path):
+        ret = False 
         target_dir = source_path
-        source_file_list = []
-        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
+        source_file_list  = []
+
         for (dirpath, dirnames, filenames) in os.walk(target_dir):
             source_file_list = filenames
             # root folder 만 확인할것이므로 바로 break 
             break
         source_file_list = [ file.lower() for file in source_file_list ]
 
-        if( all ( x in source_file_list for x in rd.parsing_files) == False):
+        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
+        if( any ( x in source_file_list for x in rd.make_files) ):
+            ret = True
+        return ret
+
+    def check_if_has_all_file(self, source_path):
+        ret = True
+        target_dir = source_path
+        source_file_list  = []
+
+        for (dirpath, dirnames, filenames) in os.walk(target_dir):
+            source_file_list = filenames
+            # root folder 만 확인할것이므로 바로 break 
+            break
+        source_file_list = [ file.lower() for file in source_file_list ]
+
+        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
+        if( all ( x in source_file_list for x in rd.make_files) == False):
+            QMessageBox.critical(self, "오류", "타겟 폴더의 파일 리스트가 온전치 않음")
             print(source_file_list)
+            ret = False
+        return ret
+
+    # read_para_table 에서는 단순히 파일을 파싱해서 올려주는 역할만 하고 
+    # 올라온 데이터에 대한 수정은 상위단에서 수행하도록 함 
+    def readDataFromFile(self, source_path):
+        target_dir = source_path
+        source_file_list = []
+
+        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
+        if( self.check_if_has_all_file(target_dir) == False):
             return False
 
         for filename in rd.parsing_files:
@@ -793,7 +949,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowDelete(self.viewVariable)
         pass
 
-    def make_add_title_eng(self):
+    def make_add_title_eng(self, source_path):
         col_info = ci.title_col_info()
         model = self.model_title
         row = model.rowCount()
@@ -847,8 +1003,7 @@ const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ \n
 '''
         file_contents = src_template.format('\n,'.join(rows))
 
-        TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.c_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'addtitle_eng.c', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -862,7 +1017,7 @@ extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 '''
 
         file_contents = header_template.format(total_add_title, add_title_size)
-        with open(TARGET_DIR + os.path.sep + 'addtitle_eng.h_temp', 'w') as f:
+        with open(source_path + os.path.sep + 'addtitle_eng.h', 'w') as f:
             f.write(file_contents)
         pass
 
@@ -887,12 +1042,13 @@ enum{{
             have_add_title = '#define HAVE_ADD_TITLE	//Add Title이 존재할때만 Define 된다.'
         else:
             have_add_title = ''
+
         file_contents = kpd_title_enum_header_template.format('\n ,'.join(enum_list), have_add_title)
-        with open(TARGET_DIR + os.path.sep + 'kpd_title_enum.h_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpd_title_enum.h', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
-    def make_kpdpara_var(self):
+    def make_kpdpara_var(self, source_path):
         col_info = ci.variable_col_info()
         model = self.model_var
         row = model.rowCount()
@@ -939,8 +1095,7 @@ extern {1}                          //{1} TYPE의 변수들
         # print(var_list)
         # print(define_list)
         # print(file_contents)
-        TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.h_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpdpara_vari.h', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -959,12 +1114,12 @@ extern {1}                          //{1} TYPE의 변수들
 ;
 '''
         file_contents = source_template.format(var_type, '\n,'.join(var_list)) 
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Vari.c_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpdpara_vari.c', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
 
-    def make_kpdpara_msg(self):
+    def make_kpdpara_msg(self, source_path):
         col_info = ci.msg_values_col_info()
         key_col_info = ci.msg_info_col_info()
         key_model = self.model_msg_info
@@ -1064,8 +1219,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx)
         file_contents = source_template.format(  '\n'.join(msg_vars),
                                                  '\n\t,'.join(msg_data_tbl_lines),
                                                  '\n\t,'.join(msg_data_size_lines) )
-        TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.c_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpdpara_msg.c', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1098,12 +1252,11 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
 
         file_contents = header_template.format(  '\n\t\t,'.join(msg_data_enum_lines),
                                                  '\n'.join(msg_define_lines) )
-        TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Msg.h_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpdpara_msg.h', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
-    def make_kpdpara_table(self):
+    def make_kpdpara_table(self, source_path):
         col_info = ci.para_col_info_for_view()
         model = self.model_parameters
         key_col_info = ci.group_col_info()
@@ -1323,8 +1476,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx)
                                                 ''.join(table_addr_lines)
 
         )
-        TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Table.c_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpdpara_table.c', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1347,7 +1499,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx);
         file_contents = header_template.format(
             '\n'.join(defines_lines)
         )
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_Table.h_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpdpara_table.h', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1367,11 +1519,11 @@ enum eGrpIndex{{
         file_contents = group_index_template.format(
             '\n\t,'.join(group_index_lines)
         )
-        with open(TARGET_DIR + os.path.sep + 'KpdPara_grpidx.h_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kpdpara_grpidx.h', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
-    def make_kfunc_head(self):
+    def make_kfunc_head(self, source_path):
         col_info = ci.para_col_info_for_view()
         model = self.model_parameters
         key_col_info = ci.group_col_info()
@@ -1431,8 +1583,7 @@ enum eKpdFuncIndex{{
             len(cmd_key_func_lines),
             len(after_enter_key_func_lines)
         )
-        TARGET_DIR = r"d:\download\1\result"
-        with open(TARGET_DIR + os.path.sep + 'KFunc_Head.h_temp', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + 'kfunc_head.h', 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1441,11 +1592,6 @@ enum eKpdFuncIndex{{
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
     form = MainWindow()
-    form.setWindowTitle('Table Editor 4')
+    form.setWindowTitle('TableEditor4')
     form.show()
-    # form.make_kpdpara_var()
-    # form.make_add_title_eng()
-    # form.make_kpdpara_msg()
-    # form.make_kpdpara_table()
-    # form.make_kfunc_head()
     sys.exit(app.exec_())
