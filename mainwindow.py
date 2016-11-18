@@ -72,6 +72,15 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             self.viewMsgValue, self.viewVariable, 
                             self.viewTitle]
 
+        self.model_list = [
+                            self.model_msg_info, 
+                            self.model_msg_values,
+                            self.model_parameters, 
+                            self.model_group,
+                            self.model_var,
+                            self.model_title
+        ]
+
 
 
         self.initView()
@@ -146,6 +155,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.actionAddMsg.triggered.connect(actionAddFunc('Msg'))
         self.actionAddVar.triggered.connect(actionAddFunc('Var'))
         self.actionAddTitle.triggered.connect(actionAddFunc('Title'))
+    
+    def check_if_model_valid(self):
+
+        # TODO: model valid 한지 파악 필요 
+        # for model in self.model_list:
+        #     row_cnt = model.rowCount()
+        #     col_cnt = model.columnCount()
+        #     for row in range(row_cnt):
+        #         for col in range(col_cnt):
+        #             item = model.item(row, col)
+        #             if( item.text() == '' )
+
+
+        pass
 
     @pyqtSlot(str)
     def onAddActionTriggered(self, action_name):
@@ -1265,8 +1288,11 @@ extern {1}                          //{1} TYPE의 변수들
         # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
         for row_index in range(key_row):
             key_msg_name = key_model.item(row_index, key_col_info.index('MsgName')).text() 
-
+            msg_name = key_msg_name
             find_items = model.findItems(key_msg_name, column = col_info.index('MsgName'))
+            msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
+            lines = []
+            enum_name = ''
 
             for find_item in find_items:
                 find_row_index = find_item.row()
@@ -1292,7 +1318,6 @@ extern {1}                          //{1} TYPE의 변수들
             )
             lines.clear()
             msg_name_count_list.append([msg_name, msg_name_count])
-            msg_name_count = 0 
             
 
 
