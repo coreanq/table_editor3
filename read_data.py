@@ -106,11 +106,11 @@ def read_para_table(contents):
                 find_list = re_parse_params.findall(data_part)
                 # // "Cmd Frequency "[EDS :60000,]//20110519 whko modified MISRA 0-3635
                 #     (group1)       group(2)(group(3)group(4))    group(5)
-                comment_search_obj = re_parse_comment.search(comment_part) # return 값이 list 의 tuple 이 들어 있는 형식이므로 
-                comment_list = [] 
-                if( comment_search_obj ):
-                    # eds_max, eds_min, comment
-                    comment_list = comment_search_obj.group(4), comment_search_obj.group(5), comment_search_obj.group(6)
+                comment_list = re_parse_comment.findall(comment_part)
+                # 검색 결과는 하나만 나옴 
+                # eds_max, eds_min, comment
+                comment_list = comment_list[0][3], comment_list[0][4], comment_list[0][5]
+                # print(comment_list)
                 # (WORD)blahblah
                 # item[0] item[1]
                 yield (group_name, *[item[1].strip() for item in find_list], *comment_list )
@@ -185,30 +185,6 @@ def read_kpd_para_var(contents):
             yield ('', find_list[0][0] + array_footer, var_type, find_list[0][3]) 
             continue
     pass
-
-# def read_enum_title(contents):
-#     find_list =  []
-#     search_file_obj = re_extract_enum_title.search(contents)
-#     if( search_file_obj ):
-#         search_string = search_file_obj.string[search_file_obj.start(0):]
-#         # print(search_string )
-#         buf = io.StringIO(search_string) 
-#         for line in buf.readlines():
-#             search_line_obj = re_check_enum_title.search(line)
-#             if(search_line_obj):
-#                 searched_line =  search_line_obj.string[search_line_obj.start(0):]
-#                 # print(searched_line)
-#                 # example
-#                 #,T_LangBankEmpty               //94
-#                 # (group0        )              (group1)
-#                 find_list = re_parse_enum_title.findall(searched_line)
-#                 if( len(find_list) ):
-#                     # ('T_nnn5kW4', '//1065')
-#                     yield (find_list[0][0], find_list[0][1] ) 
-#     else: 
-#         yield None
-#     pass
-
 
 
 def read_basic_title(contents):

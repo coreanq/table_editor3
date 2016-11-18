@@ -2,7 +2,7 @@ import os
 import shutil
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView,  \
-                            QAction, QFileDialog, QMessageBox
+                            QAction, QFileDialog, QMessageBox, QMenu
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
                          QRegExp, Qt, QItemSelectionModel, QStringListModel, \
@@ -59,9 +59,24 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_kpd_para_unit = QStandardItemModel()
 
+        self.actionAddGroup = QAction('Add Group')
+        self.actionAddPara = QAction('Add Parameter')
+        self.actionAddMsgInfo = QAction('Add MsgInfo')
+        self.actionAddMsg = QAction('Add Msg')
+        self.actionAddVar = QAction('Add Var')
+        self.actionAddTitle = QAction('Add Title')
+
+
+        self.view_list = [  self.viewGroup,  
+                            self.viewParameter, self.viewMsgInfo, 
+                            self.viewMsgValue, self.viewVariable, 
+                            self.viewTitle]
+
+
+
         self.initView()
-        self.initDelegate()
         self.createConnection()
+        self.createAction()
         self.setWindowTitle('TableEditor4')
         pass
 
@@ -120,7 +135,88 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.menuEdit.triggered[QAction].connect(self.onMenuEditActionTriggered)
         self.menuAbout.triggered[QAction].connect(self.onMenuAboutActionTriggered)
 
+        def actionAddFunc(action_name):
+            def inner():
+                self.onAddActionTriggered(action_name)
+            return inner 
+        
+        self.actionAddGroup.triggered.connect(actionAddFunc('Group'))
+        self.actionAddPara.triggered.connect(actionAddFunc('Para'))
+        self.actionAddMsgInfo.triggered.connect(actionAddFunc('MsgInfo'))
+        self.actionAddMsg.triggered.connect(actionAddFunc('Msg'))
+        self.actionAddVar.triggered.connect(actionAddFunc('Var'))
+        self.actionAddTitle.triggered.connect(actionAddFunc('Title'))
 
+    @pyqtSlot(str)
+    def onAddActionTriggered(self, action_name):
+        if( action_name == 'Group'):
+            model = self.model_group
+            items = [QStandardItem() for x in range(len(ci.group_col_info()))]
+            model.appendRow(items)
+            pass
+        # 왼쪽 창에서 선택한 행의 값을 기준으로 오른쪽창의 행을 추가 하기 위한 루틴 
+        elif( action_name == 'Para'):
+            model = self.model_parameters
+            key_view = self.viewGroup
+            items = [QStandardItem() for x in range(len(ci.para_col_info_for_view()))]
+
+            selection_model = key_view.selectionModel()
+            row_indexes = selection_model.selectedRows()
+
+            if( len(row_indexes) == 0 ):
+                QMessageBox.critical(self, '오류', '왼쪽 창에서 행이 선택 되지 않았습니다.')
+                return  
+            
+            key_value = self.model_proxy_parameters.filterRegExp().pattern()
+            items[ ci.para_col_info_for_view().index('Group')] = QStandardItem(key_value)
+            model.appendRow(items)
+            pass
+        elif( action_name == 'MsgInfo'):
+            model = self.model_msg_info
+            items = [QStandardItem() for x in range(len(ci.msg_info_col_info()))]
+            model.appendRow(items)
+            pass
+        # 왼쪽 창에서 선택한 행의 값을 기준으로 오른쪽창의 행을 추가 하기 위한 루틴 
+        elif( action_name == 'Msg'):
+            model = self.model_msg_values
+            key_view = self.viewMsgInfo
+            items = [QStandardItem() for x in range(len(ci.msg_values_col_info()))]
+
+            selection_model = key_view.selectionModel()
+            row_indexes = selection_model.selectedRows()
+
+            if( len(row_indexes) == 0 ):
+                QMessageBox.critical(self, '오류', '왼쪽 창에서 행이 선택 되지 않았습니다.')
+                return  
+            
+            key_value = self.model_proxy_msg_values.filterRegExp().pattern()
+            items[ ci.para_col_info_for_view().index('Group')] = QStandardItem(key_value)
+            model.appendRow(items)
+            pass
+        elif( action_name == 'Var'):
+            model = self.model_var
+            items = [QStandardItem() for x in range(len(ci.variable_col_info()))]
+            model.appendRow(items)
+            pass
+        elif( action_name == 'Title'):
+            model = self.model_title
+            items = [QStandardItem() for x in range(len(ci.title_col_info()))]
+            model.appendRow(items)
+            pass
+
+        pass
+    def createAction(self):
+        view_list = self.view_list 
+        for view in view_list:
+            view.setContextMenuPolicy(Qt.ActionsContextMenu)
+
+        self.viewGroup.addAction(self.actionAddGroup)
+        self.viewParameter.addAction(self.actionAddPara)
+        self.viewMsgInfo.addAction(self.actionAddMsgInfo)
+        self.viewMsgValue.addAction(self.actionAddMsg)
+        self.viewVariable.addAction(self.actionAddVar)
+        self.viewTitle.addAction(self.actionAddTitle)
+        
     @pyqtSlot(QAction)
     def onMenuFileActionTriggered(self, action):
         action_type = action.text()
@@ -128,14 +224,29 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         if( action_type == 'Open'):
             selected_dir = QFileDialog.getExistingDirectory(
                                             self, 
-                                            caption = 'Open', 
+                                            caption = action_type, 
                                             directory = current_path, 
                                             options = QFileDialog.ShowDirsOnly
                                             )
             
             if( os.path.isdir(selected_dir) ):
+                self.model_msg_info.clear()
+                self.model_msg_values.clear()
+                self.model_kpd_para_unit.clear()
+                self.model_parameters.clear()
+                self.model_title.clear()
+                self.model_var.clear()
+                self.model_group.clear()
+
                 if( self.readDataFromFile(selected_dir) ):
+                    self.initView()
                     self.lineSourcePath.setText(selected_dir)
+                    # 셀크기를 유지하기 위해 사용 
+                    self.initDelegate()
+                    QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
+                else:
+                    QMessageBox.critical(self, '오류', '파일열기가 실패하였습니다')
+
             pass
         elif( action_type == 'Save'):
             source_path = self.lineSourcePath.text()
@@ -153,7 +264,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         elif( action_type =='Save As'):
             selected_dir = QFileDialog.getExistingDirectory(
                                             self, 
-                                            caption = 'Open', 
+                                            caption = action_type, 
                                             directory = current_path, 
                                             options = QFileDialog.ShowDirsOnly
                                             )
@@ -164,6 +275,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 else:
                     self.make_base_file(selected_dir)
                     self.make_model_to_file(selected_dir)
+                    QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
             pass
 
         elif( action_type == 'Exit'):
@@ -238,10 +350,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         print(action.text())
 
     def initView(self):
-        view_list = [self.viewGroup,  
-                    self.viewParameter, self.viewMsgInfo, 
-                    self.viewMsgValue, self.viewVariable, 
-                    self.viewTitle]
+        view_list = self.view_list
 
         # group view init 
         col_info = ci.group_col_info()
@@ -438,8 +547,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         # 통신 주소 설정 
         group_name = model.item(row, col_info.index('Group')).text()
-        code_num = int(model.item(row, col_info.index('Code#')).text())
-        
+        code_num_str = model.item(row, col_info.index('Code#')).text()
+        if( code_num_str == ''):
+            code_num = 0
+        else:
+            code_num = int( code_num_str )
         find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
         group_num = 0 
 
@@ -482,7 +594,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         for item in items:
             row = item.row()
             return self.model_title.item(row, col_info.index('Title')).text() 
-        return ("Error")
+        return ('')
 
     def makeAddrValue(self, group_num, code_num ):
         comm_addr = hex(0x1000 + (0x0100 * group_num) + code_num)
@@ -620,8 +732,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for items in rd.read_para_table(contents):
                         col_info = ci.para_col_info_for_file()
                         arg = items[col_info.index('Attribute')] 
-                        attribute  = int(arg, 16)
+                        if( arg == ''):
+                            arg_num = 0
+                        else:
+                            arg_num = int(arg, 16)
 
+                        attribute  = arg_num
                         no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
                         key_pad_type = 'Cmd'
                         hidden_condition = ''
@@ -640,7 +756,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         # 통신 주소 설정 
                         group_name = items[col_info.index('Group')]
-                        code_num = int(items[col_info.index('Code#')])
+                        code_num_str = items[col_info.index('Code#')]
+                        if( code_num_str == ''):
+                            code_num = 0
+                        else:
+                            code_num = int(code_num_str)
                         
                         find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
                         group_num = 0 
@@ -730,7 +850,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             item = QStandardItem(data)
             if( not editing ):
                 item.setBackground(QColor(Qt.lightGray) )
-                item.setFlags(Qt.NoItemFlags)
             item.setEditable(editing)
             item_list.append(item)            
         model.appendRow(item_list)
@@ -971,14 +1090,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             title_index = row_items[col_info.index('Title Index')]
             data = row_items[col_info.index('Data')]
 
+            if( title_index == ''):
+                title_index_num = 0
+            else:
+                title_index_num = int(title_index)
+
             # enum_list 생성용  for kpd_title_enum.h
-            if( int(title_index) == 1000):
+            if( title_index_num == 1000):
                 enum_list.append('T_TotalDefaultTitleSize')
                 enum_list.append(r'{0:<32} = START_ADD_TITLE_INDEX//{1}'.format(enum_name, title_index))
             else:
                 enum_list.append(r'{0:<32}//{1}'.format(enum_name, title_index))
 
-            if( int(title_index) < 1000):
+            if( title_index_num < 1000):
                 continue
 
             total_add_title = total_add_title + 1   
