@@ -6,21 +6,21 @@ import io
 # 파일 명에 상관없이 변수 명을 통해 그 파싱 내용이 어느 부분 데이터 인지 파악함
 # 각 인자들 파싱 
 
-KPD_ADD_TITLE_SRC_FILE = 'addtitle_eng.c'
-KPD_ADD_TITLE_HEADER_FILE = 'addtitle_eng.h'
-KPD_FUNC_HEAD_HEADER_FILE = 'kfunc_head.h'
-KPD_BASIC_TITLE_SRC_FILE='kpd_tbl_msg_eng.c'
-KPD_ENUM_TITLE_HEADER_FILE = 'kpd_title_enum.h'
-KPD_GRP_INDEX_HEADER_FILE = 'kpdpara_grpidx.h'
+KPD_ADD_TITLE_SRC_FILE = 'AddTitle_Eng.c'
+KPD_ADD_TITLE_HEADER_FILE = 'AddTitle_Eng.H'
+KPD_FUNC_HEAD_HEADER_FILE = 'KFunc_Head.H'
+KPD_BASIC_TITLE_SRC_FILE='KPD_TBL_MSG_ENG.c'
+KPD_ENUM_TITLE_HEADER_FILE = 'KPD_Title_Enum.H'
+KPD_GRP_INDEX_HEADER_FILE = 'KpdPara_GrpIdx.H'
 
-KPD_PARA_MSG_SRC_FILE =  'kpdpara_msg.c'
-KPD_PARA_MSG_HEADER_FILE = 'kpdpara_msg.h'
-KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'kpdpara_structunit.h'
-KPD_PARA_TABLE_SRC_FILE = 'kpdpara_table.c'
-KPD_PARA_TABLE_HEADER_FILE = 'kpdpara_table.h'
+KPD_PARA_MSG_SRC_FILE =  'KpdPara_Msg.c'
+KPD_PARA_MSG_HEADER_FILE = 'KpdPara_Msg.h'
+KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'KpdPara_StructUnit.H'
+KPD_PARA_TABLE_SRC_FILE = 'KpdPara_Table.c'
+KPD_PARA_TABLE_HEADER_FILE = 'KpdPara_Table.h'
 
-KPD_PARA_VAR_SRC_FILE = 'kpdpara_vari.c'
-KPD_PARA_VAR_HEADER_FILE = 'kpdpara_vari.h'
+KPD_PARA_VAR_SRC_FILE = 'KpdPara_Vari.c'
+KPD_PARA_VAR_HEADER_FILE = 'KpdPara_Vari.H'
 
 # write 에 사용하는 파일 리스트 정의
 make_files = (

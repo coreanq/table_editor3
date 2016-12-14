@@ -655,8 +655,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     def make_base_file(self, source_path):
         #기본 키패드 title 파일이나, struct_unit 파일은 내부에서 리소스로 가지고 있다가 만들어줌 
-        filelist = [rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE, 
-                    rd.KPD_BASIC_TITLE_SRC_FILE]
+        filelist = [rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE.lower(), 
+                    rd.KPD_BASIC_TITLE_SRC_FILE.lower() ]
 
         for file in filelist:
             resource_file_path = r':/base/' + file 
@@ -683,8 +683,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     # 날짜시간으로 된 폴더 하나 생성하고 거기에 backup 파일 다 넣음 
     def make_bakcup_file(self, source_path):
-        time_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
-        target_path = source_path + os.path.sep + time_str
+        target_path = source_path + os.path.sep + 'backup'
 
         if( not os.path.exists(target_path) ):
             os.mkdir(target_path)
@@ -718,13 +717,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         source_file_list  = []
 
         for (dirpath, dirnames, filenames) in os.walk(target_dir):
-            source_file_list = filenames
+            source_file_list =list(map(str.lower, filenames))
             # root folder 만 확인할것이므로 바로 break 
             break
-        source_file_list = [ file.lower() for file in source_file_list ]
+        # source_file_list = [ file.lower() for file in source_file_list ]
 
         # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
-        if( all ( x in source_file_list for x in rd.make_files) == False):
+        if( all ( x.lower() in source_file_list for x in rd.make_files) == False):
             QMessageBox.critical(self, "오류", "타겟 폴더의 파일 리스트가 온전치 않음")
             print(source_file_list)
             ret = False
@@ -746,7 +745,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 contents = ""
                 with open(file_path, 'r', encoding='utf8') as f:
                     contents = f.read()
-                if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE ):
+                if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE.lower() ):
+
                     # 그룹  정보 읽기 
                     for items in rd.read_grp_info(contents):
                         self.addRowToModel(self.model_group, items)
@@ -829,7 +829,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             print('error occur')
                             print(items)
                         
-                elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE):
+                elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE.lower()):
                     msg_list = [] 
                     col_info = ci.msg_values_col_info()
                     title_index = col_info.index('Title')
@@ -846,21 +846,21 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for item in msg_list:
                         self.addRowToModel(self.model_msg_info, item)
                         
-                elif( filename.lower() == rd.KPD_PARA_VAR_HEADER_FILE):
+                elif( filename.lower() == rd.KPD_PARA_VAR_HEADER_FILE.lower() ):
                     for items in rd.read_kpd_para_var(contents):
                         self.addRowToModel(self.model_var, items)
                     pass
-                elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE):
+                elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE.lower() ):
                     for items in rd.read_basic_title(contents):
                         # 항상 add title 보다 앞서야 하므로 
                         self.addRowToModel(self.model_title, items, editing = False)
                     pass
-                elif ( filename.lower() == rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE):
+                elif ( filename.lower() == rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE.lower() ):
                     for items in rd.read_kpd_para_struct_unit(contents):
                         for item in items:
                             self.model_kpd_para_unit.appendRow(QStandardItem(item))
 
-                elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE ):
+                elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE.lower() ):
                     for items in rd.read_add_title(contents):
                         self.addRowToModel(self.model_title, items)
                 pass
@@ -1150,7 +1150,7 @@ const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ \n
 '''
         file_contents = src_template.format('\n,'.join(rows))
 
-        with open(source_path + os.path.sep + 'addtitle_eng.c', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_ADD_TITLE_SRC_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1164,7 +1164,7 @@ extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 '''
 
         file_contents = header_template.format(total_add_title, add_title_size)
-        with open(source_path + os.path.sep + 'addtitle_eng.h', 'w') as f:
+        with open(source_path + os.path.sep + rd.KPD_ADD_TITLE_HEADER_FILE, 'w') as f:
             f.write(file_contents)
         pass
 
@@ -1191,7 +1191,7 @@ enum{{
             have_add_title = ''
 
         file_contents = kpd_title_enum_header_template.format('\n ,'.join(enum_list), have_add_title)
-        with open(source_path + os.path.sep + 'kpd_title_enum.h', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_ENUM_TITLE_HEADER_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1242,7 +1242,7 @@ extern {1}                          //{1} TYPE의 변수들
         # print(var_list)
         # print(define_list)
         # print(file_contents)
-        with open(source_path + os.path.sep + 'kpdpara_vari.h', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_PARA_VAR_HEADER_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1261,7 +1261,7 @@ extern {1}                          //{1} TYPE의 변수들
 ;
 '''
         file_contents = source_template.format(var_type, '\n,'.join(var_list)) 
-        with open(source_path + os.path.sep + 'kpdpara_vari.c', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_PARA_VAR_SRC_FILE , 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1368,7 +1368,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx)
         file_contents = source_template.format(  '\n'.join(msg_vars),
                                                  '\n\t,'.join(msg_data_tbl_lines),
                                                  '\n\t,'.join(msg_data_size_lines) )
-        with open(source_path + os.path.sep + 'kpdpara_msg.c', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_PARA_MSG_SRC_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1401,7 +1401,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
 
         file_contents = header_template.format(  '\n\t\t,'.join(msg_data_enum_lines),
                                                  '\n'.join(msg_define_lines) )
-        with open(source_path + os.path.sep + 'kpdpara_msg.h', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_PARA_MSG_HEADER_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1551,7 +1551,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                 else:
                     min_val = '(WORD)' + min_val
                    
-                if( unit == 'U_DATAMSG'):
+                if( 'DATAMSG' in unit ):
                     form_msg = 'MSG_' + form_msg
                 
                 eds_val = ''
@@ -1625,7 +1625,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx)
                                                 ''.join(table_addr_lines)
 
         )
-        with open(source_path + os.path.sep + 'kpdpara_table.c', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_SRC_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1648,7 +1648,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx);
         file_contents = header_template.format(
             '\n'.join(defines_lines)
         )
-        with open(source_path + os.path.sep + 'kpdpara_table.h', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1668,7 +1668,7 @@ enum eGrpIndex{{
         file_contents = group_index_template.format(
             '\n\t,'.join(group_index_lines)
         )
-        with open(source_path + os.path.sep + 'kpdpara_grpidx.h', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_GRP_INDEX_HEADER_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
@@ -1684,6 +1684,7 @@ enum eGrpIndex{{
         after_enter_key_func_lines = []
 
         # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
+        key_func_list = [] # 중복 제거를 위해 사용 
         for row_index in range(key_row):
             # 그룹 정보 추출 
             key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
@@ -1691,7 +1692,6 @@ enum eGrpIndex{{
             # 해당 하는 그룹의 아이템 정보를 얻음 
             find_items = model.findItems(key_group_name, column = col_info.index('Group'))
 
-            key_func_list = [] # 중복 제거를 위해 사용 
             for find_item in find_items:
                 find_row_index = find_item.row()
 
@@ -1732,7 +1732,7 @@ enum eKpdFuncIndex{{
             len(cmd_key_func_lines),
             len(after_enter_key_func_lines)
         )
-        with open(source_path + os.path.sep + 'kfunc_head.h', 'w', encoding='utf8') as f:
+        with open(source_path + os.path.sep + rd.KPD_FUNC_HEAD_HEADER_FILE, 'w', encoding='utf8') as f:
             f.write(file_contents)
         pass
 
