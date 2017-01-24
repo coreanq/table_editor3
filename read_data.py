@@ -136,7 +136,8 @@ def read_para_msg(contents):
                 comment_search_obj = re_parse_msg_comment.search(comment_part)
                 if( comment_search_obj ):
                     comment = comment_search_obj.group(1)
-                yield (msg_name, msg_info_comment,  *[item.strip() for item in find_list])
+                # para msg col info 에 맞춰서 형식을 만들어 줌 
+                yield (msg_name, msg_info_comment,  find_list[0].strip() , "", find_list[1].strip())
     pass               
     
 def read_grp_info(contents):

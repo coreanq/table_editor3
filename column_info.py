@@ -25,6 +25,7 @@ _parameters_file_columns_info = [
 _parameters_view_columns_info = [
     'Group', 
     'Code#',
+    'Title Index',
     'Code TITLE',
     'AtValue',
     'Para 변수',
@@ -49,7 +50,7 @@ _parameters_view_columns_info = [
     '설명'
 ]
 _group_columns_info = [
-    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
     'Group', 
     'Hidden Var', 
     'Hidden Val'
@@ -57,26 +58,27 @@ _group_columns_info = [
 
 # read_data 시 yield 되는 tuple 의 index 정보를 나타냄  
 _title_columns_info = [
-   'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
+   'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
    'Title',
    'Enum 이름',
    'Title Index',
    'Data'
 ]
 _variable_columns_info = [
-    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
     'Variable',
     'Type',
     'Description'
 ]
 _msg_values_columns_info = [
     'MsgName',
-    'MsgInfo',
+    'MsgComment',
+    'Title Index',
     'Title', 
     'AtValue' 
 ]
 _msg_info_columns_info = [
-    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 func 가 공용이므로 dummy 만듬
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
     'MsgName',
     'MsgComment'
 ]

@@ -278,7 +278,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             # Save 할때는 상관이 없지만 기존 파일 백업 생성할때 문제 발생할 수 있으므로 그렇게 함 
             if( self.check_if_has_all_file(source_path) == False ):
                 return
-            self.make_bakcup_file(source_path)
+            self.make_backup_file(source_path)
             self.make_base_file(source_path)
             self.make_model_to_file(source_path)
             QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
@@ -390,6 +390,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_parameters.setHorizontalHeaderLabels(col_info)
         view.setModel(self.model_proxy_parameters) 
         view.setColumnHidden( col_info.index('Group'), True)
+        view.setColumnHidden( col_info.index('Title Index'), True )
        
         # msg info view init 
         col_info = ci.msg_info_col_info()
@@ -406,7 +407,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_msg_values.setHorizontalHeaderLabels(col_info)
         view.setModel(self.model_proxy_msg_values)
         view.setColumnHidden(col_info.index('MsgName'), True)
-        view.setColumnHidden(col_info.index('MsgInfo'), True)
+        view.setColumnHidden(col_info.index('MsgComment'), True)
+        view.setColumnHidden(col_info.index('Title Index'), True )
         
         # var view init
         col_info = ci.variable_col_info()
@@ -681,8 +683,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.make_kfunc_head(source_path)
         pass
 
-    # 날짜시간으로 된 폴더 하나 생성하고 거기에 backup 파일 다 넣음 
-    def make_bakcup_file(self, source_path):
+    def make_backup_file(self, source_path):
         target_path = source_path + os.path.sep + 'backup'
 
         if( not os.path.exists(target_path) ):
@@ -796,11 +797,16 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         else:
                             comm_addr = self.makeAddrValue(group_num, code_num)
                         eep_addr = self.makeEEPAddrValue(group_num, code_num)
-                            
+
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
+                        at_value = items[col_info.index('AtValue')]
+
+                        title = self.make_title_with_at_value(title, at_value)
+
                         try : 
                             view_col_list = [ items[col_info.index('Group')],  
                                             items[col_info.index('Code#')],  
+                                            items[col_info.index('TitleIndex')],
                                             title, 
                                             items[col_info.index('AtValue')], 
                                             items[col_info.index('ParaVar')],
@@ -832,14 +838,21 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE.lower()):
                     msg_list = [] 
                     col_info = ci.msg_values_col_info()
-                    title_index = col_info.index('Title')
+                    title_index = col_info.index('Title Index')
+                    at_value_index = col_info.index('AtValue')
                     for items in rd.read_para_msg(contents):
-                        msg_info = ['', items[col_info.index('MsgName')], items[col_info.index('MsgInfo')]] 
+                        msg_name = items[col_info.index('MsgName')]
+                        msg_comment = items[col_info.index('MsgComment')]
+                        msg_info = ['', msg_name, msg_comment ]
 
                         if( msg_info not in msg_list ):
                             msg_list.append(msg_info) 
-                        title = self.searchTitlefromEnumName(items[title_index])
-                        insert_list = *items[:title_index], title,  *items[title_index +1: ]
+                        title_enum  = items[title_index]
+                        title = self.searchTitlefromEnumName(title_enum)
+                        at_value = items[at_value_index]
+                        title = self.make_title_with_at_value(title, at_value )
+
+                        insert_list =  msg_name, msg_comment, title_enum, title, at_value 
                         self.addRowToModel(self.model_msg_values, insert_list)
                         pass
 
@@ -866,6 +879,28 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 pass
         return True
         pass
+
+    # padding 가 있는 이유는 parameter 랑 msg 의 at value 생성 방식이 다르기 때문이다. 
+    def make_title_with_at_value(self, title, at_value, padding = ''):
+        # title 내 at value 설정 
+        at_count = 0
+        result = title
+        if( at_value.lower() == '0xff'):
+            title.replace('@', '0')
+            result = title
+        else:
+            if( title.count('#') == 0 ):
+                at_count = title.count('@')
+                at_value = '{value:{padding}>{count}}'.format(value = at_value, count = at_count, padding = padding)
+    
+                for value in at_value:
+                    result = result.replace('@', value, 1)
+            else:
+                at_value = at_value.replace('\'', '')
+                result = result.replace('#', at_value)
+
+        return result
+
         
     def addRowToModel(self, model, data_list, editing = True):
         item_list = []
@@ -1298,13 +1333,11 @@ extern {1}                          //{1} TYPE의 변수들
                 find_row_index = find_item.row()
 
                 msg_name = model.item(find_row_index, col_info.index('MsgName')).text()
-                msg_comment = model.item(find_row_index, col_info.index('MsgInfo')).text()
+                msg_comment = model.item(find_row_index, col_info.index('MsgComment')).text()
                 title_name = model.item(find_row_index, col_info.index('Title')).text()
                 at_value = model.item(find_row_index, col_info.index('AtValue')).text()
-
-                title_items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
-                for item in title_items:
-                    enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
+                enum_name = model.item(find_row_index, col_info.index('Title Index')).text()
+                title_name = self.make_title_with_at_value(title_name, at_value)
 
                 lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
                 msg_name_count =msg_name_count + 1
@@ -1482,12 +1515,10 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
                 group_name = model.item(find_row_index, col_info.index('Group')).text()
                 code_num = model.item(find_row_index, col_info.index('Code#')).text()
                 title_name = model.item(find_row_index, col_info.index('Code TITLE')).text()
-                title_enum_name = ''
-                title_items = self.model_title.findItems(title_name, column = ci.title_col_info().index('Title'))
-                for item in title_items:
-                    title_enum_name = self.model_title.item(item.row(), ci.title_col_info().index('Enum 이름')).text()
+                title_enum_name =  model.item(find_row_index, col_info.index('Title Index')).text()
                 
                 at_value = model.item(find_row_index, col_info.index('AtValue')).text()
+                title_name = self.make_title_with_at_value(title_name, at_value) # at value 적용 
                 para_var= model.item(find_row_index, col_info.index('Para 변수')).text()
                 kpd_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
                 default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
