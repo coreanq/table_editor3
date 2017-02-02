@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeade
                             QAction, QFileDialog, QMessageBox, QMenu
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
-                         QRegExp, Qt, QItemSelectionModel, QStringListModel, \
+                         QRegExp, Qt, QItemSelectionModel, QItemSelection,  QStringListModel, \
                          QIODevice, QFile
 import datetime
 import json
@@ -90,8 +90,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
 
     def createConnection(self):
-        self.viewGroup.clicked.connect(self.onViewGroupClicked)  
-        self.viewMsgInfo.clicked.connect(self.onViewMsgInfoClicked)
+        self.viewGroup.selectionModel().currentChanged.connect(self.onViewGroupSelectionChanged)
+        # self.viewGroup.clicked.connect(self.onViewGroupClicked)  
+        self.viewMsgInfo.selectionModel().currentChanged.connect(self.onViewMsgInfoSelectionChanged)
         
         # ctrl + c, ctrl + v, insert, delete 누를 시 
         parameter_view_eater = ve.ViewKeyEater(self)
@@ -443,11 +444,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             horizontalHeaderView  = item.horizontalHeader()
             horizontalHeaderView.setStretchLastSection(True)
             horizontalHeaderView.setSectionResizeMode(QHeaderView.ResizeToContents)
+
             # row drag & drop 을 위해서는 headerView 를 설정해야함 view 자체에서는 안됨 
             verticalHeaderView = item.verticalHeader()
             verticalHeaderView.setSectionsMovable(True)
             verticalHeaderView.setDragEnabled(True)
             verticalHeaderView.setDragDropMode(QAbstractItemView.InternalMove)
+            verticalHeaderView.setHidden(True)
 
     def setCmbDelegateAttribute(self, model, view, delegate, columns = [], editable = False, 
         width = 0, cmb_model_column = 0):
@@ -591,10 +594,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         model.setItem(index.row(), comm_addr_col, QStandardItem(comm_addr))
         pass
 
-    @pyqtSlot(QModelIndex)
-    def onViewGroupClicked(self, index):
+    @pyqtSlot(QModelIndex, QModelIndex)
+    def onViewGroupSelectionChanged(self, current, previous):
         # print(util.whoami() )
-        row = index.row()
+        row = current.row()
         col_info = ci.group_col_info()
         key_name = self.model_group.item(row, col_info.index('Group')).text() 
         regx = QRegExp(key_name.strip()) 
@@ -602,10 +605,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_proxy_parameters.setFilterRegExp(regx)
         pass
      
-    @pyqtSlot(QModelIndex)
-    def onViewMsgInfoClicked(self, index):
+    @pyqtSlot(QModelIndex, QModelIndex)
+    def onViewMsgInfoSelectionChanged(self, current, previous):
         # print(util.whoami() )
-        row = index.row()
+        row = current.row()
         col_info = ci.msg_info_col_info()
         key_name = self.model_msg_info.item(row, col_info.index('MsgName')).text()
         regx = QRegExp(key_name.strip() )

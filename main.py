@@ -5,7 +5,7 @@ from PyQt5 import uic
 import read_data as rd
 import mainwindow
 
-VERSION_NUMBER = '0.0.0.3'
+VERSION_NUMBER = '0.0.0.5'
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
