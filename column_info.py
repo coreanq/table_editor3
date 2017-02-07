@@ -2,12 +2,33 @@ import os
 import sys
 from PyQt5.QtCore import QStringListModel
 # file 을 읽고 파싱 후  올라오는 column 정보 
-_parameters_file_columns_info = [ 
+_parameters_file_columns_info_old = [ 
     'Group',
     'Code#' , 
     'AtValue',
     'TitleIndex', 
     'ParaVar', 
+    'KpdFunc',
+    'DefaultVal',
+    'MaxVal', 
+    'MinVal', 
+    'Msg',
+    'Unit', 
+    'Attribute', 
+    'ShowVar',
+    'ShowVal',
+    'MaxEDS', 
+    'MinEDS',
+    'Comment' 
+]
+_parameters_file_columns_info_new = [ 
+    'Group',
+    'Code#' , 
+    'AtValue',
+    'TitleIndex', 
+    'Para Index', 
+    'KpdWordScale',
+    'KpdFloatScale',
     'KpdFunc',
     'DefaultVal',
     'MaxVal', 
@@ -28,7 +49,9 @@ _parameters_view_columns_info = [
     'Title Index',
     'Code TITLE',
     'AtValue',
-    'Para 변수',
+    'Para Index',
+    'KpdWordScale',
+    'KpdFloatScale',
     'KPD 함수',
     '공장설정값',
     '최대값', 
@@ -94,8 +117,11 @@ _unit_with_msg = {
                                 'F_YMDHM', 'F_RYMDHM', 'F_VER'] )
 }
 
-def para_col_info_for_file():
-    return _parameters_file_columns_info
+def para_col_info_for_file_old():
+    return _parameters_file_columns_info_old
+
+def para_col_info_for_file_new():
+    return _parameters_file_columns_info_new
     
 def para_col_info_for_view():
     return _parameters_view_columns_info

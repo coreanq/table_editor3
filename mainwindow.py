@@ -1,35 +1,26 @@
-import os
-import shutil
-import sys
+import os, sys, shutil, json, re
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView,  \
                             QAction, QFileDialog, QMessageBox, QMenu
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
                          QRegExp, Qt, QItemSelectionModel, QItemSelection,  QStringListModel, \
                          QIODevice, QFile
-import datetime
-import json
 import mainwindow_ui 
+import horizontal_proxy_model
+
 import view_delegate as cbd 
 import view_key_eater as ve
 import column_info as ci
 import read_data as rd
 import resource_rc
 import util
-import re
+import version
+import make_files as mk 
 
-ATTR_BYTE = 0x0001  # byte 단위 사용 안함 
-ATTR_UP = 0x0002
-ATTR_LP = 0x0004
-ATTR_READ_ONLY = 0x0008
-ATTR_NO_CHANGE_ON_RUN =  0x0010
-ATTR_ZERO_INPUT = 0x0020
-ATTR_NO_COMM =0x0040
-ATTR_ENT = 0x0080
-ATTR_HIDDEN_CON = 0x0700
-ATTR_ADD  = 0x1000
 
 class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
+    sigFileVersionChanged  = pyqtSignal()
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
@@ -39,6 +30,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         self.model_parameters = QStandardItemModel(self)
         self.model_proxy_parameters = QSortFilterProxyModel(self)
+        # self.model_proxy_parameters_detail = horizontal_proxy_model.HorizontalProxyModel(self)
+        self.model_proxy_parameters_detail = QSortFilterProxyModel(self)
         
         self.model_msg_info = QStandardItemModel(self)
         self.model_proxy_msg_info = QSortFilterProxyModel(self)
@@ -81,18 +74,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             self.model_title
         ]
 
-
+        self.table_editor_number = ''
+        self.table_editor_version = ''
 
         self.initView()
         self.createConnection()
         self.createAction()
-        self.setWindowTitle('TableEditor4')
         pass
 
     def createConnection(self):
         self.viewGroup.selectionModel().currentChanged.connect(self.onViewGroupSelectionChanged)
         # self.viewGroup.clicked.connect(self.onViewGroupClicked)  
         self.viewMsgInfo.selectionModel().currentChanged.connect(self.onViewMsgInfoSelectionChanged)
+        self.viewParameter.selectionModel().currentChanged.connect(self.onViewParameterSelectionChanged)
         
         # ctrl + c, ctrl + v, insert, delete 누를 시 
         parameter_view_eater = ve.ViewKeyEater(self)
@@ -169,6 +163,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         #             if( item.text() == '' )
 
 
+        pass
+    
+    def setFileVersion(self, table_editor_number, table_editor_version):
+        self.table_editor_number = table_editor_number
+        self.table_editor_version = table_editor_version 
+        self.lblVersion.setText('Table Editor ' + table_editor_number + '  V'+ table_editor_version )
+        self.sigFileVersionChanged.emit()
         pass
 
     @pyqtSlot(str)
@@ -269,23 +270,28 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     self.initDelegate()
                     QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
                 else:
-                    QMessageBox.critical(self, '오류', '파일열기가 실패하였습니다')
+                    QMessageBox.critical(self, '실패', '파일열기가 실패하였습니다')
 
             pass
         elif( action_type == 'Save'):
+            ret_val = [] 
             source_path = self.lineSourcePath.text()
 
-            # 모든 파일이 제대로 존재 하는지 확인 
-            # Save 할때는 상관이 없지만 기존 파일 백업 생성할때 문제 발생할 수 있으므로 그렇게 함 
-            if( self.check_if_has_all_file(source_path) == False ):
-                return
-            self.make_backup_file(source_path)
-            self.make_base_file(source_path)
-            self.make_model_to_file(source_path)
-            QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
+            if( not os.path.isdir(source_path) ):
+                ret_val.append('소스 폴더명 오류')
+            if(  self.make_backup_file(source_path) == False ):
+                ret_val.append('백업 파일 생성 오류')
+            
+            if( len(ret_val) == 0 ):
+                self.make_base_file(source_path) 
+                self.make_model_to_file(source_path) 
+                QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
+            else:
+                QMessageBox.information(self, '실패', ' | '.join(ret_val) )
             pass
 
         elif( action_type =='Save As'):
+            ret_val = []
             selected_dir = QFileDialog.getExistingDirectory(
                                             self, 
                                             caption = action_type, 
@@ -293,13 +299,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             options = QFileDialog.ShowDirsOnly
                                             )
             
-            if( os.path.isdir(selected_dir) ):
-                if( self.check_if_has_any_file(selected_dir) == True):
-                    QMessageBox.critical(self, '오류', '타겟 폴더에 중요 파일이 존재합니다')
-                else:
-                    self.make_base_file(selected_dir)
-                    self.make_model_to_file(selected_dir)
-                    QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
+            if( not os.path.isdir(selected_dir) ):
+                ret_val.append('소스 폴더명 오류')
+            if( self.check_has_any_file_for_write(selected_dir) == True):
+                ret_val.append('타겟 폴더에 중요 파일이 존재')
+            if( self.model_parameters.rowCount() == 0 ):
+                ret_val.append('데이터가 비어 있음')
+            
+            if( len(ret_val) == 0 ):
+                self.make_base_file(selected_dir)
+                self.make_model_to_file(selected_dir)
+                QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
+            else:
+                QMessageBox.critical(self, '실패', ' | '.join(ret_val))
             pass
 
         elif( action_type == 'Exit'):
@@ -392,7 +404,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setModel(self.model_proxy_parameters) 
         view.setColumnHidden( col_info.index('Group'), True)
         view.setColumnHidden( col_info.index('Title Index'), True )
-       
+
+        # parameter view detail init
+        view = self.viewParameterDetail
+        self.model_proxy_parameters_detail.setSourceModel(self.model_proxy_parameters)
+        view.setModel(self.model_proxy_parameters_detail) 
+
         # msg info view init 
         col_info = ci.msg_info_col_info()
         view = self.viewMsgInfo
@@ -487,14 +504,26 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         model = self.model_var
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
-        col_indexes = [ col_info.index('Para 변수'), 
+        col_indexes = [ col_info.index('Para Index'), 
                         col_info.index('최대값'),
                         col_info.index('최소값'),
                         col_info.index('보임변수')
         ]
         cmb_model_column_index = ci.variable_col_info().index('Variable')
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = True,  
-                width = 150, cmb_model_column = cmb_model_column_index)
+                width = 200, cmb_model_column = cmb_model_column_index)
+
+        model = QStringListModel(['E_DATA_DIV_1','E_DATA_DIV_10', 'E_DATA_DIV_100','E_DATA_DIV_1K' , 'E_DATA_DIV_10K', 'E_DATA_DIV_100K'] ) 
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
+        col_indexes = [ 
+                        col_info.index('KpdWordScale'),
+                        col_info.index('KpdFloatScale')
+        ]
+        cmb_model_column_index = ci.variable_col_info().index('Variable')
+        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  
+                width = 120 )
+
 
         model = QStringListModel( ['True', 'False']) 
         view  = self.viewParameter
@@ -614,7 +643,26 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         regx = QRegExp(key_name.strip() )
         self.model_proxy_msg_values.setFilterKeyColumn(0)
         self.model_proxy_msg_values.setFilterRegExp(regx)
-         
+
+    @pyqtSlot(QModelIndex, QModelIndex)
+    def onViewParameterSelectionChanged(self, current, previous):
+        src_model = self.model_proxy_parameters
+        dst_model = self.model_proxy_parameters_detail
+        dst_model.setSourceModel(self.viewParameter.selectionModel().model() )
+
+        # src_row = current.row()
+        # src_column = ci.para_col_info_for_view().index('Code#')
+
+        # src_code_num_index = src_model.index(src_row, src_column)
+        # src_code_num = src_model.data(src_code_num_index)
+        # print(util.whoami() , src_row , src_code_num)
+        # # 불필요 컬럼 hidden
+        # for count in range(dst_model.columnCount() ):
+        #     code_num = dst_model.data(dst_model.index(src_column, count)) 
+        #     if( src_code_num == code_num ):
+        #         self.viewParameterDetail.setColumnHidden(count, False)
+        #     else:
+        #         self.viewParameterDetail.setColumnHidden(count, True)
         pass
     def searchTitlefromEnumName(self, enumName):
         col_info = ci.title_col_info()
@@ -633,30 +681,23 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         eep_addr = hex(0x0200 + (16 * 2 * 7 * group_num) + (code_num * 2 + 16) )
         eep_addr = '0x{0}'.format( eep_addr[2:].upper() )
         return eep_addr
-    def makeHiddenCondition(self, attribute):
-        hidden_condition = '' 
-        val = (attribute & ATTR_HIDDEN_CON) >> 8
-        if( val == 0 ):
-            hidden_condition = '=='
-        elif ( val == 1 ):
-            hidden_condition = '>'
-        elif ( val == 2 ):
-            hidden_condition = '<'
-        elif( val  == 3 ) :
-            hidden_condition = '!='
-        return hidden_condition
-    
-    def hiddenConditionToValue(self, hidden_condition ):
-        value = 0
-        if( hidden_condition == '=='):
-            value = 0
-        elif ( hidden_condition == '>'):
-            value = 1
-        elif( hidden_condition == '<'):
-            value = 2
-        elif( hidden_condition == '!='):
-            value = 3
-        return value
+
+
+ 
+    def make_backup_file(self, source_path):
+        if( not os.path.exists(source_path) ) :
+            return False
+
+        target_path = os.path.curdir + os.path.sep + source_path + os.path.sep + 'backup'
+        if( not os.path.exists(target_path) ):
+            os.mkdir(target_path)
+        
+        for file in rd.make_files:
+            source_file_path = source_path + os.path.sep + file
+            target_file_path = target_path + os.path.sep + file
+            shutil.move(source_file_path, target_file_path)
+
+        return True
 
     def make_base_file(self, source_path):
         #기본 키패드 title 파일이나, struct_unit 파일은 내부에서 리소스로 가지고 있다가 만들어줌 
@@ -677,29 +718,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             
             with open(source_file_path, 'w', encoding= 'utf8') as f:
                 f.write(str(contents))
-        pass
+        return True
+
     def make_model_to_file(self, source_path):
-        self.make_kpdpara_var(source_path)
-        self.make_add_title_eng(source_path)
-        self.make_kpdpara_msg(source_path)
-        self.make_kpdpara_table(source_path)
-        self.make_kfunc_head(source_path)
-        pass
+        mk.make_kpdpara_var(source_path, self.model_var)
+        mk.make_add_title_eng(source_path, self.model_title)
+        mk.make_kpdpara_msg(source_path, self.model_msg_info, self.model_msg_values)
+        mk.make_kpdpara_table(source_path, self.model_parameters, self.model_group)
+        mk.make_kfunc_head(source_path, self.model_parameters, self.model_group)
 
-    def make_backup_file(self, source_path):
-        target_path = source_path + os.path.sep + 'backup'
+        return True
 
-        if( not os.path.exists(target_path) ):
-            os.mkdir(target_path)
-        
-        for file in rd.make_files:
-            source_file_path = source_path + os.path.sep + file
-            target_file_path = target_path + os.path.sep + file
-            shutil.move(source_file_path, target_file_path)
-
-        pass
-
-    def check_if_has_any_file(self, source_path):
+    def check_has_any_file_for_write(self, source_path):
         ret = False 
         target_dir = source_path
         source_file_list  = []
@@ -710,12 +740,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             break
         source_file_list = [ file.lower() for file in source_file_list ]
 
-        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
+        # writing 시 덮어 씌여지는 파일 있는지 체크  
         if( any ( x in source_file_list for x in rd.make_files) ):
             ret = True
         return ret
 
-    def check_if_has_all_file(self, source_path):
+    def check_has_all_file_for_read(self, source_path):
+        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
         ret = True
         target_dir = source_path
         source_file_list  = []
@@ -726,8 +757,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             break
         # source_file_list = [ file.lower() for file in source_file_list ]
 
-        # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
-        if( all ( x.lower() in source_file_list for x in rd.make_files) == False):
+        if( all ( x.lower() in source_file_list for x in rd.parsing_files) == False):
             QMessageBox.critical(self, "오류", "타겟 폴더의 파일 리스트가 온전치 않음")
             print(source_file_list)
             ret = False
@@ -740,7 +770,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         source_file_list = []
 
         # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
-        if( self.check_if_has_all_file(target_dir) == False):
+        if( self.check_has_all_file_for_read(target_dir) == False):
             return False
 
         for filename in rd.parsing_files:
@@ -751,13 +781,39 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     contents = f.read()
                 if(filename.lower() == rd.KPD_PARA_TABLE_SRC_FILE.lower() ):
 
+                    # 테이블 버전 정보 얻기 
+                    table_editor_number, table_editor_version = rd.read_para_table_version(contents)
+                    self.setFileVersion(table_editor_number, table_editor_version)
+
                     # 그룹  정보 읽기 
                     for items in rd.read_grp_info(contents):
                         self.addRowToModel(self.model_group, items)
                         pass
 
+                    # parameter table parameter 값 읽기  
                     for items in rd.read_para_table(contents):
-                        col_info = ci.para_col_info_for_file()
+                        col_info = None 
+                        para_index = ''
+                        kpd_word_scale = ''
+                        kpd_float_scale = ''
+
+                        # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
+                        if( int(self.table_editor_number) < 4 ):
+                            col_info = ci.para_col_info_for_file_old()
+                            para_vari = items[col_info.index('ParaVar')].lower()
+                            para_vari = para_vari.replace('[', '_')
+                            para_vari = para_vari.replace(']', '')
+                            para_vari = para_vari.replace('k_w', '')
+                            para_vari = para_vari.replace('k_aw', '')
+                            para_index = para_vari.upper()
+                            kpd_word_scale = 'E_DATA_DIV_1'
+                            kpd_float_scale = 'E_DATA_EIV_1'
+                        else:
+                            col_info = ci.para_col_info_for_file_new()
+                            para_index = items[col_info.index('Para Index')].upper()
+                            kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
+                            kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
+
                         arg = items[col_info.index('Attribute')] 
                         if( arg == ''):
                             arg_num = 0
@@ -769,17 +825,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         key_pad_type = 'Cmd'
                         hidden_condition = ''
 
-                        if( attribute & ATTR_NO_COMM ):
+                        if( attribute & mk.ATTR_NO_COMM ):
                             no_comm = True 
-                        if( attribute & ATTR_READ_ONLY ):
+                        if( attribute & mk.ATTR_READ_ONLY ):
                             read_only = True
-                        if( attribute & ATTR_NO_CHANGE_ON_RUN ):
+                        if( attribute & mk.ATTR_NO_CHANGE_ON_RUN ):
                             no_change_on_run = True 
-                        if( attribute & ATTR_ZERO_INPUT ):
+                        if( attribute & mk.ATTR_ZERO_INPUT ):
                             zero_input = True 
-                        if( attribute & ATTR_ENT):
+                        if( attribute & mk.ATTR_ENT):
                             key_pad_type = 'AfterEnter'
-                        hidden_condition = self.makeHiddenCondition(attribute)
+                        hidden_condition = mk.makeHiddenCondition(attribute)
 
                         # 통신 주소 설정 
                         group_name = items[col_info.index('Group')]
@@ -804,7 +860,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         at_value = items[col_info.index('AtValue')]
 
-                        title = self.make_title_with_at_value(title, at_value)
+                        title = mk.make_title_with_at_value(title, at_value)
+
 
                         try : 
                             view_col_list = [ items[col_info.index('Group')],  
@@ -812,7 +869,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             items[col_info.index('TitleIndex')],
                                             title, 
                                             items[col_info.index('AtValue')], 
-                                            items[col_info.index('ParaVar')],
+                                            para_index, 
+                                            kpd_word_scale,
+                                            kpd_float_scale,
                                             items[col_info.index('KpdFunc')],
                                             items[col_info.index('DefaultVal')],
                                             items[col_info.index('MaxVal')],
@@ -853,7 +912,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         title_enum  = items[title_index]
                         title = self.searchTitlefromEnumName(title_enum)
                         at_value = items[at_value_index]
-                        title = self.make_title_with_at_value(title, at_value )
+                        title = mk.make_title_with_at_value(title, at_value )
 
                         insert_list =  msg_name, msg_comment, title_enum, title, at_value 
                         self.addRowToModel(self.model_msg_values, insert_list)
@@ -883,28 +942,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         return True
         pass
 
-    # padding 가 있는 이유는 parameter 랑 msg 의 at value 생성 방식이 다르기 때문이다. 
-    def make_title_with_at_value(self, title, at_value, padding = ''):
-        # title 내 at value 설정 
-        at_count = 0
-        result = title
-        if( at_value.lower() == '0xff'):
-            title.replace('@', '0')
-            result = title
-        else:
-            if( title.count('#') == 0 ):
-                at_count = title.count('@')
-                at_value = '{value:{padding}>{count}}'.format(value = at_value, count = at_count, padding = padding)
-    
-                for value in at_value:
-                    result = result.replace('@', value, 1)
-            else:
-                at_value = at_value.replace('\'', '')
-                result = result.replace('#', at_value)
-
-        return result
-
-        
     def addRowToModel(self, model, data_list, editing = True):
         item_list = []
         for data in data_list:
@@ -1129,652 +1166,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowDelete(self.viewVariable)
         pass
 
-    def make_add_title_eng(self, source_path):
-        col_info = ci.title_col_info()
-        model = self.model_title
-        row = model.rowCount()
-        col = model.columnCount()
 
-        rows = []
-        total_add_title = 0
-        add_title_size = 0
-        enum_list = []
-
-        for row_index in range(row):
-            row_items = []
-            for col_index in range(col):
-                item = model.item(row_index, col_index)
-                row_items.append(item.text()) 
-
-            title = row_items[col_info.index('Title')]
-            enum_name = row_items[col_info.index('Enum 이름')]
-            title_index = row_items[col_info.index('Title Index')]
-            data = row_items[col_info.index('Data')]
-
-            if( title_index == ''):
-                title_index_num = 0
-            else:
-                title_index_num = int(title_index)
-
-            # enum_list 생성용  for kpd_title_enum.h
-            if( title_index_num == 1000):
-                enum_list.append('T_TotalDefaultTitleSize')
-                enum_list.append(r'{0:<32} = START_ADD_TITLE_INDEX//{1}'.format(enum_name, title_index))
-            else:
-                enum_list.append(r'{0:<32}//{1}'.format(enum_name, title_index))
-
-            if( title_index_num < 1000):
-                continue
-
-            total_add_title = total_add_title + 1   
-            # hex data 4개씩 짜름 
-            re_split = re.compile(r'[a-z0-9A-Z]{4,4}')
-            find_list = re_split.findall(data)
-            add_title_size = len(find_list)
-            find_merge = ','.join('0x'+item for item in find_list )
-            rows.append(r'{{{0}}}//{1:<5}"{2:<20}"{3}'.format(find_merge, title_index, title, enum_name))
-        # print('\n'.join(rows))
-
-        
-        src_template= \
-'''//================================================
-//이 프로그램은 ADD Title용              
-//================================================
-#include "BaseDefine.H"
-#include "AddTitle_Eng.H"\n\n\
-const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ \n 
- {0}
-}};
-'''
-        file_contents = src_template.format('\n,'.join(rows))
-
-        with open(source_path + os.path.sep + rd.KPD_ADD_TITLE_SRC_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-        header_template= \
-'''#ifndef ADD_TITLE_ENG_H
-#define ADD_TITLE_ENG_H\n\n
-#define TOTAL_ADD_TITLE       {0} 
-#define ADD_TITLE_SIZE        {1} 
-extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
-#endif   //ADD_TITLE_ENG_H 
-'''
-
-        file_contents = header_template.format(total_add_title, add_title_size)
-        with open(source_path + os.path.sep + rd.KPD_ADD_TITLE_HEADER_FILE, 'w') as f:
-            f.write(file_contents)
-        pass
-
-
-        kpd_title_enum_header_template= \
-'''#ifndef KPD_TITLE_ENUM_H
-#define KPD_TITLE_ENUM_H
-    
-/***********************************************
-   Keypad Title을 사용하기 위한 Enum정의        
-***********************************************/
-#define START_ADD_TITLE_INDEX 1000
-    
-enum{{ 
- {0}
-}};
-{1}
-#endif
-'''
-        enum_list.append('T_TotalAddTitleSize')
-        if( total_add_title ):
-            have_add_title = '#define HAVE_ADD_TITLE	//Add Title이 존재할때만 Define 된다.'
-        else:
-            have_add_title = ''
-
-        file_contents = kpd_title_enum_header_template.format('\n ,'.join(enum_list), have_add_title)
-        with open(source_path + os.path.sep + rd.KPD_ENUM_TITLE_HEADER_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-    def make_kpdpara_var(self, source_path):
-        col_info = ci.variable_col_info()
-        model = self.model_var
-        row = model.rowCount()
-        col = model.columnCount()
-
-        define_list = []
-        var_list = []
-        var_type = ''
-
-        for row_index in range(row):
-            row_items = []
-            for col_index in range(col):
-                item = model.item(row_index, col_index)
-                row_items.append(item.text()) 
-
-            variable = row_items[col_info.index('Variable')]
-            var_type = row_items[col_info.index('Type')]
-            description = row_items[col_info.index('Description')]
-
-            re_split = re.compile(r'(k_[a-z0-9A-Z]+)(\[([0-9_A-Z]+)\])?')
-            find_list = re_split.findall(variable)
-            for var_name, dummy, var_arr_cnt in find_list:
-                if( len(var_arr_cnt) ):
-                    define_list.append(r'#define {0:<32}{1}'.format(var_name.upper(), var_arr_cnt ))
-                    variable = re.sub(r'\[([0-9]+)\]', '[' + var_name.upper() + ']', variable )
-                var_list.append('{0:<62}//{1}'.format(variable, description))
-
-
-        header_template= \
-'''/***********************************************
-// TABLE EDITOR 3 : 인버터 파라메터 변수 선언
-***********************************************/\n\n
-#ifndef KPD_PARA_VARI_H
-#define KPD_PARA_VARI_H\n
-{0}\n\n\n
-extern {1}                          //{1} TYPE의 변수들
-{2}
-;    
-\n\n\n
-#endif    //KPD_PARA_VARI_H
-'''
-
-        file_contents = header_template.format('\n'.join(define_list), var_type, '\n,'.join(var_list)) 
-        # print(var_list)
-        # print(define_list)
-        # print(file_contents)
-        with open(source_path + os.path.sep + rd.KPD_PARA_VAR_HEADER_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-
-        source_template = \
-'''
-/***********************************************
-// TABLE EDITOR 3 : 인버터 파라메터 변수 선언
-***********************************************/
-    
-    
-#include "BaseDefine.H"
-#include "KpdPara_Vari.H"
-{0}                          //{0} TYPE의 변수들 
-{1}
-;
-'''
-        file_contents = source_template.format(var_type, '\n,'.join(var_list)) 
-        with open(source_path + os.path.sep + rd.KPD_PARA_VAR_SRC_FILE , 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-
-    def make_kpdpara_msg(self, source_path):
-        col_info = ci.msg_values_col_info()
-        key_col_info = ci.msg_info_col_info()
-        key_model = self.model_msg_info
-        model = self.model_msg_values
-
-        key_row = key_model.rowCount()
-        key_col = key_model.columnCount()
-
-        msg_name_count_list  = []
-        msg_vars = [] 
-        lines = []
-        msg_var_template = \
-'''static const S_MSG_TYPE t_ast{0}[MSG_COUNT_{1}] = {{                        //MSG_{2:<20}//{3}
-     {4}
-}};
-'''
-        msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
-        msg_name, msg_comment, title_name, at_value  = '', '', '', ''
-        # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
-        for row_index in range(key_row):
-            key_msg_name = key_model.item(row_index, key_col_info.index('MsgName')).text() 
-            msg_name = key_msg_name
-            find_items = model.findItems(key_msg_name, column = col_info.index('MsgName'))
-            msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
-            lines = []
-            enum_name = ''
-
-            for find_item in find_items:
-                find_row_index = find_item.row()
-
-                msg_name = model.item(find_row_index, col_info.index('MsgName')).text()
-                msg_comment = model.item(find_row_index, col_info.index('MsgComment')).text()
-                title_name = model.item(find_row_index, col_info.index('Title')).text()
-                at_value = model.item(find_row_index, col_info.index('AtValue')).text()
-                enum_name = model.item(find_row_index, col_info.index('Title Index')).text()
-                title_name = self.make_title_with_at_value(title_name, at_value)
-
-                lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
-                msg_name_count =msg_name_count + 1
-            
-            msg_vars.append(
-                msg_var_template.format(msg_name,
-                                        msg_name.upper(), 
-                                        msg_name, 
-                                        msg_comment, 
-                                        '\n\t,'.join(lines))
-            )
-            lines.clear()
-            msg_name_count_list.append([msg_name, msg_name_count])
-            
-
-
-        source_template = \
-'''//========================================= 
-// TABLE EDITOR 3 : 인버터 Message들 저장   
-//=========================================/ 
-          
-          
-#include "BaseDefine.H"
-#include "KPD_Title_Enum.H"
-#include "KpdPara_Msg.H"
-\n\n
-static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum);
-\n\n
-{0}\n
-static const S_MSG_TYPE * t_pastMsgDataTbl[MSG_TOTAL] = {{
-\t {1}
-}};
-static const WORD t_awMsgDataSize[MSG_TOTAL] = {{
-\t {2}
-}};\n
-static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum)
-{{
-	return astMsgType[wMsgNum];
-}}
-S_MSG_TYPE KpdParaGetMsgData(WORD wMsgIdx, WORD wMsgNum)
-{{
-	return KpdParaGetMsg(t_pastMsgDataTbl[wMsgIdx], wMsgNum);
-}}
-WORD KpdParaGetMsgSize(WORD wMsgIdx)
-{{
-	return t_awMsgDataSize[wMsgIdx];
-}}
-
-'''
-        msg_data_tbl_lines = []
-        msg_data_size_lines = []
-        msg_data_enum_lines = []
-        msg_enum_count = 0
-
-        for msg_name, msg_name_count in msg_name_count_list:
-            msg_data_tbl_lines.append('t_ast{0}'.format(msg_name))
-            msg_data_size_lines.append('MSG_COUNT_{0}'.format(msg_name.upper()))
-            msg_data_enum_lines.append('MSG_{0:<36}//{1:0>3}'.format(msg_name, msg_enum_count))
-            msg_enum_count = msg_enum_count + 1
-
-        file_contents = source_template.format(  '\n'.join(msg_vars),
-                                                 '\n\t,'.join(msg_data_tbl_lines),
-                                                 '\n\t,'.join(msg_data_size_lines) )
-        with open(source_path + os.path.sep + rd.KPD_PARA_MSG_SRC_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-        header_template =  \
-'''
-//========================================= 
-// TABLE EDITOR 3 : 인버터 Message들 저장   
-//========================================= 
-#ifndef KEYPAD_MESSAG_H
-#define KEYPAD_MESSAG_H
-      
-#include "KpdPara_StructUnit.H"
-      
-enum{{  //MSG들의 Index 값
-\t\t {0}
-}};
-\n
-{1}
-\n\n
-S_MSG_TYPE KpdParaGetMsgData(WORD wMsgIdx, WORD wMsgNum);
-WORD KpdParaGetMsgSize(WORD wMsgIdx);
-#endif  //KEYPAD_MESSAG_H
-
-'''
-        # 한라인 추가 되므로  msg_total 
-        msg_data_enum_lines.append('MSG_{0:<36}//{1:0>3}'.format('TOTAL', msg_enum_count))
-        msg_define_lines = []
-        for msg_name, msg_name_count in msg_name_count_list:
-            msg_define_lines.append('#define MSG_COUNT_{0:<30}{1}'.format(msg_name.upper(), msg_name_count))
-
-        file_contents = header_template.format(  '\n\t\t,'.join(msg_data_enum_lines),
-                                                 '\n'.join(msg_define_lines) )
-        with open(source_path + os.path.sep + rd.KPD_PARA_MSG_HEADER_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-    def make_kpdpara_table(self, source_path):
-        col_info = ci.para_col_info_for_view()
-        model = self.model_parameters
-        key_col_info = ci.group_col_info()
-        key_model = self.model_group
-
-        key_row = key_model.rowCount()
-
-        # 소스용 variable template
-        para_vars = [] 
-        para_vars_lines = []
-        para_vars_template = \
-'''static const S_TABLE_X_TYPE t_ast{0}grp[GRP_{1}_CODE_TOTAL] = {{
-{2}
-}};
-'''
-        # 소스내 group info 용 template 
-        group_info_lines  = []
-        group_info_template ='{{T_{0:<10},{1:<20},{2:<25},{3:<10}}}'
-
-        table_addr_lines = [] 
-        table_addr_template = \
-'''\tcase GROUP_{0}:
-\t\tpstTable = &t_ast{0}grp[wTableIdx];
-\t\tbreak;
-'''
-
-        # 헤더용 define template
-        defines_lines = []
-        defines_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
-
-        # group index 용 
-        group_index_lines = []
-
-        # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
-        for row_index in range(key_row):
-            # 그룹 정보 추출 
-            key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
-            key_group_hidden_var = key_model.item(row_index, key_col_info.index('Hidden Var')).text()
-            key_group_hidden_val = key_model.item(row_index, key_col_info.index('Hidden Val')).text()
-            if( 'g_' in key_group_hidden_var or 'k_' in key_group_hidden_val ):
-                key_group_hidden_var = '(WORD*)&' + key_group_hidden_var
-
-            group_info_lines.append( 
-                group_info_template.format(
-                    key_group_name.upper(), 'GRP_' + key_group_name.upper() + '_CODE_TOTAL', 
-                    key_group_hidden_var, key_group_hidden_val
-                )
-            )
-
-            table_addr_lines.append( 
-                table_addr_template.format(
-                    key_group_name.upper()
-                )
-            )
-
-            # 해당 하는 그룹의 아이템 정보를 얻음 
-            find_items = model.findItems(key_group_name, column = col_info.index('Group'))
-            per_group_item_count = len(find_items)
-
-            defines_lines.append( 
-                defines_template.format(
-                    key_group_name.upper(),
-                    per_group_item_count
-                )
-            )
-
-            group_index_lines.append( 
-                'GROUP_{0}'.format( key_group_name.upper() )
-            )
-
-            for find_item in find_items:
-                find_row_index = find_item.row()
-
-                group_name = model.item(find_row_index, col_info.index('Group')).text()
-                code_num = model.item(find_row_index, col_info.index('Code#')).text()
-                title_name = model.item(find_row_index, col_info.index('Code TITLE')).text()
-                title_enum_name =  model.item(find_row_index, col_info.index('Title Index')).text()
-                
-                at_value = model.item(find_row_index, col_info.index('AtValue')).text()
-                title_name = self.make_title_with_at_value(title_name, at_value) # at value 적용 
-                para_var= model.item(find_row_index, col_info.index('Para 변수')).text()
-                kpd_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
-                default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
-                max_val = model.item(find_row_index, col_info.index('최대값')).text()
-                min_val = model.item(find_row_index, col_info.index('최소값')).text()
-                form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
-                unit = model.item(find_row_index, col_info.index('단위')).text()
-
-                hidden_condition =  model.item(find_row_index, col_info.index('Hidden Con')).text()
-                kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
-                no_comm = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
-                read_only = model.item(find_row_index, col_info.index('읽기전용')).text()
-                no_change_on_run =  model.item(find_row_index, col_info.index('운전중변경불가')).text()
-                zero_input = model.item(find_row_index, col_info.index('0 입력가능')).text()
-                '''
-                no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
-                if( attribute & ATTR_NO_COMM ):
-                    no_comm = True 
-                if( attribute & ATTR_READ_ONLY ):
-                    read_only = True
-                if( attribute & ATTR_NO_CHANGE_ON_RUN ):
-                    no_change_on_run = True 
-                if( attribute & ATTR_ZERO_INPUT ):
-                    zero_input = True 
-                '''
-                attribute = 0x0000
-                if( no_comm == 'True'):
-                    attribute |= ATTR_NO_COMM
-                if( read_only == 'True'):
-                    attribute |= ATTR_READ_ONLY
-                if( no_change_on_run == 'True'):
-                    attribute |= ATTR_NO_CHANGE_ON_RUN
-                if( zero_input == 'True'):
-                    attribute |= ATTR_ZERO_INPUT
-                if( 'k_' in max_val ):
-                    attribute |= ATTR_UP
-                if( 'k_' in min_val ):
-                    attribute |= ATTR_LP
-                if( kpd_type == 'AfterEnter' ):
-                    attribute |= ATTR_ENT
-                hidden_val = self.hiddenConditionToValue(hidden_condition)
-                attribute |= (hidden_val << 8)
-
-                show_var  =  model.item(find_row_index, col_info.index('보임변수')).text()
-                show_value = model.item(find_row_index, col_info.index('보임값')).text()
-                eep_addr = model.item(find_row_index, col_info.index('EEP 주소')).text()
-                comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
-                max_eds = model.item(find_row_index, col_info.index('최대 EDS')).text()
-                min_eds = model.item(find_row_index, col_info.index('최소 EDS')).text()
-                comment = model.item(find_row_index, col_info.index('설명')).text()
-
-                para_var = '(WORD*)&' + para_var
-                default_val ='(WORD)' + default_val
-                if( 'k_' in max_val ) :
-                    max_val = '(LONG)&' + max_val
-                else:
-                    max_val = '(WORD)' + max_val
-
-                if( 'k_' in min_val ) :
-                    min_val = '(LONG)&' + min_val
-                else:
-                    min_val = '(WORD)' + min_val
-                   
-                if( 'DATAMSG' in unit ):
-                    form_msg = 'MSG_' + form_msg
-                
-                eds_val = ''
-                if( max_eds or min_eds):
-                    eds_val ='[EDS :{0},{1}]'.format(max_eds, min_eds)
-
-                attribute_str = '0x{0:0>4}'.format(hex(attribute)[2:].upper())
-
-                if( 'k_' in show_var or 'g_' in show_var ):
-                    show_var = '(WORD*)&' + show_var
-
-                format_str = '{{{0:<5},{1:<5},{2:<30},{3:<40},{4:<40},{5:<30},{6:<30},{7:<30},{8:<30},{9:<30},{10:<10},{11:<30},{12:<5}}},//"{13:<14}"{14}//{15}'
-
-                if( find_item == find_items[-1]):
-                    format_str = '{{{0:<5},{1:<5},{2:<30},{3:<40},{4:<40},{5:<30},{6:<30},{7:<30},{8:<30},{9:<30},{10:<10},{11:<30},{12:<5}}}//"{13:<14}"{14}//{15}'
-                para_vars_lines.append(format_str.format \
-                            (code_num, at_value, title_enum_name, para_var, kpd_func, default_val, max_val, min_val,
-                            form_msg, unit, attribute_str, show_var, show_value, title_name, eds_val, comment)
-                )
-            
-            para_vars.append(
-                para_vars_template.format(group_name,
-                                         group_name,
-                                        '\n'.join(para_vars_lines))
-            )
-            para_vars_lines.clear()
-
-
-        source_template = \
-'''// PRQA S 502, 4130, 4131, 750, 759, 1514, 3218, 1504, 1505, 1503, 2860, 2895 EOF
-
-
-/***********************************************
-//  TABLE EDITOR 3  인버터 Keypad Table
-//  Edit시 Table Edit 3 V2.00을 사용하세요      
-***********************************************/
-#include "BaseDefine.H"
-#include "KPD_Title_Enum.H"
-#include "KpdPara_GrpIdx.H"
-#include "KpdPara_Msg.H"
-#include "KpdPara_Vari.H"
-#include "KpdPara_ShowParaVari.H"
-#include "KFunc_Head.H"
-#include "KpdPara_Table.H"
-{0}
-\n\n
-static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
-{1}
-}};\n\n
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx)
-{{
-	return &t_astGrpInfo[wGrpIdx];
-}}
-
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx)
-{{
-	const S_TABLE_X_TYPE* pstTable;
-
-	switch(wGrpIdx)
-	{{
-{2}
-	default:
-		pstTable = NULL;
-		break;
-	}}
-	return pstTable;
-}}
-'''
-        file_contents = source_template.format( '\n'.join(para_vars),
-                                                ',\n'.join(group_info_lines),
-                                                ''.join(table_addr_lines)
-
-        )
-        with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_SRC_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-
-        header_template = \
-'''#ifndef _KPD_TABLE_H
-#define _KPD_TABLE_H
-/***********************************************
-//  TABLE EDITOR 3  인버터 Keypad Table
-//  Edit시 Table Edit 3 V1.00을 사용하세요      
-***********************************************/
-#include "KpdPara_StructUnit.H"
-\n\n
-{0}\n\n
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx);
-\n\n
-#endif   //_KPD_TABLE_H
-'''
-        file_contents = header_template.format(
-            '\n'.join(defines_lines)
-        )
-        with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-
-        group_index_template = \
-'''#ifndef KPDPARA_GRP_INDEX_H
-#define KPDPARA_GRP_INDEX_H
-\n
-enum eGrpIndex{{
-     {0}
-	,GROUP_TOTAL
-}};
-\n
-#endif   //KPDPARA_GRP_INDEX_H
-'''
-
-        file_contents = group_index_template.format(
-            '\n\t,'.join(group_index_lines)
-        )
-        with open(source_path + os.path.sep + rd.KPD_GRP_INDEX_HEADER_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
-
-    def make_kfunc_head(self, source_path):
-        col_info = ci.para_col_info_for_view()
-        model = self.model_parameters
-        key_col_info = ci.group_col_info()
-        key_model = self.model_group
-
-        key_row = key_model.rowCount()
-
-        cmd_key_func_lines = []
-        after_enter_key_func_lines = []
-
-        # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
-        key_func_list = [] # 중복 제거를 위해 사용 
-        for row_index in range(key_row):
-            # 그룹 정보 추출 
-            key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
-
-            # 해당 하는 그룹의 아이템 정보를 얻음 
-            find_items = model.findItems(key_group_name, column = col_info.index('Group'))
-
-            for find_item in find_items:
-                find_row_index = find_item.row()
-
-                key_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
-                code_num = model.item(find_row_index, col_info.index('Code#')).text()
-                kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
-
-                if('NULL' not in key_func):
-                    if( key_func not in key_func_list ):
-                        key_func_list.append(key_func)
-                        arg = '{0:<40}//({1},{2:>2})'.format(key_func, key_group_name, code_num)
-                        if(kpd_type == 'AfterEnter'):
-                            after_enter_key_func_lines.append(arg)
-                        else:
-                            cmd_key_func_lines.append(arg)
-
-        header_template = \
-'''#ifndef KFUNC_INDEX_H
-#define KFUNC_INDEX_H
-\n
-enum eKpdFuncIndex{{
-	 KFUNC_NULL
-    ,{0}
-	,KFUNC_START_AFTER_ENT_FUNC = 1000
-    ,{1}
-
-}};
-\n
-#define TOTAL_KFUNC_CMD_ENT                  {2} 
-#define TOTAL_KFUNC_AFTER_ENT                {3} 
-\n
-#endif   //KFUNC_INDEX_H
-'''
-
-        file_contents = header_template.format(
-            '\n\t,'.join(cmd_key_func_lines),
-            '\n\t,'.join(after_enter_key_func_lines),
-            len(cmd_key_func_lines),
-            len(after_enter_key_func_lines)
-        )
-        with open(source_path + os.path.sep + rd.KPD_FUNC_HEAD_HEADER_FILE, 'w', encoding='utf8') as f:
-            f.write(file_contents)
-        pass
 
 
 
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
     form = MainWindow()
-    form.setWindowTitle('TableEditor4')
+    form.setWindowTitle('TableEditor4 V' + version.VERSION_INFO)
     form.show()
     sys.exit(app.exec_())

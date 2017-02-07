@@ -22,6 +22,10 @@ KPD_PARA_TABLE_HEADER_FILE = 'KpdPara_Table.h'
 KPD_PARA_VAR_SRC_FILE = 'KpdPara_Vari.c'
 KPD_PARA_VAR_HEADER_FILE = 'KpdPara_Vari.H'
 
+# neweraplatform kpd_index 파일
+DRVPARA_DATASTORAGE_SRC_AUTO = 'DrvPara_DataStorage_Auto.c'
+DRVPARA_DATASTORAGE_HEADER_AUTO = 'DrvPara_DataStorage_Auto.h'
+
 # write 에 사용하는 파일 리스트 정의
 make_files = (
     KPD_ADD_TITLE_SRC_FILE,
@@ -36,17 +40,23 @@ make_files = (
     KPD_PARA_TABLE_SRC_FILE,
     KPD_PARA_TABLE_HEADER_FILE,
     KPD_PARA_VAR_SRC_FILE,
-    KPD_PARA_VAR_HEADER_FILE
+    KPD_PARA_VAR_HEADER_FILE,
+    DRVPARA_DATASTORAGE_SRC_AUTO,
+    DRVPARA_DATASTORAGE_HEADER_AUTO
 )
 
 # read 에 사용하는 파싱 파일 리스트 정의 
-parsing_files = (   KPD_BASIC_TITLE_SRC_FILE,
-                    KPD_ADD_TITLE_SRC_FILE,
-                    KPD_PARA_VAR_HEADER_FILE,
-                    KPD_PARA_MSG_SRC_FILE,
-                    KPD_PARA_STRUCT_UNIT_HEADER_FILE,
-                    KPD_PARA_TABLE_SRC_FILE
+parsing_files = (   
+    KPD_BASIC_TITLE_SRC_FILE,
+    KPD_ADD_TITLE_SRC_FILE,
+    KPD_PARA_VAR_HEADER_FILE,
+    KPD_PARA_MSG_SRC_FILE,
+    KPD_PARA_STRUCT_UNIT_HEADER_FILE,
+    KPD_PARA_TABLE_SRC_FILE
 )               
+
+
+
 
 re_extract_kpd_para_unit = re.compile(r'(?P<para_unit>{[^{}]*(U_[^,=]+[,]?)+[^{}]*})')
 re_parse_kpd_para_unit_params = re.compile(r'(U_[^,= ]+)')
@@ -66,6 +76,8 @@ re_check_msg_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)
 re_parse_msg_params = re.compile(r'([^,{}\n;]+)')
 re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
 
+# table editor 파일의 버전정보 추출 
+re_extract_version_info = re.compile(r'Table Edit[a-z]{0,2} (?P<table_editor_number>[0-9]) V(?P<table_editor_version>[0-9](.[0-9]+){0,3})', re.I)
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
 re_extract_basic_title_var = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
 re_extract_add_title_var = re.compile(r'const WORD g_awAddTitleEng[^;]+};')
@@ -89,7 +101,15 @@ def read_kpd_para_struct_unit(contents):
         yield find_list 
     pass
         
-
+def read_para_table_version(contents):
+    search_obj  = re_extract_version_info.search(contents)
+    table_editor_number = ''
+    table_editor_version = '' 
+    if( search_obj ):
+         table_editor_number = search_obj.group('table_editor_number')
+         table_editor_version = search_obj.group('table_editor_version')
+    return table_editor_number, table_editor_version 
+    
 def read_para_table(contents):
     find_list = []
     search_grp_iter = re_extract_grp.finditer(contents)

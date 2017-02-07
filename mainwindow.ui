@@ -20,12 +20,12 @@
       <item>
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>파일수정날짜:</string>
+         <string>파일내 테이블 에디터 버전:</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="lblFileModifyDate">
+       <widget class="QLabel" name="lblVersion">
         <property name="minimumSize">
          <size>
           <width>200</width>
@@ -80,30 +80,27 @@
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
-         <widget class="QSplitter" name="splitter_2">
+         <widget class="QSplitter" name="splitter">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QSplitter" name="splitter">
+          <widget class="QTableView" name="viewGroup">
            <property name="maximumSize">
             <size>
              <width>300</width>
              <height>16777215</height>
             </size>
            </property>
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <widget class="QTableView" name="viewGroup">
-            <property name="maximumSize">
-             <size>
-              <width>300</width>
-              <height>16777215</height>
-             </size>
-            </property>
-           </widget>
           </widget>
           <widget class="QTableView" name="viewParameter"/>
+          <widget class="QTableView" name="viewParameterDetail">
+           <property name="maximumSize">
+            <size>
+             <width>250</width>
+             <height>16777215</height>
+            </size>
+           </property>
+          </widget>
          </widget>
         </item>
        </layout>
