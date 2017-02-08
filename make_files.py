@@ -1,6 +1,5 @@
-import os, sys, re
+import os, sys, re, datetime
 import column_info as ci
-from PyQt5.QtCore import QIODevice, QFile 
 
 import read_data as rd
 import version
@@ -15,6 +14,16 @@ ATTR_NO_COMM =0x0040
 ATTR_ENT = 0x0080
 ATTR_HIDDEN_CON = 0x0700
 ATTR_ADD  = 0x1000
+
+banner = '''\
+//-------------------------------------------------------------------------
+//      Auto generated from TABLE EDITOR {0} V{1}    {2}
+//-------------------------------------------------------------------------
+'''.format(
+    version.TABLE_EDITOR_NUMBER, 
+    version.VERSION_INFO,
+    datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
 
 def makeHiddenCondition(attribute):
     hidden_condition = '' 
@@ -110,49 +119,53 @@ def make_add_title_eng(source_path, title_model):
 
     
     src_template= \
-'''//================================================
-//이 프로그램은 ADD Title용              
-//================================================
+'''{0}
 #include "BaseDefine.H"
-#include "AddTitle_Eng.H"\n\n\
-const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ \n 
-{0}
+#include "AddTitle_Eng.H"\n\n\n
+const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ 
+ {1}
 }};
 '''
-    file_contents = src_template.format('\n,'.join(rows))
+    file_contents = src_template.format(
+        banner, 
+        '\n,'.join(rows)
+        )
 
     with open(source_path + os.path.sep + rd.KPD_ADD_TITLE_SRC_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass
 
     header_template= \
-'''#ifndef ADD_TITLE_ENG_H
+'''{0}
+#ifndef ADD_TITLE_ENG_H
 #define ADD_TITLE_ENG_H\n\n
-#define TOTAL_ADD_TITLE       {0} 
-#define ADD_TITLE_SIZE        {1} 
+#define TOTAL_ADD_TITLE       {1} 
+#define ADD_TITLE_SIZE        {2} 
 extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 #endif   //ADD_TITLE_ENG_H 
 '''
 
-    file_contents = header_template.format(total_add_title, add_title_size)
+    file_contents = header_template.format(
+        banner, 
+        total_add_title, 
+        add_title_size
+        )
     with open(source_path + os.path.sep + rd.KPD_ADD_TITLE_HEADER_FILE, 'w') as f:
         f.write(file_contents)
     pass
 
 
     kpd_title_enum_header_template= \
-'''#ifndef KPD_TITLE_ENUM_H
+'''{0}
+#ifndef KPD_TITLE_ENUM_H
 #define KPD_TITLE_ENUM_H
 
-/***********************************************
-Keypad Title을 사용하기 위한 Enum정의        
-***********************************************/
 #define START_ADD_TITLE_INDEX 1000
 
 enum{{ 
-{0}
+  {1}
 }};
-{1}
+{2}
 #endif
 '''
     enum_list.append('T_TotalAddTitleSize')
@@ -161,92 +174,89 @@ enum{{
     else:
         have_add_title = ''
 
-    file_contents = kpd_title_enum_header_template.format('\n ,'.join(enum_list), have_add_title)
+    file_contents = kpd_title_enum_header_template.format(
+        banner, 
+        '\n ,'.join(enum_list), 
+        have_add_title
+        )
     with open(source_path + os.path.sep + rd.KPD_ENUM_TITLE_HEADER_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass
 
-def make_kpdpara_var(source_path, variable_model):
-    col_info = ci.variable_col_info()
-    model = variable_model 
-    row = model.rowCount()
-    col = model.columnCount()
+# def make_kpdpara_var(source_path, variable_model):
+#     col_info = ci.variable_col_info()
+#     model = variable_model 
+#     row = model.rowCount()
+#     col = model.columnCount()
 
-    define_list = []
-    var_list = []
-    var_type = ''
+#     define_list = []
+#     var_list = []
+#     var_type = ''
 
-    for row_index in range(row):
-        row_items = []
-        for col_index in range(col):
-            item = model.item(row_index, col_index)
-            row_items.append(item.text()) 
+#     for row_index in range(row):
+#         row_items = []
+#         for col_index in range(col):
+#             item = model.item(row_index, col_index)
+#             row_items.append(item.text()) 
 
-        variable = row_items[col_info.index('Variable')]
-        var_type = row_items[col_info.index('Type')]
-        description = row_items[col_info.index('Description')]
+#         variable = row_items[col_info.index('Variable')]
+#         var_type = row_items[col_info.index('Type')]
+#         description = row_items[col_info.index('Description')]
 
-        re_split = re.compile(r'(k_[a-z0-9A-Z]+)(\[([0-9_A-Z]+)\])?')
-        find_list = re_split.findall(variable)
-        for var_name, dummy, var_arr_cnt in find_list:
-            if( len(var_arr_cnt) ):
-                define_list.append(r'#define {0:<32}{1}'.format(var_name.upper(), var_arr_cnt ))
-                variable = re.sub(r'\[([0-9]+)\]', '[' + var_name.upper() + ']', variable )
-            var_list.append('{0:<62}//{1}'.format(variable, description))
-
-
-    header_template= \
-'''
-//-----------------------------------------------------------------------
-// auto generagted from TABLE EDITOR {0} V{1} 인버터 파라메터 변수 선언
-//-----------------------------------------------------------------------\n\n
-#ifndef KPD_PARA_VARI_H
-#define KPD_PARA_VARI_H\n
-{2}\n\n\n
-extern {3}                          //{3} TYPE의 변수들
-{4}
-;    
-\n\n\n
-#endif    //KPD_PARA_VARI_H
-'''
-
-    file_contents = header_template.format(
-        version.TABLE_EDITOR_NUMBER,
-        version.VERSION_INFO,
-        '\n'.join(define_list), 
-        var_type, 
-        '\n,'.join(var_list)
-    ) 
-    # print(var_list)
-    # print(define_list)
-    # print(file_contents)
-    with open(source_path + os.path.sep + rd.KPD_PARA_VAR_HEADER_FILE, 'w', encoding='utf8') as f:
-        f.write(file_contents)
-    pass
+#         re_split = re.compile(r'(k_[a-z0-9A-Z]+)(\[([0-9_A-Z]+)\])?')
+#         find_list = re_split.findall(variable)
+#         for var_name, dummy, var_arr_cnt in find_list:
+#             if( len(var_arr_cnt) ):
+#                 define_list.append(r'#define {0:<32}{1}'.format(var_name.upper(), var_arr_cnt ))
+#                 variable = re.sub(r'\[([0-9]+)\]', '[' + var_name.upper() + ']', variable )
+#             var_list.append('{0:<62}//{1}'.format(variable, description))
 
 
-    source_template = \
-'''
-//-------------------------------------------------------------------------
-// auto generagted from TABLE EDITOR {0} V{1} 인버터 파라메터 변수 선언
-//-------------------------------------------------------------------------
+#     header_template= \
+# '''
+# {0}
+# #ifndef KPD_PARA_VARI_H
+# #define KPD_PARA_VARI_H\n
+# {1}\n\n\n
+# extern {2}                          //{2} TYPE의 변수들
+# {3}
+# ;    
+# \n\n\n
+# #endif    //KPD_PARA_VARI_H
+# '''
+
+#     file_contents = header_template.format(
+#         banner, 
+#         '\n'.join(define_list), 
+#         var_type, 
+#         '\n,'.join(var_list)
+#     ) 
+#     # print(var_list)
+#     # print(define_list)
+#     # print(file_contents)
+#     with open(source_path + os.path.sep + rd.KPD_PARA_VAR_HEADER_FILE, 'w', encoding='utf8') as f:
+#         f.write(file_contents)
+#     pass
 
 
-#include "BaseDefine.H"
-#include "KpdPara_Vari.H"
-{2}                          //{2} TYPE의 변수들 
-{3}
-;
-'''
-    file_contents = source_template.format(
-        version.TABLE_EDITOR_NUMBER,
-        version.VERSION_INFO,
-        var_type, 
-        '\n,'.join(var_list)
-        ) 
-    with open(source_path + os.path.sep + rd.KPD_PARA_VAR_SRC_FILE , 'w', encoding='utf8') as f:
-        f.write(file_contents)
-    pass
+#     source_template = \
+# '''
+# {0}
+
+# #include "BaseDefine.H"
+# #include "KpdPara_Vari.H"
+# {1}                          //{1} TYPE의 변수들 
+# {2}
+# ;
+# '''
+#     file_contents = source_template.format(
+#         banner, 
+#         var_type, 
+#         '\n,'.join(var_list)
+#         ) 
+#     with open(source_path + os.path.sep + rd.KPD_PARA_VAR_SRC_FILE , 'w', encoding='utf8') as f:
+#         f.write(file_contents)
+#     pass
 
 
 def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
@@ -262,8 +272,8 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
     msg_vars = [] 
     lines = []
     msg_var_template = \
-'''static const S_MSG_TYPE t_ast{0}[MSG_COUNT_{1}] = {{                        //MSG_{2:<20}//{3}
-    {4}
+'''{0:<90}//MSG_{1:<20}//{2}
+\t {3}
 }};
 '''
     msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
@@ -289,13 +299,20 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
 
             lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
             msg_name_count =msg_name_count + 1
+
+
+        
+        msg_var_banner = 'static const S_MSG_TYPE t_ast{0}[MSG_COUNT_{1}] = {{'\
+            .format(msg_name, 
+                    msg_name.upper() 
+            )
         
         msg_vars.append(
-            msg_var_template.format(msg_name,
-                                    msg_name.upper(), 
-                                    msg_name, 
-                                    msg_comment, 
-                                    '\n\t,'.join(lines))
+            msg_var_template.format(
+                msg_var_banner,
+                msg_name, 
+                msg_comment, 
+                '\n\t,'.join(lines))
         )
         lines.clear()
         msg_name_count_list.append([msg_name, msg_name_count])
@@ -303,11 +320,8 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
 
 
     source_template = \
-'''
-//-----------------------------------------------------------------------
-// auto generagted from TABLE EDITOR {0} V{1} 인버터 Message들 저장   
-//-----------------------------------------------------------------------
-        
+'''// PRQA S 502, 4130, 4131, 750, 759, 1514, 3218, 1504, 1505, 1503, 2860, 2895 EOF
+{0}        
         
 #include "BaseDefine.H"
 #include "KPD_Title_Enum.H"
@@ -315,12 +329,12 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
 \n\n
 static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum);
 \n\n
-{2}\n
+{1}\n
 static const S_MSG_TYPE * t_pastMsgDataTbl[MSG_TOTAL] = {{
-\t {3}
+\t {2}
 }};
 static const WORD t_awMsgDataSize[MSG_TOTAL] = {{
-\t {4}
+\t {3}
 }};\n
 static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum)
 {{
@@ -348,8 +362,7 @@ return t_awMsgDataSize[wMsgIdx];
         msg_enum_count = msg_enum_count + 1
 
     file_contents = source_template.format(  
-        version.TABLE_EDITOR_NUMBER,
-        version.VERSION_INFO,
+        banner,
         '\n'.join(msg_vars),
         '\n\t,'.join(msg_data_tbl_lines),
         '\n\t,'.join(msg_data_size_lines) 
@@ -359,20 +372,17 @@ return t_awMsgDataSize[wMsgIdx];
     pass
 
     header_template =  \
-'''
-//-----------------------------------------------------------------------
-// auto generagted from TABLE EDITOR {0} V{1} 인버터 Message들 저장   
-//-----------------------------------------------------------------------
+'''{0}
 #ifndef KEYPAD_MESSAG_H
 #define KEYPAD_MESSAG_H
     
 #include "KpdPara_StructUnit.H"
     
 enum{{  //MSG들의 Index 값
-\t\t {2}
+\t\t {1}
 }};
 \n
-{3}
+{2}
 \n\n
 S_MSG_TYPE KpdParaGetMsgData(WORD wMsgIdx, WORD wMsgNum);
 WORD KpdParaGetMsgSize(WORD wMsgIdx);
@@ -386,8 +396,7 @@ WORD KpdParaGetMsgSize(WORD wMsgIdx);
         msg_define_lines.append('#define MSG_COUNT_{0:<30}{1}'.format(msg_name.upper(), msg_name_count))
 
     file_contents = header_template.format(  
-        version.TABLE_EDITOR_NUMBER,
-        version.VERSION_INFO,
+        banner,
         '\n\t\t,'.join(msg_data_enum_lines),
         '\n'.join(msg_define_lines) 
         )
@@ -582,10 +591,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
     source_template = \
 '''// PRQA S 502, 4130, 4131, 750, 759, 1514, 3218, 1504, 1505, 1503, 2860, 2895 EOF
 
-
-//------------------------------------------------------------------
-// auto generagted from TABLE EDITOR {0} V{1}    
-//------------------------------------------------------------------
+{0}
 #include "BaseDefine.H"
 #include "KPD_Title_Enum.H"
 #include "KpdPara_GrpIdx.H"
@@ -594,10 +600,10 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 #include "KpdPara_ShowParaVari.H"
 #include "KFunc_Head.H"
 #include "KpdPara_Table.H"
-{2}
+{1}
 \n\n
 static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
-{3}
+{2}
 }};\n\n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx)
 {{
@@ -610,7 +616,7 @@ const S_TABLE_X_TYPE* pstTable;
 
 switch(wGrpIdx)
 {{
-{4}
+{3}
 default:
     pstTable = NULL;
     break;
@@ -619,8 +625,7 @@ return pstTable;
 }}
 '''
     file_contents = source_template.format( 
-        version.TABLE_EDITOR_NUMBER,
-        version.VERSION_INFO,
+        banner,
         '\n'.join(para_vars),
         ',\n'.join(group_info_lines),
         ''.join(table_addr_lines)
@@ -632,22 +637,19 @@ return pstTable;
 
 
     header_template = \
-'''#ifndef _KPD_TABLE_H
+'''{0}
+#ifndef _KPD_TABLE_H
 #define _KPD_TABLE_H
-//---------------------------------------------------------
-// auto generagted from TABLE EDITOR {0} V{1}       
-//---------------------------------------------------------
 #include "KpdPara_StructUnit.H"
 \n\n
-{2}\n\n
+{1}\n\n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx);
 \n\n
 #endif   //_KPD_TABLE_H
 '''
     file_contents = header_template.format(
-        version.TABLE_EDITOR_NUMBER,
-        version.VERSION_INFO,
+        banner,
         '\n'.join(defines_lines)
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
@@ -656,18 +658,20 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx);
 
 
     group_index_template = \
-'''#ifndef KPDPARA_GRP_INDEX_H
+'''{0}
+#ifndef KPDPARA_GRP_INDEX_H
 #define KPDPARA_GRP_INDEX_H
 \n
 enum eGrpIndex{{
-    {0}
-,GROUP_TOTAL
+\t {1}
+\t,GROUP_TOTAL
 }};
 \n
 #endif   //KPDPARA_GRP_INDEX_H
 '''
 
     file_contents = group_index_template.format(
+        banner,
         '\n\t,'.join(group_index_lines)
     )
     with open(source_path + os.path.sep + rd.KPD_GRP_INDEX_HEADER_FILE, 'w', encoding='utf8') as f:
@@ -711,24 +715,26 @@ def make_kfunc_head(source_path, parameters_model, group_model):
                         cmd_key_func_lines.append(arg)
 
     header_template = \
-'''#ifndef KFUNC_INDEX_H
+'''{0}
+#ifndef KFUNC_INDEX_H
 #define KFUNC_INDEX_H
 \n
 enum eKpdFuncIndex{{
-    KFUNC_NULL
-,{0}
-,KFUNC_START_AFTER_ENT_FUNC = 1000
-,{1}
+     KFUNC_NULL
+\t,{1}
+\t,KFUNC_START_AFTER_ENT_FUNC = 1000
+\t,{2}
 
 }};
 \n
-#define TOTAL_KFUNC_CMD_ENT                  {2} 
-#define TOTAL_KFUNC_AFTER_ENT                {3} 
+#define TOTAL_KFUNC_CMD_ENT                  {3} 
+#define TOTAL_KFUNC_AFTER_ENT                {4} 
 \n
 #endif   //KFUNC_INDEX_H
 '''
 
     file_contents = header_template.format(
+        banner, 
         '\n\t,'.join(cmd_key_func_lines),
         '\n\t,'.join(after_enter_key_func_lines),
         len(cmd_key_func_lines),
@@ -738,38 +744,43 @@ enum eKpdFuncIndex{{
         f.write(file_contents)
     pass
 
-def make_drv_para_data_storage(source_path):
-#     col_info = ci.para_col_info_for_view()
-#     model = self.model_parameters
-#     para_index = self.model_parameters
+def make_drv_para_data_storage(source_path, parameters_model):
+    col_info = ci.para_col_info_for_view()
+    model = parameters_model
+    para_index = col_info.index('Para Index') 
 
+    para_indexes = []
 
-#     header_template = \
-# '''
-# #ifndef DRIVE_PARA_DATA_STORAGE_AUTO_H_
-# #define DRIVE_PARA_DATA_STORAGE_AUTO_H_
+    for index in range(model.rowCount() ):
+        para_index_str = model.item(index, para_index).text()
+        para_indexes.append('E_DATA_CMD_' + para_index_str)
 
-# typedef enum eDrvParaDataVariIdx	//Drive Parameter Variable Index Enumeration 0 ~ 9999사이에는 Floating Point Type의 변수, Fixed Point Type의 변수
-# {
-# {0}
-# E_DATA_VARI_END,
-# }E_DRV_PARA_DATA_VARI_IDX;
+    header_template = \
+'''{0}
+#ifndef DRIVE_PARA_DATA_STORAGE_AUTO_H_
+#define DRIVE_PARA_DATA_STORAGE_AUTO_H_
 
-# typedef enum eDrvParaMsgVariIdx	//Drive Parameter Message Variable Index Enumeration
-# {
-# {1}
-# E_MSG_VARI_END
+typedef enum eDrvParaDataVariIdx	//Drive Parameter Variable Index Enumeration 0 ~ 9999사이에는 Floating Point Type의 변수, Fixed Point Type의 변수
+{{
+\t{1}
+E_DATA_VARI_END,
+}}E_DRV_PARA_DATA_VARI_IDX;
 
-# }E_DRV_PARA_MSG_VARI_IDX;
+typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enumeration
+{{
+\t{2}
+E_MSG_VARI_END
 
-# #endif 
+}}E_DRV_PARA_MSG_VARI_IDX;
 
-# '''
+#endif 
+'''
 
-#     file_contents = header_template.format(
-#         '\n\t,'.join(cmd_key_func_lines),
-#         '\n\t,'.join(after_enter_key_func_lines)
-#     )
-#     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
-#         f.write(file_contents)
+    file_contents = header_template.format(
+        banner,
+        '\n\t,'.join(para_indexes),
+        '\n\t,'
+    )
+    with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
+        f.write(file_contents)
     pass

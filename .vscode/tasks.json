@@ -5,7 +5,7 @@
     "isShellCommand": true, 
     "showOutput": "always",  
     "suppressTaskName": true,
-    "echoCommand": true,'
+    "echoCommand": true,
     "tasks" : [
         {
             "taskName": "pyflakes",

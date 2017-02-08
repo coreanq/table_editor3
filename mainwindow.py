@@ -30,8 +30,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         self.model_parameters = QStandardItemModel(self)
         self.model_proxy_parameters = QSortFilterProxyModel(self)
-        # self.model_proxy_parameters_detail = horizontal_proxy_model.HorizontalProxyModel(self)
-        self.model_proxy_parameters_detail = QSortFilterProxyModel(self)
+        self.model_proxy_parameters_detail = horizontal_proxy_model.HorizontalProxyModel(self)
+        # self.model_proxy_parameters_detail = QSortFilterProxyModel(self)
         
         self.model_msg_info = QStandardItemModel(self)
         self.model_proxy_msg_info = QSortFilterProxyModel(self)
@@ -721,11 +721,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         return True
 
     def make_model_to_file(self, source_path):
-        mk.make_kpdpara_var(source_path, self.model_var)
         mk.make_add_title_eng(source_path, self.model_title)
         mk.make_kpdpara_msg(source_path, self.model_msg_info, self.model_msg_values)
         mk.make_kpdpara_table(source_path, self.model_parameters, self.model_group)
         mk.make_kfunc_head(source_path, self.model_parameters, self.model_group)
+        mk.make_drv_para_data_storage(source_path, self.model_parameters)
 
         return True
 
