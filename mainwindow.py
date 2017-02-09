@@ -39,6 +39,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_msg_values = QStandardItemModel(self)
         self.model_proxy_msg_values = QSortFilterProxyModel(self)
         
+        self.model_para_indexes  = QStandardItemModel(self) 
         self.model_var = QStandardItemModel(self)
         self.model_proxy_var = QSortFilterProxyModel(self)
         
@@ -77,7 +78,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.table_editor_number = ''
         self.table_editor_version = ''
 
-        self.initView()
+        self.initModelAndView()
         self.createConnection()
         self.createAction()
         pass
@@ -150,7 +151,95 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.actionAddMsg.triggered.connect(actionAddFunc('Msg'))
         self.actionAddVar.triggered.connect(actionAddFunc('Var'))
         self.actionAddTitle.triggered.connect(actionAddFunc('Title'))
-    
+        pass
+
+    def initView(self):
+        view_list = self.view_list
+
+        # group view init 
+        col_info = ci.group_col_info()
+        view = self.viewGroup
+        self.model_proxy_group.setSourceModel(self.model_group)
+        self.model_group.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_group)
+        view.setColumnHidden(col_info.index('Dummy Key'), True)
+
+        # prameter view init
+        col_info = ci.para_col_info_for_view()
+        view = self.viewParameter
+        self.model_proxy_parameters.setSourceModel(self.model_parameters)
+        self.model_parameters.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_parameters) 
+        view.setColumnHidden( col_info.index('Group'), True)
+        view.setColumnHidden( col_info.index('Title Index'), True )
+
+        # parameter view detail init
+        view = self.viewParameterDetail
+        self.model_proxy_parameters_detail.setSourceModel(self.model_proxy_parameters)
+        view.setModel(self.model_proxy_parameters_detail) 
+
+        # msg info view init 
+        col_info = ci.msg_info_col_info()
+        view = self.viewMsgInfo
+        self.model_proxy_msg_info.setSourceModel(self.model_msg_info) 
+        self.model_msg_info.setHorizontalHeaderLabels(col_info )
+        view.setModel(self.model_proxy_msg_info)
+        view.setColumnHidden( col_info.index('Dummy Key'), True)
+
+        # msg value view init 
+        col_info = ci.msg_values_col_info()
+        view = self.viewMsgValue
+        self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
+        self.model_msg_values.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_msg_values)
+        view.setColumnHidden(col_info.index('MsgName'), True)
+        view.setColumnHidden(col_info.index('MsgComment'), True)
+        view.setColumnHidden(col_info.index('Title Index'), True )
+        
+        # var view init
+        col_info = ci.variable_col_info()
+        view = self.viewVariable
+        self.model_proxy_var.setSourceModel(self.model_var)
+        self.model_var.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_var)
+        view.setColumnHidden(col_info.index('Dummy Key'), True)
+        self.tabWidget.setTabEnabled(2, False)
+
+        # title view init 
+        col_info = ci.title_col_info()
+        view = self.viewTitle
+        self.model_proxy_title.setSourceModel(self.model_title)
+        self.model_title.setHorizontalHeaderLabels(col_info)
+        view.setModel(self.model_proxy_title)
+        view.setColumnHidden(col_info.index('Dummy Key'), True)
+
+        # filter 값을 이상한 값으로 넣어 처음에는 아무 리스트가 안나타나게 함 
+        proxy_list = [  self.model_proxy_msg_values, self.model_proxy_parameters, 
+                        # self.model_proxy_title, self.model_proxy_var  
+        ]  
+        for proxy in proxy_list:
+            regx = QRegExp("!@#$") 
+            proxy.setFilterKeyColumn(0)
+            proxy.setFilterRegExp(regx)
+
+        # 모든 view 기본 설정  
+        for item in view_list:
+            item.setAlternatingRowColors(True)
+            item.setSelectionBehavior(QAbstractItemView.SelectRows)
+            item.setSelectionMode(QAbstractItemView.SingleSelection)
+            horizontalHeaderView  = item.horizontalHeader()
+            horizontalHeaderView.setStretchLastSection(True)
+            horizontalHeaderView.setSectionResizeMode(QHeaderView.ResizeToContents)
+
+            # row drag & drop 을 위해서는 headerView 를 설정해야함 view 자체에서는 안됨 
+            verticalHeaderView = item.verticalHeader()
+            verticalHeaderView.setSectionsMovable(True)
+            verticalHeaderView.setDragEnabled(True)
+            verticalHeaderView.setDragDropMode(QAbstractItemView.InternalMove)
+            verticalHeaderView.setHidden(True)
+        
+        # 특수 세팅
+        self.viewParameter.setSelectionMode(QAbstractItemView.ExtendedSelection)
     def check_if_model_valid(self):
 
         # TODO: model valid 한지 파악 필요 
@@ -241,6 +330,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewMsgValue.addAction(self.actionAddMsg)
         self.viewVariable.addAction(self.actionAddVar)
         self.viewTitle.addAction(self.actionAddTitle)
+    
+    def initModelAndView(self):
+        self.model_msg_info.clear()
+        self.model_msg_values.clear()
+        self.model_kpd_para_unit.clear()
+        self.model_parameters.clear()
+        self.model_title.clear()
+        self.model_var.clear()
+        self.model_group.clear()
+        self.model_para_indexes.clear()
+        
+        self.initView()
+        # 셀크기를 유지하기 위해 사용 
+        self.initDelegate()
         
     @pyqtSlot(QAction)
     def onMenuFileActionTriggered(self, action):
@@ -254,23 +357,22 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             options = QFileDialog.ShowDirsOnly
                                             )
             
-            if( os.path.isdir(selected_dir) ):
-                self.model_msg_info.clear()
-                self.model_msg_values.clear()
-                self.model_kpd_para_unit.clear()
-                self.model_parameters.clear()
-                self.model_title.clear()
-                self.model_var.clear()
-                self.model_group.clear()
+            ret_val  = []
+            
+            if( not os.path.isdir(selected_dir) ):
+                ret_val.append('존재하지 않는 디렉토리')
 
-                if( self.readDataFromFile(selected_dir) ):
-                    self.initView()
-                    self.lineSourcePath.setText(selected_dir)
-                    # 셀크기를 유지하기 위해 사용 
-                    self.initDelegate()
-                    QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
-                else:
-                    QMessageBox.critical(self, '실패', '파일열기가 실패하였습니다')
+            self.initModelAndView()
+
+            if( self.readDataFromFile(selected_dir) == False ):
+                ret_val.append('파일 읽기 실패')
+
+            if( len(ret_val) == 0 ):
+                self.lineSourcePath.setText(selected_dir)
+                QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
+            else:
+                self.initModelAndView()
+                QMessageBox.critical(self, '실패', ' | '.join(ret_val))
 
             pass
         elif( action_type == 'Save'):
@@ -385,89 +487,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def onMenuAboutActionTriggered(self, action):
         print(action.text())
 
-    def initView(self):
-        view_list = self.view_list
-
-        # group view init 
-        col_info = ci.group_col_info()
-        view = self.viewGroup
-        self.model_proxy_group.setSourceModel(self.model_group)
-        self.model_group.setHorizontalHeaderLabels(col_info)
-        view.setModel(self.model_proxy_group)
-        view.setColumnHidden(col_info.index('Dummy Key'), True)
-
-        # prameter view init
-        col_info = ci.para_col_info_for_view()
-        view = self.viewParameter
-        self.model_proxy_parameters.setSourceModel(self.model_parameters)
-        self.model_parameters.setHorizontalHeaderLabels(col_info)
-        view.setModel(self.model_proxy_parameters) 
-        view.setColumnHidden( col_info.index('Group'), True)
-        view.setColumnHidden( col_info.index('Title Index'), True )
-
-        # parameter view detail init
-        view = self.viewParameterDetail
-        self.model_proxy_parameters_detail.setSourceModel(self.model_proxy_parameters)
-        view.setModel(self.model_proxy_parameters_detail) 
-
-        # msg info view init 
-        col_info = ci.msg_info_col_info()
-        view = self.viewMsgInfo
-        self.model_proxy_msg_info.setSourceModel(self.model_msg_info) 
-        self.model_msg_info.setHorizontalHeaderLabels(col_info )
-        view.setModel(self.model_proxy_msg_info)
-        view.setColumnHidden( col_info.index('Dummy Key'), True)
-
-        # msg value view init 
-        col_info = ci.msg_values_col_info()
-        view = self.viewMsgValue
-        self.model_proxy_msg_values.setSourceModel(self.model_msg_values)
-        self.model_msg_values.setHorizontalHeaderLabels(col_info)
-        view.setModel(self.model_proxy_msg_values)
-        view.setColumnHidden(col_info.index('MsgName'), True)
-        view.setColumnHidden(col_info.index('MsgComment'), True)
-        view.setColumnHidden(col_info.index('Title Index'), True )
-        
-        # var view init
-        col_info = ci.variable_col_info()
-        view = self.viewVariable
-        self.model_proxy_var.setSourceModel(self.model_var)
-        self.model_var.setHorizontalHeaderLabels(col_info)
-        view.setModel(self.model_proxy_var)
-        view.setColumnHidden(col_info.index('Dummy Key'), True)
-
-        # title view init 
-        col_info = ci.title_col_info()
-        view = self.viewTitle
-        self.model_proxy_title.setSourceModel(self.model_title)
-        self.model_title.setHorizontalHeaderLabels(col_info)
-        view.setModel(self.model_proxy_title)
-        view.setColumnHidden(col_info.index('Dummy Key'), True)
-
-        # filter 값을 이상한 값으로 넣어 처음에는 아무 리스트가 안나타나게 함 
-        proxy_list = [  self.model_proxy_msg_values, self.model_proxy_parameters, 
-                        # self.model_proxy_title, self.model_proxy_var  
-        ]  
-        for proxy in proxy_list:
-            regx = QRegExp("!@#$") 
-            proxy.setFilterKeyColumn(0)
-            proxy.setFilterRegExp(regx)
-
-        # 모든 view 기본 설정  
-        for item in view_list:
-            item.setAlternatingRowColors(True)
-            item.setSelectionBehavior(QAbstractItemView.SelectRows)
-            item.setSelectionMode(QAbstractItemView.SingleSelection)
-            horizontalHeaderView  = item.horizontalHeader()
-            horizontalHeaderView.setStretchLastSection(True)
-            horizontalHeaderView.setSectionResizeMode(QHeaderView.ResizeToContents)
-
-            # row drag & drop 을 위해서는 headerView 를 설정해야함 view 자체에서는 안됨 
-            verticalHeaderView = item.verticalHeader()
-            verticalHeaderView.setSectionsMovable(True)
-            verticalHeaderView.setDragEnabled(True)
-            verticalHeaderView.setDragDropMode(QAbstractItemView.InternalMove)
-            verticalHeaderView.setHidden(True)
+  
 
     def setCmbDelegateAttribute(self, model, view, delegate, columns = [], editable = False, 
         width = 0, cmb_model_column = 0):
@@ -501,26 +521,24 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         col_index = col_info.index('단위')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = False,  width = 150)
 
-        model = self.model_var
+        model = self.model_para_indexes
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
-        col_indexes = [ col_info.index('Para Index'), 
-                        col_info.index('최대값'),
-                        col_info.index('최소값'),
-                        col_info.index('보임변수')
+        col_indexes = [ 
+            col_info.index('최대값'),
+            col_info.index('최소값'),
+            col_info.index('보임변수')
         ]
-        cmb_model_column_index = ci.variable_col_info().index('Variable')
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = True,  
-                width = 200, cmb_model_column = cmb_model_column_index)
+                width = 200 )
 
         model = QStringListModel(['E_DATA_DIV_1','E_DATA_DIV_10', 'E_DATA_DIV_100','E_DATA_DIV_1K' , 'E_DATA_DIV_10K', 'E_DATA_DIV_100K'] ) 
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ 
-                        col_info.index('KpdWordScale'),
-                        col_info.index('KpdFloatScale')
+            col_info.index('KpdWordScale'),
+            col_info.index('KpdFloatScale')
         ]
-        cmb_model_column_index = ci.variable_col_info().index('Variable')
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  
                 width = 120 )
 
@@ -528,10 +546,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         model = QStringListModel( ['True', 'False']) 
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
-        col_indexes = [ col_info.index('통신쓰기금지'), 
-                        col_info.index('읽기전용'),
-                        col_info.index('운전중변경불가'),
-                        col_info.index('0 입력가능')
+        col_indexes = [ 
+            col_info.index('통신쓰기금지'), 
+            col_info.index('읽기전용'),
+            col_info.index('운전중변경불가'),
+            col_info.index('0 입력가능')
         ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes )
 
@@ -807,10 +826,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             para_vari = para_vari.replace('k_aw', '')
                             para_index = para_vari.upper()
                             kpd_word_scale = 'E_DATA_DIV_1'
-                            kpd_float_scale = 'E_DATA_EIV_1'
+                            kpd_float_scale = 'E_DATA_DIV_1'
                         else:
                             col_info = ci.para_col_info_for_file_new()
                             para_index = items[col_info.index('Para Index')].upper()
+                            para_index = para_index.replace('E_DATA_CMD_', '' )
                             kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
                             kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
 
@@ -862,6 +882,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         title = mk.make_title_with_at_value(title, at_value)
 
+                        self.addRowToModel(self.model_para_indexes, (para_index,) )
 
                         try : 
                             view_col_list = [ items[col_info.index('Group')],  
@@ -1011,6 +1032,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         row_indexes = selection_model.selectedRows()
         data_dict = {}
 
+        # multiline copy 가능 
         # ' "subject" : [ 'item1, item2...', 'item1, item2...' ] '
         for row_index in row_indexes:
             row_data = ','.join(view_model.data(row_index.sibling(row_index.row(), column)) for column in range(view_model.columnCount() )) 
@@ -1023,50 +1045,39 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
 
     def viewRowPaste(self, subject, view, source_model):
+        # view 의 model 은 proxy 모델이고 데이터를 추가 하기 위해서는 source model 이 필요함 
         clipboard = QApplication.clipboard()
         view_model = view.model() 
-        selection_model = view.selectionModel()
-        row_indexes = selection_model.selectedRows()
         key_name = view_model.filterRegExp().pattern() 
+        current_index = view.currentIndex()
 
-        # 한줄만 선택 
-        for row_index in row_indexes:
-            source_index = None
-            if( source_model == view_model ):
-                source_index = row_index
-            else :
-                source_index = view_model.mapToSource( row_index ) 
-            insert_row = source_index.row() 
-            dict_result = json.loads(clipboard.text())
+        source_index = view_model.mapToSource( current_index ) 
+        insert_row = source_index.row() 
+        dict_result = json.loads(clipboard.text())
 
-            for key, lists in dict_result.items():
-                if( key == subject ):
-                    for row in lists:
-                        row_items = row.split(',')
-                        row_items[0] = key_name
-                        self.insertRowToModel(source_model, row_items, insert_row)
-                break
+        for key, lists in dict_result.items():
+            # 동일한 항목의 데이터 복사 인지 확인 
+            if( key == subject ):
+                for row in lists:
+                    row_items = row.split(',')
+                    row_items[0] = key_name
+                    self.insertRowToModel(source_model, row_items, insert_row)
+                    insert_row = insert_row + 1
+            break
         pass
 
     def viewRowInsert(self, view, source_model):
+        # view 의 model 은 proxy 모델이고 데이터를 추가 하기 위해서는 source model 이 필요함 
         view_model = view.model() 
-        selection_model = view.selectionModel()
-        row_indexes = selection_model.selectedRows()
         key_name = view_model.filterRegExp().pattern() 
+        current_index = view.currentIndex()
 
-        # 한줄만 선택 
-        for row_index in row_indexes:
-            source_index = None
-            if( source_model == view_model ):
-                source_index = row_index
-            else :
-                source_index = view_model.mapToSource( row_index ) 
-            insert_row = source_index.row() 
+        source_index = view_model.mapToSource( current_index ) 
+        insert_row = source_index.row() 
 
-            row_items = [''] * view_model.columnCount()
-            row_items[0] = key_name
-            self.insertRowToModel(source_model, row_items, insert_row)
-            break
+        row_items = [''] * view_model.columnCount()
+        row_items[0] = key_name
+        self.insertRowToModel(source_model, row_items, insert_row)
         pass
 
     def viewRowDelete(self, view):
@@ -1074,10 +1085,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         selection_model = view.selectionModel()
         row_indexes = selection_model.selectedRows()
 
-        # 한줄만 선택 
-        for row_index in row_indexes:
+        # 역순으로 row 제거해야함  
+        for row_index in sorted(row_indexes, reverse =True ):
             view_model.removeRow(row_index.row())
-            break
         pass
         
     @pyqtSlot()
@@ -1165,9 +1175,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def onVariableViewDeleted(self):
         self.viewRowDelete(self.viewVariable)
         pass
-
-
-
 
 
 if __name__ == '__main__': 

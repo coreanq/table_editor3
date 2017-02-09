@@ -748,12 +748,28 @@ def make_drv_para_data_storage(source_path, parameters_model):
     col_info = ci.para_col_info_for_view()
     model = parameters_model
     para_index = col_info.index('Para Index') 
+    para_word_scale_index = col_info.index('KpdWordScale')
+    para_float_scale_index = col_info.index('KpdFloatScale')
+    para_title_index = col_info.index('Code TITLE')
+    para_group_index = col_info.index('Group')
+    para_code_index = col_info.index('Code#')
 
-    para_indexes = []
+    para_indexes_info = []
+    para_scale_info = [] # [float, word , comment ]
 
     for index in range(model.rowCount() ):
+
+        float_scale = model.item(index, para_float_scale_index).text()
+        word_scale  = model.item(index, para_word_scale_index).text()
+        group = model.item(index, para_group_index).text()
+        code = model.item(index, para_code_index).text()
+        title = model.item(index, para_title_index ).text()
+        comment = '\t//{0:>5} {1:>4} {2:>20}'.format(group, code, title)
+
         para_index_str = model.item(index, para_index).text()
-        para_indexes.append('E_DATA_CMD_' + para_index_str)
+        para_index_str = 'E_DATA_CMD_{0:<30}{1}'.format(para_index_str, comment)
+        para_indexes_info.append(para_index_str) 
+        para_scale_info.append((float_scale, word_scale, comment ))
 
     header_template = \
 '''{0}
@@ -762,14 +778,14 @@ def make_drv_para_data_storage(source_path, parameters_model):
 
 typedef enum eDrvParaDataVariIdx	//Drive Parameter Variable Index Enumeration 0 ~ 9999사이에는 Floating Point Type의 변수, Fixed Point Type의 변수
 {{
-\t{1}
-E_DATA_VARI_END,
+\t {1}
+\t,E_DATA_VARI_END
 }}E_DRV_PARA_DATA_VARI_IDX;
 
 typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enumeration
 {{
-\t{2}
-E_MSG_VARI_END
+\t {2}
+\t,E_MSG_VARI_END
 
 }}E_DRV_PARA_MSG_VARI_IDX;
 
@@ -778,9 +794,39 @@ E_MSG_VARI_END
 
     file_contents = header_template.format(
         banner,
-        '\n\t,'.join(para_indexes),
+        '\n\t,'.join(para_indexes_info),
         '\n\t,'
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
+        f.write(file_contents)
+    pass
+
+
+    scale_list = []
+    for float_scale, word_scale, comment in  para_scale_info:
+        scale_list.append('{{{0:>20}, {1:>20}}}{2}'.format(float_scale, word_scale, comment) )
+        pass
+
+    src_template = \
+'''{0}
+#include "BaseDefine.H"
+#include "DrvPara_DataStorage_Auto.h"
+
+typedef struct sDrvParaDataScaleType	//소수점 표현하는 Data
+{{
+	E_DRV_PARA_DATA_DIV eFloatScale;		//Floating 변수로 전환할때의 소수점 자리값
+	E_DRV_PARA_DATA_DIV eWordScale;			//WORD Type으로 Data를 변화할때 잘라낼 자리값
+}}S_DRV_PARA_DATA_SCALE;
+
+static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =	
+{{
+\t {1}
+}}
+'''
+    file_contents = src_template.format(
+        banner,
+        '\n\t,'.join(scale_list)
+    )
+    with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass
