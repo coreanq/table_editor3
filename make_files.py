@@ -16,9 +16,9 @@ ATTR_HIDDEN_CON = 0x0700
 ATTR_ADD  = 0x1000
 
 banner = '''\
-//-------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //      Auto generated from TABLE EDITOR {0} V{1}    {2}
-//-------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 '''.format(
     version.TABLE_EDITOR_NUMBER, 
     version.VERSION_INFO,
@@ -493,6 +493,17 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
             max_val = model.item(find_row_index, col_info.index('최대값')).text()
             min_val = model.item(find_row_index, col_info.index('최소값')).text()
+            show_var  =  model.item(find_row_index, col_info.index('보임변수')).text()
+
+            # max, min show var 의 key_pad index 인 경우 처리 
+            re_val = re.compile('[A-Z][A-Z_0-9]+')
+            if( re_val.search(max_val) ):
+                max_val = 'E_DATA_CMD_' + max_val
+            if( re_val.search(min_val) ):
+                max_val = 'E_DATA_CMD_' + max_val
+            if( re_val.search(show_var) ):
+                max_val = 'E_DATA_CMD_' + max_val
+
             form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
             unit = model.item(find_row_index, col_info.index('단위')).text()
 
@@ -531,7 +542,6 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             hidden_val = hiddenConditionToValue(hidden_condition)
             attribute |= (hidden_val << 8)
 
-            show_var  =  model.item(find_row_index, col_info.index('보임변수')).text()
             show_value = model.item(find_row_index, col_info.index('보임값')).text()
             eep_addr = model.item(find_row_index, col_info.index('EEP 주소')).text()
             comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
@@ -596,10 +606,10 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 #include "KPD_Title_Enum.H"
 #include "KpdPara_GrpIdx.H"
 #include "KpdPara_Msg.H"
-#include "KpdPara_Vari.H"
 #include "KpdPara_ShowParaVari.H"
 #include "KFunc_Head.H"
 #include "KpdPara_Table.H"
+#include "DrvPara_DataStorage.h"
 {1}
 \n\n
 static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
@@ -754,7 +764,8 @@ def make_drv_para_data_storage(source_path, parameters_model):
     para_group_index = col_info.index('Group')
     para_code_index = col_info.index('Code#')
 
-    para_indexes_info = []
+    para_indexes = [] # duplication 제거를 위한 para_index 저장 
+    para_indexes_lines  = [] # generation 을 위한 line 
     para_scale_info = [] # [float, word , comment ]
 
     for index in range(model.rowCount() ):
@@ -765,16 +776,45 @@ def make_drv_para_data_storage(source_path, parameters_model):
         code = model.item(index, para_code_index).text()
         title = model.item(index, para_title_index ).text()
         comment = '\t//{0:>5} {1:>4} {2:>20}'.format(group, code, title)
-
         para_index_str = model.item(index, para_index).text()
-        para_index_str = 'E_DATA_CMD_{0:<30}{1}'.format(para_index_str, comment)
-        para_indexes_info.append(para_index_str) 
-        para_scale_info.append((float_scale, word_scale, comment ))
+
+        if( para_index_str not in para_indexes ):
+            #duplication 제거 
+            para_indexes.append(para_index_str) 
+            para_index_str_line = 'E_DATA_CMD_{0:<30}{1}'.format(para_index_str, comment)
+            para_indexes_lines.append(para_index_str_line)
+            para_scale_info.append('{{{0:>20}, {1:>20}}}{2}'.format(float_scale, word_scale, comment) )
+        else:
+            # 중복 발생시 comment 추가 
+            duplication_index = para_indexes.index(para_index_str)
+            para_indexes_lines[duplication_index] = '{0}\t{1}'.format(para_indexes_lines[duplication_index] , comment)
+            para_scale_info[duplication_index] = '{0}\t{1}'.format(para_scale_info[duplication_index] , comment)
 
     header_template = \
 '''{0}
 #ifndef DRIVE_PARA_DATA_STORAGE_AUTO_H_
 #define DRIVE_PARA_DATA_STORAGE_AUTO_H_
+
+typedef enum eDrvParaDataDiv
+{{
+	E_DATA_DIV_1,
+	E_DATA_DIV_10,
+	E_DATA_DIV_100,
+	E_DATA_DIV_1K,
+	E_DATA_DIV_10K,
+	E_DATA_DIV_100K,
+
+	TOTAL_DATA_DIV
+
+}}E_DRV_PARA_DATA_DIV;
+
+typedef enum eDrvParaSetErr
+{{
+	E_DRV_PARA_ERR_NONE,
+	E_DRV_PARA_WRONG_INDEX,
+	E_DRV_PARA_RANGE_OVER,
+	E_DRV_PARA_TRANS_LIMITED
+}}E_DRV_PARA_SET_ERR;
 
 typedef enum eDrvParaDataVariIdx	//Drive Parameter Variable Index Enumeration 0 ~ 9999사이에는 Floating Point Type의 변수, Fixed Point Type의 변수
 {{
@@ -794,18 +834,14 @@ typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enum
 
     file_contents = header_template.format(
         banner,
-        '\n\t,'.join(para_indexes_info),
-        '\n\t,'
+        '\n\t,'.join(para_indexes_lines),
+        '\n\t,'.join('TES')
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass
 
 
-    scale_list = []
-    for float_scale, word_scale, comment in  para_scale_info:
-        scale_list.append('{{{0:>20}, {1:>20}}}{2}'.format(float_scale, word_scale, comment) )
-        pass
 
     src_template = \
 '''{0}
@@ -821,11 +857,11 @@ typedef struct sDrvParaDataScaleType	//소수점 표현하는 Data
 static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =	
 {{
 \t {1}
-}}
+}};
 '''
     file_contents = src_template.format(
         banner,
-        '\n\t,'.join(scale_list)
+        '\n\t,'.join(para_scale_info)
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
         f.write(file_contents)

@@ -3,10 +3,11 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeade
                             QAction, QFileDialog, QMessageBox, QMenu
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
-                         QRegExp, Qt, QItemSelectionModel, QItemSelection,  QStringListModel, \
-                         QIODevice, QFile
+                         QRegExp, Qt, QItemSelectionModel, QItemSelection,  QStringListModel,\
+                         QFile
+
 import mainwindow_ui 
-import horizontal_proxy_model
+import proxy_model
 
 import view_delegate as cbd 
 import view_key_eater as ve
@@ -30,7 +31,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         self.model_parameters = QStandardItemModel(self)
         self.model_proxy_parameters = QSortFilterProxyModel(self)
-        self.model_proxy_parameters_detail = horizontal_proxy_model.HorizontalProxyModel(self)
+        self.model_proxy_parameters_detail = proxy_model.ColumnProxyModel(self)
         # self.model_proxy_parameters_detail = QSortFilterProxyModel(self)
         
         self.model_msg_info = QStandardItemModel(self)
@@ -153,6 +154,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.actionAddTitle.triggered.connect(actionAddFunc('Title'))
         pass
 
+        # keypad index column 이 변경된 경우 해당하는 model 데이터를 업데이트 시켜줘야함 
+        self.model_parameters.dataChanged.connect( self.onParameterModelChanged )
+        self.model_parameters.modelReset.connect( self.onParameterModelChanged )
+        self.model_parameters.rowsInserted.connect( self.onParameterModelChanged )
+        self.model_parameters.rowsMoved.connect( self.onParameterModelChanged )
+        self.model_parameters.rowsRemoved.connect( self.onParameterModelChanged )
+
+    @pyqtSlot()
+    def onParameterModelChanged(self):
+        # print(util.whoami())
+        pass
+
     def initView(self):
         view_list = self.view_list
 
@@ -175,7 +188,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         # parameter view detail init
         view = self.viewParameterDetail
-        self.model_proxy_parameters_detail.setSourceModel(self.model_proxy_parameters)
+        self.model_proxy_parameters_detail.setSourceModel(self.model_parameters)
         view.setModel(self.model_proxy_parameters_detail) 
 
         # msg info view init 
@@ -357,6 +370,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             options = QFileDialog.ShowDirsOnly
                                             )
             
+            if( selected_dir == ''):
+                return 
+
             ret_val  = []
             
             if( not os.path.isdir(selected_dir) ):
@@ -364,8 +380,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
             self.initModelAndView()
 
-            if( self.readDataFromFile(selected_dir) == False ):
-                ret_val.append('파일 읽기 실패')
+            ret, error_string = self.readDataFromFile(selected_dir) 
+
+            if( ret == False ):
+                ret_val.append(error_string)
 
             if( len(ret_val) == 0 ):
                 self.lineSourcePath.setText(selected_dir)
@@ -766,7 +784,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     def check_has_all_file_for_read(self, source_path):
         # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
-        ret = True
+        ret = False 
+        error_string = '' 
         target_dir = source_path
         source_file_list  = []
 
@@ -776,21 +795,29 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             break
         # source_file_list = [ file.lower() for file in source_file_list ]
 
-        if( all ( x.lower() in source_file_list for x in rd.parsing_files) == False):
-            QMessageBox.critical(self, "오류", "타겟 폴더의 파일 리스트가 온전치 않음")
-            print(source_file_list)
+        expected_file_list = []
+        for parsing_file_name in rd.parsing_files :
+            if( not parsing_file_name.lower() in source_file_list ):
+                expected_file_list.append(parsing_file_name)
+            
+        if( len(expected_file_list) ):
+            error_string  = "타겟 폴더의 파일 리스트가 온전치 않음\n필요파일 리스트:\n" + '\n'.join(expected_file_list)
             ret = False
-        return ret
+        else:
+            ret = True 
+        return ret, error_string
 
     # read_para_table 에서는 단순히 파일을 파싱해서 올려주는 역할만 하고 
     # 올라온 데이터에 대한 수정은 상위단에서 수행하도록 함 
     def readDataFromFile(self, source_path):
         target_dir = source_path
         source_file_list = []
+        error_string = ''
 
         # 파싱에 필요한 모든 파일이 다 존재 하는지 확인 
-        if( self.check_has_all_file_for_read(target_dir) == False):
-            return False
+        ret, error_string =  self.check_has_all_file_for_read(target_dir) 
+        if( ret == False ):
+            return ret, error_string 
 
         for filename in rd.parsing_files:
             file_path = target_dir + os.sep + filename 
@@ -812,7 +839,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     # parameter table parameter 값 읽기  
                     for items in rd.read_para_table(contents):
                         col_info = None 
+
                         para_index = ''
+                        max_value = ''
+                        min_value = ''
+                        show_vari = ''
+
                         kpd_word_scale = ''
                         kpd_float_scale = ''
 
@@ -820,17 +852,39 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         if( int(self.table_editor_number) < 4 ):
                             col_info = ci.para_col_info_for_file_old()
                             para_vari = items[col_info.index('ParaVar')].lower()
-                            para_vari = para_vari.replace('[', '_')
-                            para_vari = para_vari.replace(']', '')
-                            para_vari = para_vari.replace('k_w', '')
-                            para_vari = para_vari.replace('k_aw', '')
-                            para_index = para_vari.upper()
+                            max_value = items[col_info.index('MaxVal')].lower()
+                            min_value = items[col_info.index('MinVal')].lower()
+                            show_vari = items[col_info.index('ShowVar')].lower()
+
+                            var_list = [para_vari, max_value, min_value, show_vari]
+
+                            for count, var in enumerate(var_list):
+                                # k_awTemp[0]
+                                # 0: All 
+                                # 1: Temp 
+                                # 2: [0]
+                                # 3: 0  
+                                ret = rd.re_parse_kpd_var_only.search(var)
+                                if( ret ):
+                                    if( ret.group(3)):
+                                        var_list[count] = ret.group(1).upper() + '_' + ret.group(3)
+                                    else:
+                                        var_list[count] = ret.group(1).upper()
+
+                            para_index = var_list[0]
+                            max_value = var_list[1]
+                            min_value = var_list[2]
+                            show_vari = var_list[3]
+
                             kpd_word_scale = 'E_DATA_DIV_1'
                             kpd_float_scale = 'E_DATA_DIV_1'
                         else:
                             col_info = ci.para_col_info_for_file_new()
                             para_index = items[col_info.index('Para Index')].upper()
                             para_index = para_index.replace('E_DATA_CMD_', '' )
+                            max_value = items[col_info.index('MaxVal')].lower()
+                            min_value = items[col_info.index('MinVal')].lower()
+                            show_vari = items[col_info.index('ShowVar')].lower()
                             kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
                             kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
 
@@ -885,35 +939,38 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         self.addRowToModel(self.model_para_indexes, (para_index,) )
 
                         try : 
-                            view_col_list = [ items[col_info.index('Group')],  
-                                            items[col_info.index('Code#')],  
-                                            items[col_info.index('TitleIndex')],
-                                            title, 
-                                            items[col_info.index('AtValue')], 
-                                            para_index, 
-                                            kpd_word_scale,
-                                            kpd_float_scale,
-                                            items[col_info.index('KpdFunc')],
-                                            items[col_info.index('DefaultVal')],
-                                            items[col_info.index('MaxVal')],
-                                            items[col_info.index('MinVal')],
-                                            items[col_info.index('Msg')].replace('MSG_', ''),
-                                            items[col_info.index('Unit')],
-                                            hidden_condition,
-                                            key_pad_type,
-                                            str(no_comm),
-                                            str(read_only), 
-                                            str(no_change_on_run),
-                                            str(zero_input),
-                                            items[col_info.index('ShowVar')],
-                                            items[col_info.index('ShowVal')],
-                                            eep_addr,
-                                            comm_addr, 
-                                            items[col_info.index('MaxEDS')],
-                                            items[col_info.index('MinEDS')],
-                                            items[col_info.index('Comment')]
+                            view_col_list = [ 
+                                items[col_info.index('Group')],  
+                                items[col_info.index('Code#')],  
+                                items[col_info.index('TitleIndex')],
+                                title, 
+                                items[col_info.index('AtValue')], 
+                                para_index, 
+                                kpd_word_scale,
+                                kpd_float_scale,
+                                items[col_info.index('KpdFunc')],
+                                items[col_info.index('DefaultVal')],
+                                max_value,
+                                min_value,
+                                items[col_info.index('Msg')].replace('MSG_', ''),
+                                items[col_info.index('Unit')],
+                                hidden_condition,
+                                key_pad_type,
+                                str(no_comm),
+                                str(read_only), 
+                                str(no_change_on_run),
+                                str(zero_input),
+                                show_vari,
+                                items[col_info.index('ShowVal')],
+                                eep_addr,
+                                comm_addr, 
+                                items[col_info.index('MaxEDS')],
+                                items[col_info.index('MinEDS')],
+                                items[col_info.index('Comment')]
                             ]
-                            self.addRowToModel(self.model_parameters, view_col_list)
+                            # 에디팅 불가능하게 만드는 컬럼 리스트 
+                            columns  = [ci.para_col_info_for_view().index('EEP 주소'), ci.para_col_info_for_view().index('통신주소')]
+                            self.addRowToModel(self.model_parameters, view_col_list, editing_prohibit_columns = columns)
                         except IndexError:
                             print('error occur')
                             print(items)
@@ -949,7 +1006,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 elif ( filename.lower() == rd.KPD_BASIC_TITLE_SRC_FILE.lower() ):
                     for items in rd.read_basic_title(contents):
                         # 항상 add title 보다 앞서야 하므로 
-                        self.addRowToModel(self.model_title, items, editing = False)
+                        self.addRowToModel(self.model_title, items, editing_prohibit_columns = list(range(len(items))) )
                     pass
                 elif ( filename.lower() == rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE.lower() ):
                     for items in rd.read_kpd_para_struct_unit(contents):
@@ -960,16 +1017,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for items in rd.read_add_title(contents):
                         self.addRowToModel(self.model_title, items)
                 pass
-        return True
+        return ret, error_string 
         pass
 
-    def addRowToModel(self, model, data_list, editing = True):
+    def addRowToModel(self, model, data_list, editing_prohibit_columns =[] ):
         item_list = []
-        for data in data_list:
+        for col_count, data in enumerate(data_list):
             item = QStandardItem(data)
-            if( not editing ):
+            if( col_count in editing_prohibit_columns ):
                 item.setBackground(QColor(Qt.lightGray) )
-            item.setEditable(editing)
+                item.setEditable(False)
+            else:
+                item.setEditable(True)
+
             item_list.append(item)            
         model.appendRow(item_list)
         pass

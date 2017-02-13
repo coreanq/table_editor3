@@ -49,7 +49,6 @@ make_files = (
 parsing_files = (   
     KPD_BASIC_TITLE_SRC_FILE,
     KPD_ADD_TITLE_SRC_FILE,
-    KPD_PARA_VAR_HEADER_FILE,
     KPD_PARA_MSG_SRC_FILE,
     KPD_PARA_STRUCT_UNIT_HEADER_FILE,
     KPD_PARA_TABLE_SRC_FILE
@@ -87,7 +86,8 @@ re_parse_title_comment = re.compile(r'\/\/([0-9]+)[^\n\"]+\"([^\n]+)\"(T_[^\n]+)
 
 re_parse_kpd_declaration = re.compile(r'extern ([A-Z_a-z0-9]+)\s+\/\/')
 re_parse_kpd_var_define = re.compile(r'#define (K_[A-Z_0-9]+)\s+([0-9]+)')
-re_parse_kpd_var = re.compile(r'(k_[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?\s*\/\/([^\n]*)?')
+re_parse_kpd_var = re.compile(r'(k_[a]?w[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?s*\/\/([^\n]*)?')
+re_parse_kpd_var_only = re.compile(r'k_[a]?w([a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?')
 
 # re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
 # re_check_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+')

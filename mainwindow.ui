@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1036</width>
-    <height>624</height>
+    <width>1063</width>
+    <height>660</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <item>
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>파일내 테이블 에디터 버전:</string>
+         <string>파일 버전:</string>
         </property>
        </widget>
       </item>
@@ -168,7 +168,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1036</width>
+     <width>1063</width>
      <height>21</height>
     </rect>
    </property>
