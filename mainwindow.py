@@ -738,8 +738,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     def make_base_file(self, source_path):
         #기본 키패드 title 파일이나, struct_unit 파일은 내부에서 리소스로 가지고 있다가 만들어줌 
-        filelist = [rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE.lower(), 
-                    rd.KPD_BASIC_TITLE_SRC_FILE.lower() ]
+        filelist = [rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE, 
+                    rd.KPD_BASIC_TITLE_SRC_FILE ]
 
         for file in filelist:
             resource_file_path = r':/base/' + file 
@@ -871,10 +871,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                     else:
                                         var_list[count] = ret.group(1).upper()
 
-                            para_index = var_list[0]
-                            max_value = var_list[1]
-                            min_value = var_list[2]
-                            show_vari = var_list[3]
+                            para_index = var_list[0].upper()
+                            max_value = var_list[1].upper()
+                            min_value = var_list[2].upper()
+                            show_vari = var_list[3].upper()
 
                             kpd_word_scale = 'E_DATA_DIV_1'
                             kpd_float_scale = 'E_DATA_DIV_1'
@@ -882,9 +882,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             col_info = ci.para_col_info_for_file_new()
                             para_index = items[col_info.index('Para Index')].upper()
                             para_index = para_index.replace('E_DATA_CMD_', '' )
-                            max_value = items[col_info.index('MaxVal')].lower()
-                            min_value = items[col_info.index('MinVal')].lower()
-                            show_vari = items[col_info.index('ShowVar')].lower()
+                            max_value = items[col_info.index('MaxVal')].upper()
+                            min_value = items[col_info.index('MinVal')].upper()
+                            show_vari = items[col_info.index('ShowVar')].upper()
                             kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
                             kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
 

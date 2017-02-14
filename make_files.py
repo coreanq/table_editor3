@@ -497,12 +497,16 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             # max, min show var 의 key_pad index 인 경우 처리 
             re_val = re.compile('[A-Z][A-Z_0-9]+')
-            if( re_val.search(max_val) ):
-                max_val = 'E_DATA_CMD_' + max_val
-            if( re_val.search(min_val) ):
-                max_val = 'E_DATA_CMD_' + max_val
-            if( re_val.search(show_var) ):
-                max_val = 'E_DATA_CMD_' + max_val
+            if( re_val.match(max_val) ):
+                    max_val = 'E_DATA_CMD_' + max_val
+            if( re_val.match(min_val) ):
+                    min_val = 'E_DATA_CMD_' + min_val
+            if( re_val.match(show_var) ):
+                if( show_var.upper() != "NULL"):
+                    show_var = 'E_DATA_CMD_' + show_var
+
+            # max_val = '(WORD)' + max_val
+            # min_val = '(WORD)' + min_val
 
             form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
             unit = model.item(find_row_index, col_info.index('단위')).text()
@@ -549,17 +553,6 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             min_eds = model.item(find_row_index, col_info.index('최소 EDS')).text()
             comment = model.item(find_row_index, col_info.index('설명')).text()
 
-            default_val ='(WORD)' + default_val
-            if( 'k_' in max_val ) :
-                max_val = '(LONG)&' + max_val
-            else:
-                max_val = '(WORD)' + max_val
-
-            if( 'k_' in min_val ) :
-                min_val = '(LONG)&' + min_val
-            else:
-                min_val = '(WORD)' + min_val
-                
             if( 'DATAMSG' in unit ):
                 form_msg = 'MSG_' + form_msg
             
@@ -569,24 +562,21 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             attribute_str = '0x{0:0>4}'.format(hex(attribute)[2:].upper())
 
-            if( 'k_' in show_var or 'g_' in show_var ):
-                show_var = '(WORD*)&' + show_var
-
             format_str = ( '{{{0:<5},{1:<5},{2:<30},{3:<40},{4:<20},'
-                            '{5:<20},{6:<40},{7:<30},{8:<30},{9:<30},'
-                            '{10:<30},{11:<30},{12:<10},{13:<30},{14:<5}}},'
-                            '//"{15:<14}"{16}//{17}' )
-            if( find_item == find_items[-1]):
-                format_str = ( '{{{0:<5},{1:<5},{2:<30},{3:<40},{4:<20},'
-                                    '{5:<20},{6:<40},{7:<30},{8:<30},{9:<30},'
-                                    '{10:<30},{11:<30},{12:<10},{13:<30},{14:<5}}}'
-                                    '//"{15:<14}"{16}//{17}' )
+                            '{5:<20},{6:<40},{7:<20},{8:<40},{9:<40},'
+                            '{10:<30},{11:<30},{12:<10},{13:<40},{14:<5}}}'
+                            '{15}//"{16:<14}"{17}//{18}' )
+
+            separator = ','
+            if( find_item == find_items[-1] ):
+                separator = ' '
+
             para_vars_lines.append(
                 format_str.format(\
-                        code_num,              at_value, title_enum_name,  para_var, para_word_scale, 
-                        para_float_scale,      kpd_func, default_val,      max_val,  min_val,
-                        form_msg,              unit,     attribute_str,    show_var, show_value, 
-                        title_name,            eds_val,  comment\
+                        code_num,              at_value,    title_enum_name,  para_var, para_word_scale, 
+                        para_float_scale,      kpd_func,    default_val,      max_val,  min_val,
+                        form_msg,              unit,        attribute_str,    show_var, show_value, 
+                        separator,             title_name,  eds_val,          comment
                 )
             )
         
@@ -610,6 +600,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 #include "KFunc_Head.H"
 #include "KpdPara_Table.H"
 #include "DrvPara_DataStorage.h"
+
 {1}
 \n\n
 static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
