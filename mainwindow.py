@@ -851,10 +851,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
                         if( int(self.table_editor_number) < 4 ):
                             col_info = ci.para_col_info_for_file_old()
-                            para_vari = items[col_info.index('ParaVar')].lower()
-                            max_value = items[col_info.index('MaxVal')].lower()
-                            min_value = items[col_info.index('MinVal')].lower()
-                            show_vari = items[col_info.index('ShowVar')].lower()
+                            para_vari = items[col_info.index('ParaVar')]
+                            max_value = items[col_info.index('MaxVal')]
+                            min_value = items[col_info.index('MinVal')]
+                            show_vari = items[col_info.index('ShowVar')]
 
                             var_list = [para_vari, max_value, min_value, show_vari]
 
@@ -864,17 +864,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 # 1: Temp 
                                 # 2: [0]
                                 # 3: 0  
-                                ret = rd.re_parse_kpd_var_only.search(var)
+                                ret = rd.re_parse_kpd_var_only.match(var)
                                 if( ret ):
                                     if( ret.group(3)):
                                         var_list[count] = ret.group(1).upper() + '_' + ret.group(3)
                                     else:
                                         var_list[count] = ret.group(1).upper()
 
-                            para_index = var_list[0].upper()
-                            max_value = var_list[1].upper()
-                            min_value = var_list[2].upper()
-                            show_vari = var_list[3].upper()
+                            para_index = var_list[0]
+                            max_value = var_list[1]
+                            min_value = var_list[2]
+                            show_vari = var_list[3]
 
                             kpd_word_scale = 'E_DATA_DIV_1'
                             kpd_float_scale = 'E_DATA_DIV_1'
