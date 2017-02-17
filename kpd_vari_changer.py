@@ -11,7 +11,8 @@ k_wAutoTuneMode==0
 # 아래는 파싱 안됨 
 k_aw1234
 k_aw1234[123]
-or 한줄에 키패드 변수 2개 이상 나오는 경우 
+FIXME: 한줄에 키패드 변수 2개 이상 나오는 경우 
+k_wLoopMaxTime = k_wLoopMeanTime  --> 오류남 
 '''
 
 # re group info: [0]: all [1]:& [2]:123kd [3] =  or ==
@@ -21,7 +22,6 @@ re_all_kpd_var = re.compile(r'(\&)?k_w([a-zA-Z0-9]+)\s*([\=]*)')
 target_dir = 'd:\\download\\3_work\Drive_SW_Platform\\src\\trunk\\NewEraPlatform\Source\\Inverter'
 
 if __name__ == '__main__' :
-
     target_file_list = []
     # file list gathering
     for (dirpath, dirnames, filenames) in os.walk(target_dir):
@@ -31,7 +31,6 @@ if __name__ == '__main__' :
             if( extension_name == '.c' or extension_name =='.h' ):
                 target_file_list.append(dirpath + os.path.sep + name)
     # print('\n'.join(target_file_list))
-
 
     # open file and read line by line and print keypad variable 
     for file_path in target_file_list:
@@ -44,9 +43,6 @@ if __name__ == '__main__' :
         isSearch = False
         for count, line in enumerate(pre_contents):
             find_objs = re_all_kpd_var.finditer(line)
-            # 한줄에 2개 이상 keypad 변수 있는 경우 제외함  find_objes 에 바로 len 안됨 
-            # if( len(tuple(find_objs)) == 2 ):
-            #     continue
 
             for match_obj in find_objs:
                 if( match_obj.group(1) == None and match_obj.group(3) != '=' ):

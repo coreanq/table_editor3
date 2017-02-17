@@ -870,6 +870,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                         var_list[count] = ret.group(1).upper() + '_' + ret.group(3)
                                     else:
                                         var_list[count] = ret.group(1).upper()
+                                else:
+                                    # global 변수 삭제 
+                                    if( re.match(r'g_[a-zA-Z_0-9]+', var_list[count]) ) :
+                                        var_list[count] = 'NULL' 
 
                             para_index = var_list[0]
                             max_value = var_list[1]
