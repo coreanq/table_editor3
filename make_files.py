@@ -756,8 +756,7 @@ def make_drv_para_data_storage(source_path, parameters_model):
     para_code_index = col_info.index('Code#')
 
     para_indexes = [] # duplication 제거를 위한 para_index 저장 
-    para_indexes_lines  = [] # generation 을 위한 line 
-    para_scale_info = [] # [float, word , comment ]
+    para_indexes_lines  = [] # generation 을 위한 line  index_line | scale _line 합쳐진 형태임 
 
     for index in range(model.rowCount() ):
 
@@ -773,13 +772,28 @@ def make_drv_para_data_storage(source_path, parameters_model):
             #duplication 제거 
             para_indexes.append(para_index_str) 
             para_index_str_line = 'E_DATA_CMD_{0:<30}{1}'.format(para_index_str, comment)
-            para_indexes_lines.append(para_index_str_line)
-            para_scale_info.append('{{{0:>20}, {1:>20}}}{2}'.format(float_scale, word_scale, comment) )
+            para_index_scale_line = '{{{0:>20}, {1:>20}}}{2}'.format(float_scale, word_scale, comment) 
+            para_indexes_lines.append(para_index_str_line + '|' + para_index_scale_line)
         else:
             # 중복 발생시 comment 추가 
             duplication_index = para_indexes.index(para_index_str)
             para_indexes_lines[duplication_index] = '{0}\t{1}'.format(para_indexes_lines[duplication_index] , comment)
-            para_scale_info[duplication_index] = '{0}\t{1}'.format(para_scale_info[duplication_index] , comment)
+
+
+    # 배열구조로 된 parameter index 리스트의 카운트 리스트를 만들어줌 
+    re_array_type = re.compile(r'([\w]+)_[0-9]{1,2}')
+    para_array_type_list = {} 
+    for para_index_str in para_indexes:
+        if( re_array_type.match( para_index_str ) ):
+            trans_str = re_array_type.sub(r'\1', para_index_str)
+            if( trans_str not in para_array_type_list ):
+                para_array_type_list[trans_str] = 1
+            else:
+                para_array_type_list[trans_str] = para_array_type_list[trans_str]  + 1
+
+    para_array_type_lines = []
+    for key, value in para_array_type_list.items():
+        para_array_type_lines.append('#define\tCNT_{0:<40}{1}'.format(key, value))
 
     header_template = \
 '''{0}
@@ -807,15 +821,17 @@ typedef enum eDrvParaSetErr
 	E_DRV_PARA_TRANS_LIMITED
 }}E_DRV_PARA_SET_ERR;
 
+{1}
+
 typedef enum eDrvParaDataVariIdx	//Drive Parameter Variable Index Enumeration 0 ~ 9999사이에는 Floating Point Type의 변수, Fixed Point Type의 변수
 {{
-\t {1}
+\t {2}
 \t,E_DATA_VARI_END
 }}E_DRV_PARA_DATA_VARI_IDX;
 
 typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enumeration
 {{
-\t {2}
+\t {3}
 \t,E_MSG_VARI_END
 
 }}E_DRV_PARA_MSG_VARI_IDX;
@@ -823,9 +839,15 @@ typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enum
 #endif 
 '''
 
+    para_indexes_lines.sort()
+
+    para_enums = [ ret.split('|')[0]  for ret in para_indexes_lines ]
+    para_scales = [ ret.split('|')[1]  for ret in para_indexes_lines ]
+
     file_contents = header_template.format(
         banner,
-        '\n\t,'.join(para_indexes_lines),
+        '\n'.join( para_array_type_lines),
+        '\n\t,'.join(para_enums),
         '\n\t,'.join('TES')
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
@@ -852,7 +874,7 @@ static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =
 '''
     file_contents = src_template.format(
         banner,
-        '\n\t,'.join(para_scale_info)
+        '\n\t,'.join(para_scales)
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
         f.write(file_contents)

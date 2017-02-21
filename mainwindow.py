@@ -867,7 +867,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 ret = rd.re_parse_kpd_var_only.match(var)
                                 if( ret ):
                                     if( ret.group(3)):
-                                        var_list[count] = ret.group(1).upper() + '_' + ret.group(3)
+                                        var_list[count] = ret.group(1).upper() + '_' + '{0:0>2}'.format(ret.group(3))
                                     else:
                                         var_list[count] = ret.group(1).upper()
                                 else:
