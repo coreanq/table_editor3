@@ -23,8 +23,8 @@ KPD_PARA_VAR_SRC_FILE = 'KpdPara_Vari.c'
 KPD_PARA_VAR_HEADER_FILE = 'KpdPara_Vari.H'
 
 # neweraplatform kpd_index 파일
-DRVPARA_DATASTORAGE_SRC_AUTO = 'DrvPara_DataStorage_Auto.c'
-DRVPARA_DATASTORAGE_HEADER_AUTO = 'DrvPara_DataStorage_Auto.h'
+DRVPARA_DATASTORAGE_SRC_AUTO = 'DrvPara_DataStorage_AutoGen.c'
+DRVPARA_DATASTORAGE_HEADER_AUTO = 'DrvPara_DataStorage_AutoGen.h'
 
 # write 에 사용하는 파일 리스트 정의
 make_files = (
@@ -62,15 +62,15 @@ re_parse_kpd_para_unit_params = re.compile(r'(U_[^,= ]+)')
 
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z0-9]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
-re_parse_params = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
+re_parse_params = re.compile(r'(\([A-Za-z_0-9*]+\))?&?([^,{}\n;]+)')
 re_parse_comment = re.compile(r'"([^\n]+)"((\[EDS :([-0-9]*)[,]?([-0-9 ]*)\])?\/\/([^\n]*))*')
 
 re_extract_grp_info = re.compile(r'(?P<group_info_data>S_GROUP_X_TYPE t_astGrpInfo[^;]+\}\;)') # 한개의 그룹 정보 뽑아냄 
 re_check_grp_info = re.compile(r'{(?P<grp_info>[^\n]+)}[,]?')
-re_parse_grp_info = re.compile(r'(\([A-Z*]+\))?&?([^,{}\n;]+)')
+re_parse_grp_info = re.compile(r'(\([A-Za-z_0-9*]+\))?&?([^,{}\n;]+)')
 
-re_extract_msg = re.compile(r'(?P<msg_data>S_MSG_TYPE t_ast(?P<msg_name>[A-Z-a-z_0-9]+)[^\n]+\/\/(?P<msg_info>[^\n]+)\/\/(?P<msg_info_comment>[^\n]*)[^;]+\;)') # 한개의 그룹 뽑아냄 
-re_check_msg_info = re.compile(r'S_MSG_TYPE t_ast[A-Z-a-z_0-9]+[^\n]+\/\/([^\n]+)\/\/([^\n]+)')
+re_extract_msg = re.compile(r'(?P<msg_data>S_MSG_TYPE t_ast(?P<msg_name>[A-Za-z_0-9]+)[^\n]+\/\/(?P<msg_info>[^\n]+)\/\/(?P<msg_info_comment>[^\n]*)[^;]+\;)') # 한개의 그룹 뽑아냄 
+re_check_msg_info = re.compile(r'S_MSG_TYPE t_ast[A-Za-z_0-9]+[^\n]+\/\/([^\n]+)\/\/([^\n]+)')
 re_check_msg_params = re.compile(r'{(?P<parameters>[^\n]+)}.?(?P<comment>[^\n]+)')
 re_parse_msg_params = re.compile(r'([^,{}\n;]+)')
 re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
@@ -78,8 +78,8 @@ re_parse_msg_comment = re.compile(r'\/\/"([^\n]+)"')
 # table editor 파일의 버전정보 추출 
 re_extract_version_info = re.compile(r'Table Edit[a-z]{0,2} (?P<table_editor_number>[0-9]) V(?P<table_editor_version>[0-9](.[0-9]+){0,3})', re.I)
 # check 의 경우 input 의 값이 원하는 형식인지 파악 parse 의 경우 input 에서 param 리스트를 뽑아냄  
-re_extract_basic_title_var = re.compile(r'BYTE kpdParaTitleEng[^;]+};')
-re_extract_add_title_var = re.compile(r'const WORD g_awAddTitleEng[^;]+};')
+re_extract_basic_title_var = re.compile(r'[A-Za-z_0-9*]+ kpdParaTitleEng[^;]+};')
+re_extract_add_title_var = re.compile(r'const [A-Za-z_0-9*]+ g_awAddTitleEng[^;]+};')
 re_check_title = re.compile(r'{(?P<parameters>[^\n]+)}(?P<comment>\/\/[^\n]+)')
 re_parse_title_params = re.compile(r'([^,{}\n;]+)')
 re_parse_title_comment = re.compile(r'\/\/([0-9]+)[^\n\"]+\"([^\n]+)\"(T_[^\n]+)')

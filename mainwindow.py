@@ -1,10 +1,10 @@
-import os, sys, shutil, json, re
+import os, sys, shutil, json, re, json, copy
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView,  \
                             QAction, QFileDialog, QMessageBox, QMenu
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
                          QRegExp, Qt, QItemSelectionModel, QItemSelection,  QStringListModel,\
-                         QFile
+                         QFile, QObject, QEvent
 
 import mainwindow_ui 
 import proxy_model
@@ -18,6 +18,18 @@ import util
 import version
 import make_files as mk 
 
+CONFIG_FILE_NAME = "te4_config.json"
+CONFIG_FILE = {}
+
+class CloseEventEater(QObject):
+    def eventFilter(self, obj, event):
+        if( event.type() == QEvent.Close):
+            file_contents = json.dumps(CONFIG_FILE, ensure_ascii= False, indent=2)
+            with open(CONFIG_FILE_NAME, 'w', encoding='utf8' ) as f:
+                f.write(file_contents)
+            return True
+        else:
+            return super(CloseEventEater, self).eventFilter(obj, event)
 
 class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     sigFileVersionChanged  = pyqtSignal()
@@ -54,13 +66,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_kpd_para_unit = QStandardItemModel()
 
-        self.actionAddGroup = QAction('Add Group')
-        self.actionAddPara = QAction('Add Parameter')
-        self.actionAddMsgInfo = QAction('Add MsgInfo')
-        self.actionAddMsg = QAction('Add Msg')
-        self.actionAddVar = QAction('Add Var')
-        self.actionAddTitle = QAction('Add Title')
-
+        self.actionAddGroup = QAction('Add Group', self)
+        self.actionAddPara = QAction('Add Parameter', self)
+        self.actionAddMsgInfo = QAction('Add MsgInfo', self)
+        self.actionAddMsg = QAction('Add Msg', self)
+        self.actionAddVar = QAction('Add Var', self )
+        self.actionAddTitle = QAction('Add Title', self)
 
         self.view_list = [  self.viewGroup,  
                             self.viewParameter, self.viewMsgInfo, 
@@ -82,6 +93,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.initModelAndView()
         self.createConnection()
         self.createAction()
+        if( os.path.isfile(CONFIG_FILE_NAME) == True):
+            with open(CONFIG_FILE_NAME, 'r', encoding='utf8') as f:
+                file_contents = f.read()
+                jsonConfig = json.loads(file_contents)
+                global CONFIG_FILE
+                CONFIG_FILE = copy.deepcopy(jsonConfig)
+                if( '최근폴더' in jsonConfig ):
+                    self.lineSourcePath.setText(jsonConfig['최근폴더'])
         pass
 
     def createConnection(self):
@@ -361,7 +380,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot(QAction)
     def onMenuFileActionTriggered(self, action):
         action_type = action.text()
-        current_path = os.getcwd()
+        current_path = self.lineSourcePath.text() 
         if( action_type == 'Open'):
             selected_dir = QFileDialog.getExistingDirectory(
                                             self, 
@@ -388,6 +407,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             if( len(ret_val) == 0 ):
                 self.lineSourcePath.setText(selected_dir)
                 QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
+                CONFIG_FILE['최근폴더']= selected_dir
+
             else:
                 self.initModelAndView()
                 QMessageBox.critical(self, '실패', ' | '.join(ret_val))
@@ -1240,10 +1261,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowDelete(self.viewVariable)
         pass
 
-
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
     form = MainWindow()
+    closeEventEater = CloseEventEater()
+    form.installEventFilter(closeEventEater)
     form.setWindowTitle('TableEditor4 V' + version.VERSION_INFO)
     form.show()
     sys.exit(app.exec_())

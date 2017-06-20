@@ -30,7 +30,7 @@ re_kpd_var = re.compile(r'(\&)?k_w([\w]+)\s*([\=]*)')
 re_kpd_var_array  = re.compile(r'(\&)?k_aw([\w]+)\[([\w -]+)\]\s*([\=]*)')
 
 
-target_dir = 'd:\\download\\3_work\Drive_SW_Platform\\src\\trunk\\NewEraPlatform\Source\\Inverter'
+target_dir = 'd:\\download\\3_work\\Drive_SW_Platform\\src\\branches\\NewEraPlatform_kpd_index\\Source\\Inverter\\'
 
 if __name__ == '__main__' :
     target_file_list = []
