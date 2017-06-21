@@ -122,7 +122,7 @@ def make_add_title_eng(source_path, title_model):
 '''{0}
 #include "BaseDefine.H"
 #include "AddTitle_Eng.H"\n\n\n
-const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ 
+const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ 
  {1}
 }};
 '''
@@ -141,7 +141,7 @@ const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{
 #define ADD_TITLE_ENG_H\n\n
 #define TOTAL_ADD_TITLE       {1} 
 #define ADD_TITLE_SIZE        {2} 
-extern const WORD g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
+extern const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 #endif   //ADD_TITLE_ENG_H 
 '''
 
@@ -327,24 +327,24 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
 #include "KPD_Title_Enum.H"
 #include "KpdPara_Msg.H"
 \n\n
-static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum);
+static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], uint16_t wMsgNum);
 \n\n
 {1}\n
 static const S_MSG_TYPE * t_pastMsgDataTbl[MSG_TOTAL] = {{
 \t {2}
 }};
-static const WORD t_awMsgDataSize[MSG_TOTAL] = {{
+static const uint16_t t_awMsgDataSize[MSG_TOTAL] = {{
 \t {3}
 }};\n
-static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], WORD wMsgNum)
+static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], uint16_t wMsgNum)
 {{
 return astMsgType[wMsgNum];
 }}
-S_MSG_TYPE KpdParaGetMsgData(WORD wMsgIdx, WORD wMsgNum)
+S_MSG_TYPE KpdParaGetMsgData(uint16_t wMsgIdx, uint16_t wMsgNum)
 {{
 return KpdParaGetMsg(t_pastMsgDataTbl[wMsgIdx], wMsgNum);
 }}
-WORD KpdParaGetMsgSize(WORD wMsgIdx)
+uint16_t KpdParaGetMsgSize(uint16_t wMsgIdx)
 {{
 return t_awMsgDataSize[wMsgIdx];
 }}
@@ -384,8 +384,8 @@ enum{{  //MSG들의 Index 값
 \n
 {2}
 \n\n
-S_MSG_TYPE KpdParaGetMsgData(WORD wMsgIdx, WORD wMsgNum);
-WORD KpdParaGetMsgSize(WORD wMsgIdx);
+S_MSG_TYPE KpdParaGetMsgData(uint16_t wMsgIdx, uint16_t wMsgNum);
+uint16_t KpdParaGetMsgSize(uint16_t wMsgIdx);
 #endif  //KEYPAD_MESSAG_H
 
 '''
@@ -445,7 +445,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
         key_group_hidden_var = key_model.item(row_index, key_col_info.index('Hidden Var')).text()
         key_group_hidden_val = key_model.item(row_index, key_col_info.index('Hidden Val')).text()
         if( 'g_' in key_group_hidden_var or 'k_' in key_group_hidden_val ):
-            key_group_hidden_var = '(WORD*)&' + key_group_hidden_var
+            key_group_hidden_var = '(uint16_t*)&' + key_group_hidden_var
 
         group_info_lines.append( 
             group_info_template.format(
@@ -505,8 +505,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
                 if( show_var.upper() != "NULL"):
                     show_var = 'E_DATA_CMD_' + show_var
 
-            # max_val = '(WORD)' + max_val
-            # min_val = '(WORD)' + min_val
+            # max_val = '(uint16_t)' + max_val
+            # min_val = '(uint16_t)' + min_val
 
             form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
             unit = model.item(find_row_index, col_info.index('단위')).text()
@@ -606,12 +606,12 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
 {2}
 }};\n\n
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx)
+const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx)
 {{
 return &t_astGrpInfo[wGrpIdx];
 }}
 
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx)
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTableIdx)
 {{
 const S_TABLE_X_TYPE* pstTable;
 
@@ -644,8 +644,8 @@ return pstTable;
 #include "KpdPara_StructUnit.H"
 \n\n
 {1}\n\n
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(WORD wGrpIdx);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(WORD wGrpIdx, WORD wTableIdx);
+const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTableIdx);
 \n\n
 #endif   //_KPD_TABLE_H
 '''
@@ -859,12 +859,12 @@ typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enum
     src_template = \
 '''{0}
 #include "BaseDefine.H"
-#include "DrvPara_DataStorage_Auto.h"
+#include "DrvPara_DataStorage_AutoGen.h"
 
 typedef struct sDrvParaDataScaleType	//소수점 표현하는 Data
 {{
 	E_DRV_PARA_DATA_DIV eFloatScale;		//Floating 변수로 전환할때의 소수점 자리값
-	E_DRV_PARA_DATA_DIV eWordScale;			//WORD Type으로 Data를 변화할때 잘라낼 자리값
+	E_DRV_PARA_DATA_DIV eWordScale;			//uint16_t Type으로 Data를 변화할때 잘라낼 자리값
 }}S_DRV_PARA_DATA_SCALE;
 
 static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =	

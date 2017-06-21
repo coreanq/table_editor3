@@ -90,47 +90,47 @@ enum {
 
 typedef struct 
 {
-	BYTE	bGrp;				//GrpIndex
-	BYTE	bCodeNum;			// code number
-	BYTE	bCodeIndex;			//CodeIndex
-	WORD	wTitleIdx;		// LCD entry data
-	BYTE	bAtValue;
+	uint8_t		bGrp;				//GrpIndex
+	uint8_t		bCodeNum;			// code number
+	uint8_t		bCodeIndex;			//CodeIndex
+	uint16_t	wTitleIdx;		// LCD entry data
+	uint8_t 	bAtValue;
 
-	WORD	wKpdIndex;
-	WORD	wKpdFuncIdx;			// pointer of exceptional function routine
+	uint16_t	wKpdIndex;
+	uint16_t	wKpdFuncIdx;			// pointer of exceptional function routine
 
-	WORD	wDefVal;			// default value of function data
-	WORD	wMaxVal;			// high limit value of function data
-	WORD	wMinVal;			// low limit value of function data
+	uint32_t	wDefVal;			// default value of function data
+	uint32_t	wMaxVal;			// high limit value of function data
+	uint32_t	wMinVal;			// low limit value of function data
 
-	BYTE	bFormMsgType;
-	BYTE	bUnitType;
-	WORD	wAttr;           	// attribute of function
-	WORD	wEditData;			//Parameter의 값
+	uint8_t	 	bFormMsgType;
+	uint8_t		bUnitType;
+	uint16_t	wAttr;           	// attribute of function
+	uint32_t	wEditData;			//Parameter의 값
 
 } S_KPD_TYPE;
 
 
 
 typedef struct {
-	BYTE		bCodeNum;			// code number
-	BYTE		bAtValue;
-	WORD		wTitleIdx;		// LCD entry data
+	uint8_t		bCodeNum;			// code number
+	uint8_t		bAtValue;
+	uint16_t	wTitleIdx;		// LCD entry data
 
-	WORD		wKpdIndex;
-	WORD		wFloatScale;
-	WORD		wWordScale;
-	WORD		wKpdFuncIdx;			// pointer of exceptional function routine
+	uint16_t	wKpdIndex;
+	uint16_t	wFloatScale;
+	uint16_t	wWordScale;
+	uint16_t	wKpdFuncIdx;			// pointer of exceptional function routine
 
-	LONG		ulDefVal;			// default value of function data
-	LONG		ulMaxData;			// high limit value of function data
-	LONG		ulMinData;			// low limit value of function data
+	uint32_t	ulDefVal;			// default value of function data
+	uint32_t	ulMaxData;			// high limit value of function data
+	uint32_t	ulMinData;			// low limit value of function data
 
-	BYTE		bFormMsgType;
-	BYTE		bUnitType;
-	WORD		wAttr;           	// attribute of function
-	WORD		wShowVariIndex;
-	WORD		wShowValue;
+	uint8_t		bFormMsgType;
+	uint8_t		bUnitType;
+	uint16_t	wAttr;           	// attribute of function
+	uint16_t	wShowVariIndex;
+	uint16_t	wShowValue;
 
 } S_TABLE_X_TYPE;				
 
@@ -138,17 +138,17 @@ typedef struct {
 
 typedef struct
 {
-	WORD	wTitleIdx;
-	BYTE	bAtValue;
+	uint16_t	wTitleIdx;
+	uint8_t		bAtValue;
 }S_MSG_TYPE;       
 
 
 
 typedef struct {
-	WORD	wGrpTitle;
-	BYTE	bGrpSize;
-	WORD   *pwShowVari;
-	WORD	wShowValue;
+	uint16_t	wGrpTitle;
+	uint8_t		bGrpSize;
+	uint16_t   *pwShowVari;
+	uint16_t	wShowValue;
 } S_GROUP_X_TYPE;
 
 

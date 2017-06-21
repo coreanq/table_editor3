@@ -82,7 +82,7 @@ if __name__ == '__main__' :
 
                     finded_word = match_obj.group(0)
                     ret  = line.replace(finded_word,
-                                r'DrvParaGetWordData(E_DATA_CMD_{0}_0 {1} ) {2}'.format(
+                                r'DrvParaGetWordData(E_DATA_CMD_{0}_00 {1} ) {2}'.format(
                                     match_obj.group(2).upper(),
                                     index_str,
                                     match_obj.group(4)
