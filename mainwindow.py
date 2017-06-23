@@ -593,11 +593,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes )
 
-        model = QStringListModel( ['AfterEnter', 'Cmd']) 
-        view  = self.viewParameter
-        delegate = self.delegate_parameters_view
-        col_indexes = [ col_info.index('KPD 타입') ]
-        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, width = 80)
+        # model = QStringListModel( ['AfterEnter', 'Cmd']) 
+        # view  = self.viewParameter
+        # delegate = self.delegate_parameters_view
+        # col_indexes = [ col_info.index('KPD 타입') ]
+        # self.setCmbDelegateAttribute(model, view, delegate, col_indexes, width = 80)
 
         # msg view delegate 설정 
         model = self.model_title
@@ -877,30 +877,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             min_value = items[col_info.index('MinVal')]
                             show_vari = items[col_info.index('ShowVar')]
 
-                            var_list = [para_vari, max_value, min_value, show_vari]
-
-                            for count, var in enumerate(var_list):
-                                # k_awTemp[0]
-                                # 0: All 
-                                # 1: Temp 
-                                # 2: [0]
-                                # 3: 0  
-                                ret = rd.re_parse_kpd_var_only.match(var)
-                                if( ret ):
-                                    if( ret.group(3)):
-                                        var_list[count] = ret.group(1).upper() + '_' + '{0:0>2}'.format(ret.group(3))
-                                    else:
-                                        var_list[count] = ret.group(1).upper()
-                                else:
-                                    # global 변수 삭제 
-                                    if( re.match(r'g_[a-zA-Z_0-9]+', var_list[count]) ) :
-                                        var_list[count] = 'NULL' 
-
-                            para_index = var_list[0]
-                            max_value = var_list[1]
-                            min_value = var_list[2]
-                            show_vari = var_list[3]
-
                             kpd_word_scale = 'E_DATA_DIV_1'
                             kpd_float_scale = 'E_DATA_DIV_1'
                         else:
@@ -921,7 +897,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         attribute  = arg_num
                         no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
-                        key_pad_type = 'Cmd'
+                        # key_pad_type = 'Cmd'
                         hidden_condition = ''
 
                         if( attribute & mk.ATTR_NO_COMM ):
@@ -932,8 +908,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             no_change_on_run = True 
                         if( attribute & mk.ATTR_ZERO_INPUT ):
                             zero_input = True 
-                        if( attribute & mk.ATTR_ENT):
-                            key_pad_type = 'AfterEnter'
+                        # if( attribute & mk.ATTR_ENT  ):
+                        #     key_pad_type = 'AfterEnter'
                         hidden_condition = mk.makeHiddenCondition(attribute)
 
                         # 통신 주소 설정 
@@ -954,7 +930,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             comm_addr = '통신 쓰기 금지'
                         else:
                             comm_addr = self.makeAddrValue(group_num, code_num)
-                        eep_addr = self.makeEEPAddrValue(group_num, code_num)
+                        #eep_addr = self.makeEEPAddrValue(group_num, code_num)
 
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         at_value = items[col_info.index('AtValue')]
@@ -970,35 +946,63 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 items[col_info.index('TitleIndex')],
                                 title, 
                                 items[col_info.index('AtValue')], 
-                                para_index, 
+                                para_vari,
                                 kpd_word_scale,
                                 kpd_float_scale,
-                                items[col_info.index('KpdFunc')],
                                 items[col_info.index('DefaultVal')],
                                 max_value,
                                 min_value,
                                 items[col_info.index('Msg')].replace('MSG_', ''),
                                 items[col_info.index('Unit')],
                                 hidden_condition,
-                                key_pad_type,
                                 str(no_comm),
                                 str(read_only), 
                                 str(no_change_on_run),
                                 str(zero_input),
                                 show_vari,
                                 items[col_info.index('ShowVal')],
-                                eep_addr,
                                 comm_addr, 
                                 items[col_info.index('MaxEDS')],
                                 items[col_info.index('MinEDS')],
                                 items[col_info.index('Comment')]
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 
-                            columns  = [ci.para_col_info_for_view().index('EEP 주소'), ci.para_col_info_for_view().index('통신주소')]
+                            columns  = [ci.para_col_info_for_view().index('통신주소')]
                             self.addRowToModel(self.model_parameters, view_col_list, editing_prohibit_columns = columns)
                         except IndexError:
                             print('error occur')
                             print(items)
+                        
+                    # old table 의 kpd 값을 GrpAndCode 인덱스로 변경 
+                    if( int(self.table_editor_number) < 4 ):
+                        for row in range(self.model_parameters.rowCount()):
+                            col_info = ci.para_col_info_for_view()
+                            grp_col       = col_info.index('Group')
+                            code_col      = col_info.index('Code#')
+                            para_vari_col = col_info.index('ParaVar')
+
+                            max_value_col = col_info.index('최대값')
+                            min_value_col = col_info.index('최소값')
+                            show_vari_col = col_info.index('보임변수')
+
+                            col_list = [max_value_col, min_value_col, show_vari_col]
+
+                            for col in col_list:
+                                value = self.model_parameters.item(row, col).text()
+                                # k_awTemp[0]
+                                # 0: All 
+                                # 1: Temp 
+                                # 2: [0]
+                                # 3: 0  
+                                ret = rd.re_parse_kpd_var_only.match(value)
+                                if( ret ):
+                                    find_list = self.model_parameters.findItems(value, column = para_vari_col )
+                                    for find_item in find_list:
+                                        find_row = find_item.row()
+                                        grp_name = self.model_parameters.item(find_row, grp_col).text()
+                                        code_name = self.model_parameters.item(find_row, code_col).text()
+                                        self.model_parameters.item(find_row, col).setText(grp_name + '_{0:0>3}'.format(code_name) )
+
                         
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE.lower()):
                     msg_list = [] 
