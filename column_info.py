@@ -44,36 +44,48 @@ _parameters_file_columns_info_new = [
 ]
 # table view 에서 보여지는 column 의 정보 
 _parameters_view_columns_info = [
-    'Group', 
-    'Code#',
+    'Group', # 왼쪽 컬럼 클릭시 사용하기 위한 용도 
+    'GrpAndCode', 
     'Title Index',
     'Code TITLE',
     'AtValue',
-    'ParaVar',
+    'ParaVar', # 필요 없지만 이전 버전과의 호환성을 위해 필요함 
     'KpdFloatScale',
     'KpdWordScale',
     '공장설정값',
+    '최대값타입', # global or keypad 변수 
     '최대값', 
+    '최소값타입', # global or keypad 변수 
     '최소값', 
+    '읽기전용',
+    '운전중변경불가', 
+    '0입력가능', 
+    '통신쓰기금지', 
     '폼메시지', 
     '단위', 
-    'Hidden Con', # 0,1,2,3
-    '통신쓰기금지', 
-    '읽기전용', 
-    '운전중변경불가', 
-    '0 입력가능',
-    '보임변수',
-    '보임값',
+    '보임값타입', # global or keypad 변수 
+    '보임값', 
+    '보임비교값',
+    '숨김 조건',
     '통신주소',
     '최대 EDS',
     '최소 EDS',
     '설명'
 ]
+# table editor version 4
 _group_columns_info = [
     'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
     'Group', 
-    'Hidden Var', 
-    'Hidden Val'
+    '보임값타입', # global or keyapd 변수 
+    '보임값', 
+    '보임비교값'
+]
+# table editor version 2, 3
+_group_columns_info_old = [
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
+    'Group', 
+    '보임값', 
+    '보임비교값'
 ]
 
 # read_data 시 yield 되는 tuple 의 index 정보를 나타냄  
@@ -137,6 +149,9 @@ def msg_info_col_info():
 
 def group_col_info():
     return _group_columns_info
+
+def group_col_info_old():
+    return _group_columns_info_old
 
 def unit_with_msg():
     return _unit_with_msg

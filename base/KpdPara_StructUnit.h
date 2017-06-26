@@ -113,24 +113,29 @@ typedef struct
 
 
 typedef struct {
-	uint8_t		bCodeNum;			// code number
+	uint16_t	wGrpAndCode;		// Grp And Code number
+	uint16_t	wTitleIdx;			// LCD entry data
 	uint8_t		bAtValue;
-	uint16_t	wTitleIdx;		// LCD entry data
 
-	uint16_t	wKpdIndex;
 	uint16_t	wFloatScale;
 	uint16_t	wWordScale;
-	uint16_t	wKpdFuncIdx;			// pointer of exceptional function routine
 
 	uint32_t	ulDefVal;			// default value of function data
+	bool 		blIsMaxDataIndexValue;
 	uint32_t	ulMaxData;			// high limit value of function data
+	bool 		blIsMinDataIndexValue;
 	uint32_t	ulMinData;			// low limit value of function data
+
+	bool 		blIsReadOnly;
+	bool 		blDontChangeWhenRunning;
+	bool 		blIsZeroInputPossible;
+	bool 		blIsNoCommPara;
 
 	uint8_t		bFormMsgType;
 	uint8_t		bUnitType;
-	uint16_t	wAttr;           	// attribute of function
 	uint16_t	wShowVariIndex;
 	uint16_t	wShowValue;
+	uint8_t		bHiddenCondition;
 
 } S_TABLE_X_TYPE;				
 
