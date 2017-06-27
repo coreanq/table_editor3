@@ -559,7 +559,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  
                 width = 120 )
 
-        model = QStringListModel( ['True', 'False']) 
+        model = QStringListModel( ['true', 'false']) 
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ 
@@ -641,7 +641,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         for find_item in find_items:
             group_num =  find_item.row()
         
-        if( no_comm_data == 'True'):
+        if( no_comm_data == 'true'):
             comm_addr = '통신 쓰기 금지'
         else:
             comm_addr = self.makeAddrValue(group_num, code_num)
@@ -927,14 +927,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 para_vari,
                                 kpd_word_scale,
                                 kpd_float_scale,
-                                'True',
+                                'true',
                                 items[col_info.index('DefaultVal')],
                                 max_value,
                                 min_value,
-                                str(read_only), 
-                                str(no_change_on_run),
-                                str(zero_input),
-                                str(no_comm),
+                                'true' if read_only else 'false' , 
+                                'true' if no_change_on_run else 'false' , 
+                                'true' if zero_input else 'false' , 
+                                'true' if no_comm else 'false' , 
                                 items[col_info.index('Msg')].replace('MSG_', ''),
                                 items[col_info.index('Unit')],
                                 comm_addr, 
