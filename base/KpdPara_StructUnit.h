@@ -121,9 +121,9 @@ typedef struct {
 	uint16_t	wWordScale;
 
 	bool 		blIsDataFuncRun;     // 설정된 값 외에 def, max, min 이 수정되야 될때 call back 부를 지 여부 
-	uint32_t	ulDefData;			// default value 
-	uint32_t	ulMaxData;			// high limit value 
-	uint32_t	ulMinData;			// low limit value 
+	int32_t		ulDefData;			// default value 
+	int32_t		ulMaxData;			// high limit value 
+	int32_t		ulMinData;			// low limit value 
 
 	bool 		blIsReadOnly;
 	bool 		blDontChangeWhenRunning;

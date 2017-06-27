@@ -101,9 +101,6 @@ _unit_with_msg = {
 def para_col_info_for_file_old():
     return _parameters_file_columns_info_old
 
-def para_col_info_for_file_new():
-    return _parameters_file_columns_info_new
-    
 def para_col_info_for_view():
     return _parameters_view_columns_info
     

@@ -142,16 +142,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tabVariable">
-       <attribute name="title">
-        <string>Variable</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_4">
-        <item row="0" column="0">
-         <widget class="QTableView" name="viewVariable"/>
-        </item>
-       </layout>
-      </widget>
       <widget class="QWidget" name="tabTitle">
        <attribute name="title">
         <string>Title</string>

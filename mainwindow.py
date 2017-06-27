@@ -1,4 +1,4 @@
-import os, sys, shutil, json, re, json, copy
+import os, sys, shutil, re, json, copy
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView,  \
                             QAction, QFileDialog, QMessageBox, QMenu
 from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
@@ -75,7 +75,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         self.view_list = [  self.viewGroup,  
                             self.viewParameter, self.viewMsgInfo, 
-                            self.viewMsgValue, self.viewVariable, 
+                            self.viewMsgValue,  
                             self.viewTitle]
 
         self.model_list = [
@@ -145,12 +145,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         msg_value_view_eater.sig_insert_clicked.connect(self.onTitleViewInserted)
         msg_value_view_eater.sig_delete_clicked.connect(self.onTitleViewDeleted)
 
-        msg_value_view_eater = ve.ViewKeyEater(self)
-        self.viewVariable.installEventFilter(msg_value_view_eater)
-        msg_value_view_eater.sig_copy_clicked.connect(self.onVariableViewCopyed)
-        msg_value_view_eater.sig_paste_clicked.connect(self.onVariableViewPasted)
-        msg_value_view_eater.sig_insert_clicked.connect(self.onVariableViewInserted)
-        msg_value_view_eater.sig_delete_clicked.connect(self.onVariableViewDeleted)
 
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
@@ -229,14 +223,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setColumnHidden(col_info.index('MsgComment'), True)
         view.setColumnHidden(col_info.index('Title Index'), True )
         
-        # var view init
-        col_info = ci.variable_col_info()
-        view = self.viewVariable
-        self.model_proxy_var.setSourceModel(self.model_var)
-        self.model_var.setHorizontalHeaderLabels(col_info)
-        view.setModel(self.model_proxy_var)
-        view.setColumnHidden(col_info.index('Dummy Key'), True)
-        self.tabWidget.setTabEnabled(2, False)
 
         # title view init 
         col_info = ci.title_col_info()
@@ -365,7 +351,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewParameter.addAction(self.actionAddPara)
         self.viewMsgInfo.addAction(self.actionAddMsgInfo)
         self.viewMsgValue.addAction(self.actionAddMsg)
-        self.viewVariable.addAction(self.actionAddVar)
         self.viewTitle.addAction(self.actionAddTitle)
     
     def initModelAndView(self):
@@ -565,17 +550,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         col_index = col_info.index('단위')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = False,  width = 150)
 
-        model = self.model_para_indexes
-        view  = self.viewParameter
-        delegate = self.delegate_parameters_view
-        col_indexes = [ 
-            col_info.index('최대값'),
-            col_info.index('최소값'),
-            col_info.index('보임값')
-        ]
-        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = True,  
-                width = 100 )
-
         model = QStringListModel(['E_DATA_DIV_1','E_DATA_DIV_10', 'E_DATA_DIV_100','E_DATA_DIV_1K' , 'E_DATA_DIV_10K', 'E_DATA_DIV_100K'] ) 
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
@@ -585,18 +559,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  
                 width = 120 )
-
-
-        model = QStringListModel(['NONE','KEYPAD', 'GLOBAL'])
-        view  = self.viewParameter
-        delegate = self.delegate_parameters_view
-        col_indexes = [ 
-            col_info.index('최대값타입'),
-            col_info.index('최소값타입'),
-            col_info.index('보임값타입')
-        ]
-        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  
-                width = 100 )
 
         model = QStringListModel( ['True', 'False']) 
         view  = self.viewParameter
@@ -625,16 +587,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
                 cmb_model_column = cmb_model_column_index)
 
-        # group view delegate 설정 
-        model = self.model_var
-        view  = self.viewGroup
-        delegate = self.delegate_group_view  
-        col_info = ci.group_col_info()
-        col_index = col_info.index('보임값')
-        cmb_model_column_index = ci.variable_col_info().index('Variable')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = True , 
-                width = 150, cmb_model_column = cmb_model_column_index  )
-        pass
        
     # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
     def onParameterViewUnitChanged(self, index): 
@@ -875,23 +827,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             col_info = ci.group_col_info_old()
                             dummy_key = items[col_info.index('Dummy Key')]
                             group_name = items[col_info.index('Group')]
-                            show_value  = items[col_info.index('보임값')]
-                            show_compare_value = items[col_info.index('보임비교값')]
 
-                            if( 'g_'in show_value):
-                                show_value_type = "GLOBAL"
-                            elif ( 'k_' in show_value ):
-                                show_value_type = "KEYPAD"
-                            else:
-                                show_value_type = "NONE"
                         else:
-                            col_info = column_info.group_col_info()
+                            col_info = ci.group_col_info()
                             dummy_key = items[col_info['Dummy Key']]
                             group_name = items[col_info['Group']]
-                            show_value_type = items[col_info['보임값타입']]
-                            show_value  = items[col_info['보임값']]
-                            show_compare_value = items[col_info['보임비교값']]
-                        input_list = [dummy_key, group_name, show_value_type, show_value, show_compare_value]
+                        input_list = [dummy_key, group_name]
                         self.addRowToModel(self.model_group, input_list)
                         pass
 
@@ -899,14 +840,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for items in rd.read_para_table(contents):
                         col_info = None 
 
-                        para_index = ''
-                        max_value = ''
-                        min_value = ''
-                        show_vari = ''
+                        para_index, max_value, min_value =  '', '', ''
 
-                        kpd_word_scale = ''
-                        kpd_float_scale = ''
+                        kpd_word_scale, kpd_float_scale = '', ''
+
                         group_name, code_name, group_and_code = '', '', ''
+
+                        no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
 
                         # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
                         if( int(self.table_editor_number) < 4 ):
@@ -917,75 +857,58 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             para_vari = items[col_info.index('ParaVar')]
                             max_value = items[col_info.index('MaxVal')]
                             min_value = items[col_info.index('MinVal')]
-                            show_vari = items[col_info.index('ShowVar')]
-                            group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
 
                             para_index = group_and_code 
                             kpd_word_scale = 'E_DATA_DIV_1'
                             kpd_float_scale = 'E_DATA_DIV_1'
+
+                            # attribute 설정 
+                            arg = items[col_info.index('Attribute')] 
+                            if( arg == ''):
+                                arg_num = 0
+                            else:
+                                arg_num = int(arg, 16)
+
+                            attribute  = arg_num
+
+                            if( attribute & mk.ATTR_NO_COMM ):
+                                no_comm = True 
+                            if( attribute & mk.ATTR_READ_ONLY ):
+                                read_only = True
+                            if( attribute & mk.ATTR_NO_CHANGE_ON_RUN ):
+                                no_change_on_run = True 
+                            if( attribute & mk.ATTR_ZERO_INPUT ):
+                                zero_input = True 
+
                         else:
-                            col_info = ci.para_col_info_for_file_new()
+                            col_info = ci.para_col_info_for_file_view()
                             group_name = items[col_info.index('Group')]
                             code_name = items[col_info.index('Code#')]
                             group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
 
                             para_index = items[col_info.index('Para Index')].upper()
                             para_index = para_index.replace('E_DATA_CMD_', '' )
-                            max_value = items[col_info.index('MaxVal')].upper()
-                            min_value = items[col_info.index('MinVal')].upper()
-                            show_vari = items[col_info.index('ShowVar')].upper()
+                            max_value = items[col_info.index('최대값')].upper()
+                            min_value = items[col_info.index('최소값')].upper()
                             kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
                             kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
 
-                        arg = items[col_info.index('Attribute')] 
-                        if( arg == ''):
-                            arg_num = 0
-                        else:
-                            arg_num = int(arg, 16)
-
-                        attribute  = arg_num
-                        no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
-                        # type 은 세가지가 존재 NONE, KEYPAD, GLOBAL
-                        max_value_type, min_value_type, show_value_type = "NONE", "NONE", "NONE"
-                        # key_pad_type = 'Cmd'
-                        hidden_condition = ''
-
-                        if( attribute & mk.ATTR_NO_COMM ):
-                            no_comm = True 
-                        if( attribute & mk.ATTR_READ_ONLY ):
-                            read_only = True
-                        if( attribute & mk.ATTR_NO_CHANGE_ON_RUN ):
-                            no_change_on_run = True 
-                        if( attribute & mk.ATTR_ZERO_INPUT ):
-                            zero_input = True 
-                        if( attribute & mk.ATTR_UP ):
-                            max_value_type = 'KEYPAD'
-                            pass
-                        if( attribute & mk.ATTR_LP ):
-                            min_value_type = 'KEYPAD'
-                            pass
-                        # if( attribute & mk.ATTR_ENT  ):
-                        #     key_pad_type = 'AfterEnter'
-                        hidden_condition = mk.makeHiddenCondition(attribute)
-
-                        if( code_name == ''):
-                            code_num = 0
-                        else:
-                            code_num = int(code_name)
-
-                        group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
                         
+                        # 통신 어드레스 계산 
                         find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
                         group_num = 0 
 
                         for find_item in find_items:
                             group_num  =  find_item.row()
-                        
+
+                        if( code_name == ''):
+                            code_num = 0
+                        else:
+                            code_num = int(code_name)
                         if( no_comm ):
                             comm_addr = '통신 쓰기 금지'
                         else:
                             comm_addr = self.makeAddrValue(group_num, code_num)
-                        #eep_addr = self.makeEEPAddrValue(group_num, code_num)
 
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         at_value = items[col_info.index('AtValue')]
@@ -1004,10 +927,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 para_vari,
                                 kpd_word_scale,
                                 kpd_float_scale,
+                                'True',
                                 items[col_info.index('DefaultVal')],
-                                max_value_type, 
                                 max_value,
-                                min_value_type, 
                                 min_value,
                                 str(read_only), 
                                 str(no_change_on_run),
@@ -1015,10 +937,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 str(no_comm),
                                 items[col_info.index('Msg')].replace('MSG_', ''),
                                 items[col_info.index('Unit')],
-                                show_value_type, 
-                                items[col_info.index('ShowVar')],
-                                items[col_info.index('ShowVal')],
-                                hidden_condition,
                                 comm_addr, 
                                 items[col_info.index('MaxEDS')],
                                 items[col_info.index('MinEDS')],
@@ -1040,9 +958,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                             max_value_col = col_info.index('최대값')
                             min_value_col = col_info.index('최소값')
-                            show_vari_col = col_info.index('보임값')
 
-                            col_list = [max_value_col, min_value_col, show_vari_col]
+                            col_list = [max_value_col, min_value_col] 
 
                             for col in col_list:
                                 target_item = self.model_parameters.item(row, col) 
