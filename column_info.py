@@ -21,6 +21,26 @@ _parameters_file_columns_info_old = [
     'MinEDS',
     'Comment' 
 ]
+# version 4 이상 file 을 파싱후 올라오는 column  정보 
+_parameters_file_columns_info = [
+    'GrpAndCode', 
+    'Title Index',
+    'AtValue',
+    'KpdFloatScale',
+    'KpdWordScale',
+    'DataFunc실행여부', 
+    '공장설정값',
+    '최대값', 
+    '최소값', 
+    '읽기전용',
+    '운전중변경불가', 
+    '0입력가능', 
+    '통신쓰기금지', 
+    '폼메시지', 
+    '단위', 
+    '통신주소',
+    '설명'
+]
 # table view 에서 보여지는 column 의 정보 
 _parameters_view_columns_info = [
     'Group', # 왼쪽 컬럼 클릭시 사용하기 위한 용도 
@@ -28,7 +48,7 @@ _parameters_view_columns_info = [
     'Title Index',
     'Code TITLE',
     'AtValue',
-    'ParaVar', # 필요 없지만 이전 버전과의 호환성을 위해 필요함 
+    'ParaVar', #  사용안함 하지만 이전 버전에서 상위버전 변환시 필요함 
     'KpdFloatScale',
     'KpdWordScale',
     'DataFunc실행여부', 

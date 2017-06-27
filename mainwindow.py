@@ -145,7 +145,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         msg_value_view_eater.sig_insert_clicked.connect(self.onTitleViewInserted)
         msg_value_view_eater.sig_delete_clicked.connect(self.onTitleViewDeleted)
 
-
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
         self.model_parameters.dataChanged.connect(self.onModelParameterDataChanged)
@@ -564,6 +563,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ 
+            col_info.index('DataFunc실행여부'), 
             col_info.index('통신쓰기금지'), 
             col_info.index('읽기전용'),
             col_info.index('운전중변경불가'),

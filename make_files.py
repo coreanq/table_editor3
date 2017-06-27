@@ -420,10 +420,11 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 {2}
 }};
 '''
-    # 소스내 group info 용 template 
+    # table.c 소스내 group info 용 template 
     group_info_lines  = []
-    group_info_template ='{{T_{0:<10},{1:<20},{2:<25},{3:<10}}}'
+    group_info_template ='{{T_{0:<10},{1:<20}}}'
 
+    # table.c 소스내 index 를 통해 group table address 접근 하기 위한 소스 파일 
     table_addr_lines = [] 
     table_addr_template = \
 '''\tcase GROUP_{0}:
@@ -431,26 +432,19 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 \t\tbreak;
 '''
 
-    # 헤더용 define template
-    defines_lines = []
-    defines_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
+    group_index_lines = []   # group index 정의용 #define GROUP_MAK ...
+    header_enum_lines = []   # MAK_000, MAK_001 enum 을 만들기 위함 
+    header_define_lines = [] # grp total count 정보 용  #define GRP_MAK_CODE_TOTAL 24
+    header_define_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
 
-    # group index 용 
-    group_index_lines = []
-
-    # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
+    # key model(grp info) 에서 group 값을 추출하여 para table 모델에서 find 함 
     for row_index in range(key_row):
         # 그룹 정보 추출 
         key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
-        key_group_hidden_var = key_model.item(row_index, key_col_info.index('Hidden Var')).text()
-        key_group_hidden_val = key_model.item(row_index, key_col_info.index('Hidden Val')).text()
-        if( 'g_' in key_group_hidden_var or 'k_' in key_group_hidden_val ):
-            key_group_hidden_var = '(uint16_t*)&' + key_group_hidden_var
 
         group_info_lines.append( 
             group_info_template.format(
-                key_group_name.upper(), 'GRP_' + key_group_name.upper() + '_CODE_TOTAL', 
-                key_group_hidden_var, key_group_hidden_val
+                key_group_name.upper(), 'GRP_' + key_group_name.upper() + '_CODE_TOTAL'
             )
         )
 
@@ -460,112 +454,72 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             )
         )
 
+        ##########################################################################################################
+        # group index 정의용 #define GROUP_MAK ...
+        group_index_lines.append( 
+            'GROUP_{0}'.format( key_group_name.upper() )
+        )
+
+
+        ##########################################################################################################
+        # table 헤더의 group count 생성  
         # 해당 하는 그룹의 아이템 정보를 얻음 
         find_items = model.findItems(key_group_name, column = col_info.index('Group'))
         per_group_item_count = len(find_items)
 
-        defines_lines.append( 
-            defines_template.format(
+        header_define_lines.append( 
+            header_define_template.format(
                 key_group_name.upper(),
                 per_group_item_count
             )
         )
 
-        group_index_lines.append( 
-            'GROUP_{0}'.format( key_group_name.upper() )
-        )
-
+        # group info 를 정보를 토대로 해당하는 그룹에 맞는 아이템만 찾아냄 
         for find_item in find_items:
             find_row_index = find_item.row()
+            group_and_code = model.item(find_row_index, col_info.index('GrpAndCode')).text()
+            group_name = group_and_code.split('_')[0]
+            code_num = group_and_code.split('_')[1]
 
-            group_name = model.item(find_row_index, col_info.index('Group')).text()
-            code_num = model.item(find_row_index, col_info.index('Code#')).text()
             title_name = model.item(find_row_index, col_info.index('Code TITLE')).text()
             title_enum_name =  model.item(find_row_index, col_info.index('Title Index')).text()
             
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
             title_name = make_title_with_at_value(title_name, at_value) # at value 적용 
-            para_var= model.item(find_row_index, col_info.index('Para Index')).text()
-            para_var = 'E_DATA_CMD_' + para_var
+
+            # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
+            header_enum_lines.append("{0:<20}//{1:<30}".format(group_and_code, title_name) )
+
             para_word_scale = model.item(find_row_index, col_info.index('KpdWordScale')).text()
             para_float_scale = model.item(find_row_index, col_info.index('KpdFloatScale')).text()
-            kpd_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
+
+            data_func_run = model.item(find_row_index, col_info.index('DataFunc실행여부')).text()
             default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
             max_val = model.item(find_row_index, col_info.index('최대값')).text()
             min_val = model.item(find_row_index, col_info.index('최소값')).text()
-            show_var  =  model.item(find_row_index, col_info.index('보임변수')).text()
 
-            # max, min show var 의 key_pad index 인 경우 처리 
-            re_val = re.compile('[A-Z][A-Z_0-9]+')
-            if( re_val.match(max_val) ):
-                    max_val = 'E_DATA_CMD_' + max_val
-            if( re_val.match(min_val) ):
-                    min_val = 'E_DATA_CMD_' + min_val
-            if( re_val.match(show_var) ):
-                if( show_var.upper() != "NULL"):
-                    show_var = 'E_DATA_CMD_' + show_var
-
-            # max_val = '(uint16_t)' + max_val
-            # min_val = '(uint16_t)' + min_val
-
+            read_only = model.item(find_row_index, col_info.index('읽기전용')).text()
+            no_change_on_run = model.item(find_row_index, col_info.index('운전중변경불가')).text()
+            zero_input = model.item(find_row_index, col_info.index('0입력가능')).text()
+            no_comm = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
+ 
             form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
             unit = model.item(find_row_index, col_info.index('단위')).text()
 
-            hidden_condition =  model.item(find_row_index, col_info.index('Hidden Con')).text()
-            kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
-            no_comm = model.item(find_row_index, col_info.index('통신쓰기금지')).text()
-            read_only = model.item(find_row_index, col_info.index('읽기전용')).text()
-            no_change_on_run =  model.item(find_row_index, col_info.index('운전중변경불가')).text()
-            zero_input = model.item(find_row_index, col_info.index('0 입력가능')).text()
-            '''
-            no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
-            if( attribute & ATTR_NO_COMM ):
-                no_comm = True 
-            if( attribute & ATTR_READ_ONLY ):
-                read_only = True
-            if( attribute & ATTR_NO_CHANGE_ON_RUN ):
-                no_change_on_run = True 
-            if( attribute & ATTR_ZERO_INPUT ):
-                zero_input = True 
-            '''
-            attribute = 0x0000
-            if( no_comm == 'True'):
-                attribute |= ATTR_NO_COMM
-            if( read_only == 'True'):
-                attribute |= ATTR_READ_ONLY
-            if( no_change_on_run == 'True'):
-                attribute |= ATTR_NO_CHANGE_ON_RUN
-            if( zero_input == 'True'):
-                attribute |= ATTR_ZERO_INPUT
-            if( 'k_' in max_val ):
-                attribute |= ATTR_UP
-            if( 'k_' in min_val ):
-                attribute |= ATTR_LP
-            if( kpd_type == 'AfterEnter' ):
-                attribute |= ATTR_ENT
-            hidden_val = hiddenConditionToValue(hidden_condition)
-            attribute |= (hidden_val << 8)
-
-            show_value = model.item(find_row_index, col_info.index('보임값')).text()
-            eep_addr = model.item(find_row_index, col_info.index('EEP 주소')).text()
             comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
-            max_eds = model.item(find_row_index, col_info.index('최대 EDS')).text()
-            min_eds = model.item(find_row_index, col_info.index('최소 EDS')).text()
+            if( '0x' not in comm_addr ):
+                comm_addr = 'NULL'
+                pass
+
             comment = model.item(find_row_index, col_info.index('설명')).text()
 
             if( 'DATAMSG' in unit ):
                 form_msg = 'MSG_' + form_msg
             
-            eds_val = ''
-            if( max_eds or min_eds):
-                eds_val ='[EDS :{0},{1}]'.format(max_eds, min_eds)
-
-            attribute_str = '0x{0:0>4}'.format(hex(attribute)[2:].upper())
-
-            format_str = ( '{{{0:<5},{1:<5},{2:<30},{3:<40},{4:<20},'
-                            '{5:<20},{6:<40},{7:<20},{8:<40},{9:<40},'
-                            '{10:<30},{11:<30},{12:<10},{13:<40},{14:<5}}}'
-                            '{15}//"{16:<14}"{17}//{18}' )
+            format_str = ( '{{{0:>8},{1:>5},{2:>20},{3:>20},{4:>20},'
+                            '{5:>6},{6:>10},{7:>10},{8:>10},{9:>6},'
+                            '{10:>6},{11:>6},{12:>6},{13:>20},{14:>20},'
+                            '{15:>20}}}{16}//"{17:<30}"//{18}' )
 
             separator = ','
             if( find_item == find_items[-1] ):
@@ -573,15 +527,15 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             para_vars_lines.append(
                 format_str.format(\
-                        code_num,              at_value,    title_enum_name,  para_var, para_word_scale, 
-                        para_float_scale,      kpd_func,    default_val,      max_val,  min_val,
-                        form_msg,              unit,        attribute_str,    show_var, show_value, 
-                        separator,             title_name,  eds_val,          comment
+                        group_and_code,     at_value,           title_enum_name,    para_word_scale,       para_float_scale,    
+                        data_func_run,      default_val,        max_val,            min_val,               read_only,
+                        no_change_on_run,   zero_input,         no_comm,            form_msg,              unit, 
+                        comm_addr,          separator,          title_name,         comment
                 )
             )
         
         para_vars.append(
-            para_vars_template.format(group_name,
+            para_vars_template.format(  group_name,
                                         group_name,
                                     '\n'.join(para_vars_lines))
         )
@@ -636,14 +590,43 @@ return pstTable;
         f.write(file_contents)
     pass
 
+    group_index_template = \
+'''
+\n
+enum eGrpIndex{{
+\t {0}
+\t,GROUP_TOTAL
+}};
+\n
+'''
+    group_indexes = group_index_template.format(
+        '\n\t,'.join(group_index_lines)
+    )
+
+    grp_and_code_enum_template = \
+'''
+\n
+enum eGrpAndCodeIndex{{
+\t {0}
+\t,GROUP_AND_CODE_TOTAL
+}};
+\n
+'''
+    grp_and_code_indexes = grp_and_code_enum_template.format(
+        '\n\t,'.join(header_enum_lines)
+    )
+
 
     header_template = \
 '''{0}
 #ifndef _KPD_TABLE_H
 #define _KPD_TABLE_H
 #include "KpdPara_StructUnit.H"
-\n\n
-{1}\n\n
+\n
+{1}
+{2}
+{3}
+\n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTableIdx);
 \n\n
@@ -651,109 +634,87 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTable
 '''
     file_contents = header_template.format(
         banner,
-        '\n'.join(defines_lines)
+        group_indexes, 
+        grp_and_code_indexes, 
+        '\n'.join(header_define_lines)
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass
 
+# def make_kfunc_head(source_path, parameters_model, group_model):
+#     col_info = ci.para_col_info_for_view()
+#     model = parameters_model
+#     key_col_info = ci.group_col_info()
+#     key_model = group_model
 
-    group_index_template = \
-'''{0}
-#ifndef KPDPARA_GRP_INDEX_H
-#define KPDPARA_GRP_INDEX_H
-\n
-enum eGrpIndex{{
-\t {1}
-\t,GROUP_TOTAL
-}};
-\n
-#endif   //KPDPARA_GRP_INDEX_H
-'''
+#     key_row = key_model.rowCount()
 
-    file_contents = group_index_template.format(
-        banner,
-        '\n\t,'.join(group_index_lines)
-    )
-    with open(source_path + os.path.sep + rd.KPD_GRP_INDEX_HEADER_FILE, 'w', encoding='utf8') as f:
-        f.write(file_contents)
-    pass
+#     cmd_key_func_lines = []
+#     after_enter_key_func_lines = []
 
-def make_kfunc_head(source_path, parameters_model, group_model):
-    col_info = ci.para_col_info_for_view()
-    model = parameters_model
-    key_col_info = ci.group_col_info()
-    key_model = group_model
+#     # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
+#     key_func_list = [] # 중복 제거를 위해 사용 
+#     for row_index in range(key_row):
+#         # 그룹 정보 추출 
+#         key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
 
-    key_row = key_model.rowCount()
+#         # 해당 하는 그룹의 아이템 정보를 얻음 
+#         find_items = model.findItems(key_group_name, column = col_info.index('Group'))
 
-    cmd_key_func_lines = []
-    after_enter_key_func_lines = []
+#         for find_item in find_items:
+#             find_row_index = find_item.row()
 
-    # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
-    key_func_list = [] # 중복 제거를 위해 사용 
-    for row_index in range(key_row):
-        # 그룹 정보 추출 
-        key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
+#             key_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
+#             code_num = model.item(find_row_index, col_info.index('Code#')).text()
+#             kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
 
-        # 해당 하는 그룹의 아이템 정보를 얻음 
-        find_items = model.findItems(key_group_name, column = col_info.index('Group'))
+#             if('NULL' not in key_func):
+#                 if( key_func not in key_func_list ):
+#                     key_func_list.append(key_func)
+#                     arg = '{0:<40}//({1},{2:>2})'.format(key_func, key_group_name, code_num)
+#                     if(kpd_type == 'AfterEnter'):
+#                         after_enter_key_func_lines.append(arg)
+#                     else:
+#                         cmd_key_func_lines.append(arg)
 
-        for find_item in find_items:
-            find_row_index = find_item.row()
+#     header_template = \
+# '''{0}
+# #ifndef KFUNC_INDEX_H
+# #define KFUNC_INDEX_H
+# \n
+# enum eKpdFuncIndex{{
+#      KFUNC_NULL
+# \t,{1}
+# \t,KFUNC_START_AFTER_ENT_FUNC = 1000
+# \t,{2}
 
-            key_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
-            code_num = model.item(find_row_index, col_info.index('Code#')).text()
-            kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
+# }};
+# \n
+# #define TOTAL_KFUNC_CMD_ENT                  {3} 
+# #define TOTAL_KFUNC_AFTER_ENT                {4} 
+# \n
+# #endif   //KFUNC_INDEX_H
+# '''
 
-            if('NULL' not in key_func):
-                if( key_func not in key_func_list ):
-                    key_func_list.append(key_func)
-                    arg = '{0:<40}//({1},{2:>2})'.format(key_func, key_group_name, code_num)
-                    if(kpd_type == 'AfterEnter'):
-                        after_enter_key_func_lines.append(arg)
-                    else:
-                        cmd_key_func_lines.append(arg)
-
-    header_template = \
-'''{0}
-#ifndef KFUNC_INDEX_H
-#define KFUNC_INDEX_H
-\n
-enum eKpdFuncIndex{{
-     KFUNC_NULL
-\t,{1}
-\t,KFUNC_START_AFTER_ENT_FUNC = 1000
-\t,{2}
-
-}};
-\n
-#define TOTAL_KFUNC_CMD_ENT                  {3} 
-#define TOTAL_KFUNC_AFTER_ENT                {4} 
-\n
-#endif   //KFUNC_INDEX_H
-'''
-
-    file_contents = header_template.format(
-        banner, 
-        '\n\t,'.join(cmd_key_func_lines),
-        '\n\t,'.join(after_enter_key_func_lines),
-        len(cmd_key_func_lines),
-        len(after_enter_key_func_lines)
-    )
-    with open(source_path + os.path.sep + rd.KPD_FUNC_HEAD_HEADER_FILE, 'w', encoding='utf8') as f:
-        f.write(file_contents)
-    pass
+#     file_contents = header_template.format(
+#         banner, 
+#         '\n\t,'.join(cmd_key_func_lines),
+#         '\n\t,'.join(after_enter_key_func_lines),
+#         len(cmd_key_func_lines),
+#         len(after_enter_key_func_lines)
+#     )
+#     with open(source_path + os.path.sep + rd.KPD_FUNC_HEAD_HEADER_FILE, 'w', encoding='utf8') as f:
+#         f.write(file_contents)
+#     pass
 
 def make_drv_para_data_storage(source_path, parameters_model):
     col_info = ci.para_col_info_for_view()
     model = parameters_model
-    para_index = col_info.index('Para Index') 
     para_word_scale_index = col_info.index('KpdWordScale')
     para_float_scale_index = col_info.index('KpdFloatScale')
     para_title_index = col_info.index('Code TITLE')
-    para_group_index = col_info.index('Group')
-    para_code_index = col_info.index('Code#')
+    para_group_and_code_index = col_info.index('GrpAndCode')
 
     para_indexes = [] # duplication 제거를 위한 para_index 저장 
     para_indexes_lines  = [] # generation 을 위한 line  index_line | scale _line 합쳐진 형태임 
@@ -762,22 +723,11 @@ def make_drv_para_data_storage(source_path, parameters_model):
 
         float_scale = model.item(index, para_float_scale_index).text()
         word_scale  = model.item(index, para_word_scale_index).text()
-        group = model.item(index, para_group_index).text()
-        code = model.item(index, para_code_index).text()
+        group = model.item(index, para_group_and_code_index).text().split('_')[0]
+        code = model.item(index, para_group_and_code_index).text().split('_')[1]
+
         title = model.item(index, para_title_index ).text()
         comment = '\t//{0:>5} {1:>4} {2:>20}'.format(group, code, title)
-        para_index_str = model.item(index, para_index).text()
-
-        if( para_index_str not in para_indexes ):
-            #duplication 제거 
-            para_indexes.append(para_index_str) 
-            para_index_str_line = 'E_DATA_CMD_{0:<30}{1}'.format(para_index_str, comment)
-            para_index_scale_line = '{{{0:>20}, {1:>20}}}{2}'.format(float_scale, word_scale, comment) 
-            para_indexes_lines.append(para_index_str_line + '|' + para_index_scale_line)
-        else:
-            # 중복 발생시 comment 추가 
-            duplication_index = para_indexes.index(para_index_str)
-            para_indexes_lines[duplication_index] = '{0}\t{1}'.format(para_indexes_lines[duplication_index] , comment)
 
 
     # 배열구조로 된 parameter index 리스트의 카운트 리스트를 만들어줌 
@@ -823,15 +773,9 @@ typedef enum eDrvParaSetErr
 
 {1}
 
-typedef enum eDrvParaDataVariIdx	//Drive Parameter Variable Index Enumeration 0 ~ 9999사이에는 Floating Point Type의 변수, Fixed Point Type의 변수
-{{
-\t {2}
-\t,E_DATA_VARI_END
-}}E_DRV_PARA_DATA_VARI_IDX;
-
 typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enumeration
 {{
-\t {3}
+\t {2}
 \t,E_MSG_VARI_END
 
 }}E_DRV_PARA_MSG_VARI_IDX;
@@ -847,7 +791,6 @@ typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enum
     file_contents = header_template.format(
         banner,
         '\n'.join( para_array_type_lines),
-        '\n\t,'.join(para_enums),
         '\n\t,'.join('TES')
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
