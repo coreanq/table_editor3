@@ -750,7 +750,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         mk.make_add_title_eng(source_path, self.model_title)
         mk.make_kpdpara_msg(source_path, self.model_msg_info, self.model_msg_values)
         mk.make_kpdpara_table(source_path, self.model_parameters, self.model_group)
-        mk.make_kfunc_head(source_path, self.model_parameters, self.model_group)
         mk.make_drv_para_data_storage(source_path, self.model_parameters)
 
         return True

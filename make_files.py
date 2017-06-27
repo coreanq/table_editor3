@@ -415,11 +415,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
     # 소스용 variable template
     para_vars = [] 
     para_vars_lines = []
-    para_vars_template = \
-'''static const S_TABLE_X_TYPE t_ast{0}grp[GRP_{1}_CODE_TOTAL] = {{
-{2}
-}};
-'''
+
     # table.c 소스내 group info 용 template 
     group_info_lines  = []
     group_info_template ='{{T_{0:<10},{1:<20}}}'
@@ -437,6 +433,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
     header_define_lines = [] # grp total count 정보 용  #define GRP_MAK_CODE_TOTAL 24
     header_define_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
 
+    total_code_count = 0
     # key model(grp info) 에서 group 값을 추출하여 para table 모델에서 find 함 
     for row_index in range(key_row):
         # 그룹 정보 추출 
@@ -466,6 +463,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
         # 해당 하는 그룹의 아이템 정보를 얻음 
         find_items = model.findItems(key_group_name, column = col_info.index('Group'))
         per_group_item_count = len(find_items)
+        total_code_count += per_group_item_count
 
         header_define_lines.append( 
             header_define_template.format(
@@ -521,23 +519,20 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
                             '{10:>6},{11:>6},{12:>6},{13:>20},{14:>20},'
                             '{15:>20}}}{16}//"{17:<30}"//{18}' )
 
-            separator = ','
             if( find_item == find_items[-1] ):
-                separator = ' '
+                comment = comment + '\n\n'
 
             para_vars_lines.append(
                 format_str.format(\
                         group_and_code,     at_value,           title_enum_name,    para_word_scale,       para_float_scale,    
                         data_func_run,      default_val,        max_val,            min_val,               read_only,
                         no_change_on_run,   zero_input,         no_comm,            form_msg,              unit, 
-                        comm_addr,          separator,          title_name,         comment
+                        comm_addr,          ',',                title_name,         comment
                 )
             )
         
         para_vars.append(
-            para_vars_template.format(  group_name,
-                                        group_name,
-                                    '\n'.join(para_vars_lines))
+            '\n'.join(para_vars_lines)
         )
         para_vars_lines.clear()
 
@@ -555,7 +550,9 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 #include "KpdPara_Table.H"
 #include "DrvPara_DataStorage.h"
 
+static const S_TABLE_X_TYPE t_astAllGrp[ALL_GRP_CODE_TOTAL] = {{
 {1}
+}};
 \n\n
 static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
 {2}
@@ -579,6 +576,12 @@ default:
 return pstTable;
 }}
 '''
+    # 맨 마지막 콤마 삭제 
+    last_str = para_vars[-1]
+    modified_str = last_str.rsplit('},', 1)
+    modified_str = '}'.join(modified_str)
+    para_vars[-1] = modified_str
+
     file_contents = source_template.format( 
         banner,
         '\n'.join(para_vars),
@@ -632,6 +635,8 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTable
 \n\n
 #endif   //_KPD_TABLE_H
 '''
+    # 하나의 테이블이므로 전체 크기를 define 으로 추가함 
+    header_define_lines.append('#define ALL_GRP_CODE_TOTAL\t{0}'.format(total_code_count))
     file_contents = header_template.format(
         banner,
         group_indexes, 
