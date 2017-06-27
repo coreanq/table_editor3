@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1063</width>
-    <height>660</height>
+    <width>1095</width>
+    <height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -84,10 +84,13 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
+          <property name="handleWidth">
+           <number>0</number>
+          </property>
           <widget class="QTableView" name="viewGroup">
            <property name="maximumSize">
             <size>
-             <width>300</width>
+             <width>150</width>
              <height>16777215</height>
             </size>
            </property>
@@ -168,7 +171,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1063</width>
+     <width>1095</width>
      <height>21</height>
     </rect>
    </property>

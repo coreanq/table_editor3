@@ -120,23 +120,18 @@ typedef struct {
 	uint16_t	wFloatScale;
 	uint16_t	wWordScale;
 
-	uint32_t	ulDefVal;			// default value of function data
-	bool 		blIsMaxDataIndexValue;
-	uint32_t	ulMaxData;			// high limit value of function data
-	bool 		blIsMinDataIndexValue;
-	uint32_t	ulMinData;			// low limit value of function data
+	bool 		blIsDataFuncRun;     // 설정된 값 외에 def, max, min 이 수정되야 될때 call back 부를 지 여부 
+	uint32_t	ulDefData;			// default value 
+	uint32_t	ulMaxData;			// high limit value 
+	uint32_t	ulMinData;			// low limit value 
 
 	bool 		blIsReadOnly;
 	bool 		blDontChangeWhenRunning;
 	bool 		blIsZeroInputPossible;
 	bool 		blIsNoCommPara;
 
-	uint8_t		bFormMsgType;
+	uint8_t		bFormMsgType;		// word float scale 중복 부분 제거 필요 
 	uint8_t		bUnitType;
-	uint16_t	wShowVariIndex;
-	uint16_t	wShowValue;
-	uint8_t		bHiddenCondition;
-
 } S_TABLE_X_TYPE;				
 
 

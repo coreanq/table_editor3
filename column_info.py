@@ -21,27 +21,6 @@ _parameters_file_columns_info_old = [
     'MinEDS',
     'Comment' 
 ]
-_parameters_file_columns_info_new = [ 
-    'Group',
-    'Code#' , 
-    'AtValue',
-    'TitleIndex', 
-    'ParaVar', 
-    'KpdFloatScale',
-    'KpdWordScale',
-    'KpdFunc',
-    'DefaultVal',
-    'MaxVal', 
-    'MinVal', 
-    'Msg',
-    'Unit', 
-    'Attribute', 
-    'ShowVar',
-    'ShowVal',
-    'MaxEDS', 
-    'MinEDS',
-    'Comment' 
-]
 # table view 에서 보여지는 column 의 정보 
 _parameters_view_columns_info = [
     'Group', # 왼쪽 컬럼 클릭시 사용하기 위한 용도 
@@ -52,10 +31,9 @@ _parameters_view_columns_info = [
     'ParaVar', # 필요 없지만 이전 버전과의 호환성을 위해 필요함 
     'KpdFloatScale',
     'KpdWordScale',
+    'DataFunc실행여부', 
     '공장설정값',
-    '최대값타입', # global or keypad 변수 
     '최대값', 
-    '최소값타입', # global or keypad 변수 
     '최소값', 
     '읽기전용',
     '운전중변경불가', 
@@ -63,10 +41,6 @@ _parameters_view_columns_info = [
     '통신쓰기금지', 
     '폼메시지', 
     '단위', 
-    '보임값타입', # global or keypad 변수 
-    '보임값', 
-    '보임비교값',
-    '숨김 조건',
     '통신주소',
     '최대 EDS',
     '최소 EDS',
@@ -75,10 +49,7 @@ _parameters_view_columns_info = [
 # table editor version 4
 _group_columns_info = [
     'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
-    'Group', 
-    '보임값타입', # global or keyapd 변수 
-    '보임값', 
-    '보임비교값'
+    'Group'
 ]
 # table editor version 2, 3
 _group_columns_info_old = [
@@ -125,6 +96,7 @@ _unit_with_msg = {
                                 'F_HEX4', 'F_HEX8', 'F_TIME_MIN', 'F_TWO',   
                                 'F_YMDHM', 'F_RYMDHM', 'F_VER'] )
 }
+
 
 def para_col_info_for_file_old():
     return _parameters_file_columns_info_old
