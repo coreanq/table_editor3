@@ -183,81 +183,6 @@ enum{{
         f.write(file_contents)
     pass
 
-# def make_kpdpara_var(source_path, variable_model):
-#     col_info = ci.variable_col_info()
-#     model = variable_model 
-#     row = model.rowCount()
-#     col = model.columnCount()
-
-#     define_list = []
-#     var_list = []
-#     var_type = ''
-
-#     for row_index in range(row):
-#         row_items = []
-#         for col_index in range(col):
-#             item = model.item(row_index, col_index)
-#             row_items.append(item.text()) 
-
-#         variable = row_items[col_info.index('Variable')]
-#         var_type = row_items[col_info.index('Type')]
-#         description = row_items[col_info.index('Description')]
-
-#         re_split = re.compile(r'(k_[a-z0-9A-Z]+)(\[([0-9_A-Z]+)\])?')
-#         find_list = re_split.findall(variable)
-#         for var_name, dummy, var_arr_cnt in find_list:
-#             if( len(var_arr_cnt) ):
-#                 define_list.append(r'#define {0:<32}{1}'.format(var_name.upper(), var_arr_cnt ))
-#                 variable = re.sub(r'\[([0-9]+)\]', '[' + var_name.upper() + ']', variable )
-#             var_list.append('{0:<62}//{1}'.format(variable, description))
-
-
-#     header_template= \
-# '''
-# {0}
-# #ifndef KPD_PARA_VARI_H
-# #define KPD_PARA_VARI_H\n
-# {1}\n\n\n
-# extern {2}                          //{2} TYPE의 변수들
-# {3}
-# ;    
-# \n\n\n
-# #endif    //KPD_PARA_VARI_H
-# '''
-
-#     file_contents = header_template.format(
-#         banner, 
-#         '\n'.join(define_list), 
-#         var_type, 
-#         '\n,'.join(var_list)
-#     ) 
-#     # print(var_list)
-#     # print(define_list)
-#     # print(file_contents)
-#     with open(source_path + os.path.sep + rd.KPD_PARA_VAR_HEADER_FILE, 'w', encoding='utf8') as f:
-#         f.write(file_contents)
-#     pass
-
-
-#     source_template = \
-# '''
-# {0}
-
-# #include "BaseDefine.H"
-# #include "KpdPara_Vari.H"
-# {1}                          //{1} TYPE의 변수들 
-# {2}
-# ;
-# '''
-#     file_contents = source_template.format(
-#         banner, 
-#         var_type, 
-#         '\n,'.join(var_list)
-#         ) 
-#     with open(source_path + os.path.sep + rd.KPD_PARA_VAR_SRC_FILE , 'w', encoding='utf8') as f:
-#         f.write(file_contents)
-#     pass
-
 
 def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
     col_info = ci.msg_values_col_info()
@@ -484,9 +409,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
             title_name = make_title_with_at_value(title_name, at_value) # at value 적용 
-
-            # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
-            header_enum_lines.append("{0:<20}//{1:<30}".format(group_and_code, title_name) )
+            kpd_vari = model.item(find_row_index, col_info.index('ParaVar')).text()
 
             para_word_scale = model.item(find_row_index, col_info.index('KpdWordScale')).text()
             para_float_scale = model.item(find_row_index, col_info.index('KpdFloatScale')).text()
@@ -505,9 +428,17 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             unit = model.item(find_row_index, col_info.index('단위')).text()
 
             comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
-            if( '0x' not in comm_addr ):
-                comm_addr = 'NULL'
-                pass
+
+            # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
+            header_enum_lines.append(
+                    "{0:<20} = {1:<10}//{2:<30}{3:>10}{4:<30}(old keypad variable name)".format(
+                            group_and_code, 
+                            comm_addr, 
+                            title_name, 
+                            '', 
+                            kpd_vari
+                    ) 
+                )
 
             comment = model.item(find_row_index, col_info.index('설명')).text()
 
@@ -543,12 +474,9 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 {0}
 #include "BaseDefine.H"
 #include "KPD_Title_Enum.H"
-#include "KpdPara_GrpIdx.H"
 #include "KpdPara_Msg.H"
 #include "KpdPara_ShowParaVari.H"
-#include "KFunc_Head.H"
 #include "KpdPara_Table.H"
-#include "DrvPara_DataStorage.h"
 
 static const S_TABLE_X_TYPE t_astAllGrp[ALL_GRP_CODE_TOTAL] = {{
 {1}
@@ -562,32 +490,62 @@ const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx)
 return &t_astGrpInfo[wGrpIdx];
 }}
 
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTableIdx)
+static bool AddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 {{
-const S_TABLE_X_TYPE* pstTable;
-
-switch(wGrpIdx)
-{{
-{3}
-default:
-    pstTable = NULL;
-    break;
+	uint16_t wMidIndex = 0;
+	uint16_t wLeftIndex = 0;
+	uint16_t wRightIndex = 0;
+    uint16_t wSrcAddr = 0;
+	bool blSearchData = false;
+	
+	wRightIndex = ( sizeof(t_astAllGrp) / sizeof(t_astAllGrp[0]) ) - 1;
+	
+	while( wLeftIndex <= wRightIndex )
+	{{
+		wMidIndex = (wLeftIndex + wRightIndex) / 2;
+		wSrcAddr = t_astAllGrp[wMidIndex].wGrpAndCode;
+		// 찾으려는 값이 중앙값보다 작으면  right index 를 mid - 1로 둔다. 
+		if( wSrcAddr > wInputAddr )
+			wRightIndex = wMidIndex - 1;
+		// 찾으려는 값이 중앙값보다 크면  left index 를 mid - 1 로 둔다. 
+		else if( wSrcAddr < wInputAddr ) 
+			wLeftIndex = wMidIndex - 1;
+		// 찾은 경우 값 대입 후  return
+		else
+		{{
+			blSearchData = true;
+			*pwIndex = wMidIndex;
+			break;
+		}}
+	}}
+	return blSearchData;
 }}
-return pstTable;
+
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wCodeIdx)
+{{
+	const S_TABLE_X_TYPE* pstTable = NULL;
+    uint16_t wAddr = GET_PARA_TABLE_ADDR(wGrpIdx, wCodeIdx);
+	uint16_t wSearchedIndex = 0;
+
+	if( AddrBinarySearch( wAddr, &wSearchedIndex) )
+	{{
+		pstTable = &t_astAllGrp[wSearchedIndex];
+	}}
+	else
+		pstTable = NULL;
+	return pstTable;
 }}
 '''
     # 맨 마지막 콤마 삭제 
     last_str = para_vars[-1]
     modified_str = last_str.rsplit('},', 1)
-    modified_str = '}'.join(modified_str)
+    modified_str = '} '.join(modified_str)
     para_vars[-1] = modified_str
 
     file_contents = source_template.format( 
         banner,
         '\n'.join(para_vars),
-        ',\n'.join(group_info_lines),
-        ''.join(table_addr_lines)
-
+        ',\n'.join(group_info_lines)
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_SRC_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
@@ -625,13 +583,17 @@ enum eGrpAndCodeIndex{{
 #ifndef _KPD_TABLE_H
 #define _KPD_TABLE_H
 #include "KpdPara_StructUnit.H"
+
+#define PARA_START_ADDR	                    0x1000u
+#define GRP_OFFSET_MUL			            0x100
+#define GET_PARA_TABLE_ADDR(bGrp, bCode)	(PARA_START_ADDR + (((uint16_t)(bGrp) * GRP_OFFSET_MUL) + (uint16_t)(bCode)))
 \n
 {1}
 {2}
 {3}
 \n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTableIdx);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wCodeIdx);
 \n\n
 #endif   //_KPD_TABLE_H
 '''
@@ -640,8 +602,8 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wTable
     file_contents = header_template.format(
         banner,
         group_indexes, 
-        grp_and_code_indexes, 
         '\n'.join(header_define_lines)
+        grp_and_code_indexes
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)

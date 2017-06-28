@@ -617,37 +617,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         pass 
 
-    # 통신 쓰기 금지 선택에 따라서 통신 주소가 수시로 변하기 때문에 따로 함수로 만들어 줌 
-    def onParameterViewNoCommChanged(self, index): 
-        col_info = ci.para_col_info_for_view()
-        model = self.model_parameters
-        row = index.row()
-
-        no_comm_col = col_info.index('통신쓰기금지')
-        comm_addr_col = col_info.index('통신주소')
-
-        no_comm_data = model.item(row , no_comm_col).text()
-
-        # 통신 주소 설정 
-        group_name = model.item(row, col_info.index('Group')).text()
-        code_name = model.item(row, col_info.index('Code#')).text()
-        if( code_name == ''):
-            code_num = 0
-        else:
-            code_num = int( code_name )
-        find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
-        group_num = 0 
-
-        for find_item in find_items:
-            group_num =  find_item.row()
-        
-        if( no_comm_data == 'true'):
-            comm_addr = '통신 쓰기 금지'
-        else:
-            comm_addr = self.makeAddrValue(group_num, code_num)
-
-        model.setItem(index.row(), comm_addr_col, QStandardItem(comm_addr))
-        pass
 
     @pyqtSlot(QModelIndex, QModelIndex)
     def onViewGroupSelectionChanged(self, current, previous):
@@ -904,10 +873,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             code_num = 0
                         else:
                             code_num = int(code_name)
-                        if( no_comm ):
-                            comm_addr = '통신 쓰기 금지'
-                        else:
-                            comm_addr = self.makeAddrValue(group_num, code_num)
+
+                        comm_addr = self.makeAddrValue(group_num, code_num)
 
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         at_value = items[col_info.index('AtValue')]
@@ -1078,18 +1045,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         bottomy = bottomRight.column()
 
         unit_col = ci.para_col_info_for_view().index('단위')
-        no_comm_col = ci.para_col_info_for_view().index('통신쓰기금지') 
 
         if( unit_col  in range(topy, bottomy + 1) ):
             for row in range(topx, bottomx + 1):
                 self.onParameterViewUnitChanged( self.model_parameters.index(row, unit_col )  )
             pass
-        if( no_comm_col in range(topy, bottomy + 1)):
-            for row in range(topx, bottomx + 1):
-                self.onParameterViewNoCommChanged( self.model_parameters.index(row, no_comm_col) )
-            pass
-
-        pass 
 
     def viewRowCopy(self, subject, view):
         clipboard = QApplication.clipboard()
