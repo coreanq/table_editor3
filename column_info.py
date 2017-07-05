@@ -48,7 +48,8 @@ _parameters_view_columns_info = [
     'Title Index',
     'Code TITLE',
     'AtValue',
-    'ParaVar', #  사용안함 하지만 이전 버전에서 상위버전 변환시 필요함 
+    'ParaVar', # 사용안함 이전 버전 상위버전 변환시 필요함 
+    'KpdFunc', # 사용안함 이전 버전 상위버전 변환시 필요함 
     'KpdFloatScale',
     'KpdWordScale',
     'DataFunc실행여부', 

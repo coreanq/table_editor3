@@ -198,6 +198,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setColumnHidden( col_info.index('Group'), True)
         view.setColumnHidden( col_info.index('Title Index'), True )
         view.setColumnHidden( col_info.index('ParaVar'), True )
+        view.setColumnHidden( col_info.index('KpdFunc'), True )
+
 
         # parameter view detail init
         view = self.viewParameterDetail
@@ -823,6 +825,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             code_name = items[col_info.index('Code#')]
                             group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
                             para_vari = items[col_info.index('ParaVar')]
+                            kpd_func_name = items[col_info.index('KpdFunc')]
                             max_value = items[col_info.index('MaxVal')]
                             min_value = items[col_info.index('MinVal')]
 
@@ -891,6 +894,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 title, 
                                 items[col_info.index('AtValue')], 
                                 para_vari,
+                                kpd_func_name,
                                 kpd_word_scale,
                                 kpd_float_scale,
                                 'true',

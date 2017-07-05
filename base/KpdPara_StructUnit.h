@@ -96,16 +96,17 @@ typedef struct
 	uint16_t	wTitleIdx;		// LCD entry data
 	uint8_t 	bAtValue;
 
-	uint16_t	wKpdIndex;
-	uint16_t	wKpdFuncIdx;			// pointer of exceptional function routine
+	int32_t		lDefVal;			// default value of function data
+	int32_t		lMaxVal;			// high limit value of function data
+	int32_t		lMinVal;			// low limit value of function data
 
-	uint32_t	wDefVal;			// default value of function data
-	uint32_t	wMaxVal;			// high limit value of function data
-	uint32_t	wMinVal;			// low limit value of function data
+	bool 		blIsReadOnly;
+	bool 		blDontChangeWhenRunning;
+	bool 		blIsZeroInputPossible;
+	bool 		blIsNoCommPara;
 
 	uint8_t	 	bFormMsgType;
 	uint8_t		bUnitType;
-	uint16_t	wAttr;           	// attribute of function
 	uint32_t	wEditData;			//Parameter의 값
 
 } S_KPD_TYPE;
@@ -121,9 +122,9 @@ typedef struct {
 	uint16_t	wWordScale;
 
 	bool 		blIsDataFuncRun;     // 설정된 값 외에 def, max, min 이 수정되야 될때 call back 부를 지 여부 
-	int32_t		ulDefData;			// default value 
-	int32_t		ulMaxData;			// high limit value 
-	int32_t		ulMinData;			// low limit value 
+	int32_t		lDefData;			// default value 
+	int32_t		lMaxData;			// high limit value 
+	int32_t		lMinData;			// low limit value 
 
 	bool 		blIsReadOnly;
 	bool 		blDontChangeWhenRunning;

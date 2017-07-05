@@ -410,6 +410,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
             title_name = make_title_with_at_value(title_name, at_value) # at value 적용 
             kpd_vari = model.item(find_row_index, col_info.index('ParaVar')).text()
+            kpd_func_name  = model.item(find_row_index, col_info.index('KpdFunc')).text()
 
             para_word_scale = model.item(find_row_index, col_info.index('KpdWordScale')).text()
             para_float_scale = model.item(find_row_index, col_info.index('KpdFloatScale')).text()
@@ -431,12 +432,14 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
             header_enum_lines.append(
-                    "{0:<20} = {1:<10}//{2:<30}{3:>10}{4:<30}(old keypad variable name)".format(
+                    "{0:<20} = {1:<10}//{2:<20}{3:>10}{4:<30}  -  {5}".format(
                             group_and_code, 
                             comm_addr, 
                             title_name, 
                             '', 
-                            kpd_vari
+                            kpd_vari,
+                            kpd_func_name
+
                     ) 
                 )
 
@@ -473,10 +476,11 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
 {0}
 #include "BaseDefine.H"
+#include "KpdPara_Table.H"
 #include "KPD_Title_Enum.H"
 #include "KpdPara_Msg.H"
 #include "KpdPara_ShowParaVari.H"
-#include "KpdPara_Table.H"
+#include "DrvPara_DataStorage.H"
 
 static const S_TABLE_X_TYPE t_astAllGrp[ALL_GRP_CODE_TOTAL] = {{
 {1}
@@ -490,7 +494,7 @@ const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx)
 return &t_astGrpInfo[wGrpIdx];
 }}
 
-static bool AddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
+static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 {{
 	uint16_t wMidIndex = 0;
 	uint16_t wLeftIndex = 0;
@@ -521,18 +525,25 @@ static bool AddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 	return blSearchData;
 }}
 
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wCodeIdx)
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wCodeIdx)
 {{
 	const S_TABLE_X_TYPE* pstTable = NULL;
-    uint16_t wAddr = GET_PARA_TABLE_ADDR(wGrpIdx, wCodeIdx);
+    uint16_t wGrpAndCode = GET_PARA_TABLE_ADDR(wGrpIdx, wCodeIdx);
 	uint16_t wSearchedIndex = 0;
-
-	if( AddrBinarySearch( wAddr, &wSearchedIndex) )
+	pstTable = KpdParaTableGetTableAddrArg1(wGrpAndCode);
+	return pstTable;
+}}
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode)
+{{
+	const S_TABLE_X_TYPE* pstTable = NULL;
+	uint16_t wSearchedIndex = 0;
+	if( KpdParaAddrBinarySearch( wGrpAndCode, &wSearchedIndex) )
 	{{
 		pstTable = &t_astAllGrp[wSearchedIndex];
 	}}
 	else
 		pstTable = NULL;
+
 	return pstTable;
 }}
 '''
@@ -593,7 +604,8 @@ enum eGrpAndCodeIndex{{
 {3}
 \n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wCodeIdx);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wCodeIdx);
 \n\n
 #endif   //_KPD_TABLE_H
 '''
@@ -602,7 +614,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddr(uint16_t wGrpIdx, uint16_t wCodeI
     file_contents = header_template.format(
         banner,
         group_indexes, 
-        '\n'.join(header_define_lines)
+        '\n'.join(header_define_lines),
         grp_and_code_indexes
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
