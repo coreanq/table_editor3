@@ -428,7 +428,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
             unit = model.item(find_row_index, col_info.index('단위')).text()
 
-            comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
+            # comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
 
             # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
             header_enum_lines.append(
@@ -461,7 +461,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
                         group_and_code,     at_value,           title_enum_name,    para_word_scale,       para_float_scale,    
                         data_func_run,      default_val,        max_val,            min_val,               read_only,
                         no_change_on_run,   zero_input,         no_comm,            form_msg,              unit, 
-                        comm_addr,          ',',                title_name,         comment
+                        ',',                title_name,         comment
                 )
             )
         
@@ -599,7 +599,7 @@ enum eGrpAndCodeIndex{{
 #define GRP_OFFSET_MUL			            0x100
 #define GET_PARA_TABLE_ADDR(bGrp, bCode)	(PARA_START_ADDR + (((uint16_t)(bGrp) * GRP_OFFSET_MUL) + (uint16_t)(bCode)))
 #define GET_GRP(wGrpAndCode)	(((wGrpAndCode) & 0xff00) >> 16)  & 0xff
-#define GET_CODE(wGrpAndCode)	(wGrpAndCode) & 0xff) 
+#define GET_CODE(wGrpAndCode)	((wGrpAndCode) & 0xff) 
 \n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode);
@@ -800,6 +800,6 @@ static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =
         banner,
         '\n\t,'.join(para_scales)
     )
-    with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
-        f.write(file_contents)
-    pass
+    # with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
+    #     f.write(file_contents)
+    # pass

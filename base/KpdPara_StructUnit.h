@@ -56,15 +56,23 @@ enum {
 	U_DATAMSG = 0xFF
 };
 
-
+#if 0 
 
 #define KPD_ATTR_MAX_PT		0x0002u    		// Upper limit is pointer 
+
 #define KPD_ATTR_MIN_PT		0x0004u    		// Lower limit is pointer 
+
 #define KPD_ATTR_READ_ONLY	0x0008u    		// NO Program flag 
+
 #define KPD_ATTR_NO_CHG_RUN	0x0010u    		// NO CHANGE During runing 
+
 #define KPD_ATTR_ZERO 		0x0020u    		// Zero Edit flag 
+
 #define KPD_ATTR_NOCOM 		0x0040u    		// Not Communication Parameter 
+
 #define KPD_ATTR_HIDDEN_CON	0x0700u			// Hidden 조건
+
+#endif
 
 #define KEYPAD_ID			0x01u
 #define CONFIG_GRP			0x50u

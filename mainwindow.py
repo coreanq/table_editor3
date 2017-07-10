@@ -907,13 +907,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 'true' if no_comm else 'false' , 
                                 items[col_info.index('Msg')].replace('MSG_', ''),
                                 items[col_info.index('Unit')],
-                                comm_addr, 
                                 items[col_info.index('MaxEDS')],
                                 items[col_info.index('MinEDS')],
                                 items[col_info.index('Comment')]
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 
-                            columns  = [ci.para_col_info_for_view().index('통신주소')]
+                            # columns  = [ci.para_col_info_for_view().index('통신주소')]
                             self.addRowToModel(self.model_parameters, view_col_list, editing_prohibit_columns = columns)
                         except IndexError:
                             print('error occur')
