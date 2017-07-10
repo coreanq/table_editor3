@@ -598,14 +598,16 @@ enum eGrpAndCodeIndex{{
 #define PARA_START_ADDR	                    0x1000u
 #define GRP_OFFSET_MUL			            0x100
 #define GET_PARA_TABLE_ADDR(bGrp, bCode)	(PARA_START_ADDR + (((uint16_t)(bGrp) * GRP_OFFSET_MUL) + (uint16_t)(bCode)))
-\n
-{1}
-{2}
-{3}
+#define GET_GRP(wGrpAndCode)	(((wGrpAndCode) & 0xff00) >> 16)  & 0xff
+#define GET_CODE(wGrpAndCode)	(wGrpAndCode) & 0xff) 
 \n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wCodeIdx);
+{1}
+{2}
+{3}
+\n
 \n\n
 #endif   //_KPD_TABLE_H
 '''
