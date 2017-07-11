@@ -56,23 +56,13 @@ enum {
 	U_DATAMSG = 0xFF
 };
 
-#if 0 
-
-#define KPD_ATTR_MAX_PT		0x0002u    		// Upper limit is pointer 
-
-#define KPD_ATTR_MIN_PT		0x0004u    		// Lower limit is pointer 
-
+#define KPD_ATTR_MAX_PT		0x0002u    		// not use
+#define KPD_ATTR_MIN_PT		0x0004u    		// not use
 #define KPD_ATTR_READ_ONLY	0x0008u    		// NO Program flag 
-
 #define KPD_ATTR_NO_CHG_RUN	0x0010u    		// NO CHANGE During runing 
-
 #define KPD_ATTR_ZERO 		0x0020u    		// Zero Edit flag 
-
 #define KPD_ATTR_NOCOM 		0x0040u    		// Not Communication Parameter 
-
 #define KPD_ATTR_HIDDEN_CON	0x0700u			// Hidden 조건
-
-#endif
 
 #define KEYPAD_ID			0x01u
 #define CONFIG_GRP			0x50u
@@ -103,20 +93,17 @@ typedef struct
 	uint8_t		bCodeIndex;			//CodeIndex
 	uint16_t	wTitleIdx;		// LCD entry data
 	uint8_t 	bAtValue;
+	uint16_t    *pwVari;				// pointer of variable
 
-	int32_t		lDefVal;			// default value of function data
-	int32_t		lMaxVal;			// high limit value of function data
-	int32_t		lMinVal;			// low limit value of function data
+	uint16_t	wDefVal;			// default value of function data
+	uint16_t	wMaxVal;			// high limit value of function data
+	uint16_t	wMinVal;			// low limit value of function data
 
-	bool 		blIsReadOnly;
-	bool 		blDontChangeWhenRunning;
-	bool 		blIsZeroInputPossible;
-	bool 		blIsNoCommPara;
+	uint8_t 	bFormMsgType;
+	uint8_t 	bUnitType;
+	uint16_t	wAttr;           	// attribute of function
 
-	uint8_t	 	bFormMsgType;
-	uint8_t		bUnitType;
-	uint32_t	wEditData;			//Parameter의 값
-
+	uint16_t	wEditData;			//Parameter의 값
 } S_KPD_TYPE;
 
 
