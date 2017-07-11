@@ -61,7 +61,6 @@ _parameters_view_columns_info = [
     '통신쓰기금지', 
     '폼메시지', 
     '단위', 
-    '통신주소',
     '최대 EDS',
     '최소 EDS',
     '설명'

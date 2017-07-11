@@ -141,7 +141,6 @@ typedef struct {
 
 	uint8_t		bFormMsgType;		// word float scale 중복 부분 제거 필요 
 	uint8_t		bUnitType;
-	uint16_t	wCommAddr;
 } S_TABLE_X_TYPE;				
 
 

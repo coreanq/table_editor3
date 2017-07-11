@@ -4,7 +4,7 @@ import column_info as ci
 import read_data as rd
 import version
 
-ATTR_BYTE = 0x0001  # byte 단위 사용 안함 
+ATTR_BYTE = 0x0001  # byte 단위 현재 사용 안함 
 ATTR_UP = 0x0002
 ATTR_LP = 0x0004
 ATTR_READ_ONLY = 0x0008
@@ -24,6 +24,14 @@ banner = '''\
     version.VERSION_INFO,
     datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     )
+
+PARA_START_ADDR	        =    0x1000
+GRP_OFFSET_MUL		    =    0x100
+
+
+def makeCodeAddr(grp, code):
+    return PARA_START_ADDR + ((grp * GRP_OFFSET_MUL) + code)
+
 
 def makeHiddenCondition(attribute):
     hidden_condition = '' 
@@ -360,9 +368,9 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
     total_code_count = 0
     # key model(grp info) 에서 group 값을 추출하여 para table 모델에서 find 함 
-    for row_index in range(key_row):
+    for grp_row_index in range(key_row):
         # 그룹 정보 추출 
-        key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
+        key_group_name = key_model.item(grp_row_index, key_col_info.index('Group')).text() 
 
         group_info_lines.append( 
             group_info_template.format(
@@ -428,7 +436,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
             unit = model.item(find_row_index, col_info.index('단위')).text()
 
-            # comm_addr = model.item(find_row_index, col_info.index('통신주소')).text()
+            comm_addr = hex(makeCodeAddr(grp_row_index, int(code_num)))
 
             # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
             header_enum_lines.append(
@@ -450,8 +458,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             
             format_str = ( '{{{0:>8},{1:>5},{2:>20},{3:>20},{4:>20},'
                             '{5:>6},{6:>10},{7:>10},{8:>10},{9:>6},'
-                            '{10:>6},{11:>6},{12:>6},{13:>20},{14:>20},'
-                            '{15:>20}}}{16}//"{17:<30}"//{18}' )
+                            '{10:>6},{11:>6},{12:>6},{13:>20},{14:>20}'
+                            '}}{15}//"{16:<30}"//{17}' )
 
             if( find_item == find_items[-1] ):
                 comment = comment + '\n\n'
@@ -688,118 +696,3 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wC
 #     with open(source_path + os.path.sep + rd.KPD_FUNC_HEAD_HEADER_FILE, 'w', encoding='utf8') as f:
 #         f.write(file_contents)
 #     pass
-
-def make_drv_para_data_storage(source_path, parameters_model):
-    col_info = ci.para_col_info_for_view()
-    model = parameters_model
-    para_word_scale_index = col_info.index('KpdWordScale')
-    para_float_scale_index = col_info.index('KpdFloatScale')
-    para_title_index = col_info.index('Code TITLE')
-    para_group_and_code_index = col_info.index('GrpAndCode')
-
-    para_indexes = [] # duplication 제거를 위한 para_index 저장 
-    para_indexes_lines  = [] # generation 을 위한 line  index_line | scale _line 합쳐진 형태임 
-
-    for index in range(model.rowCount() ):
-
-        float_scale = model.item(index, para_float_scale_index).text()
-        word_scale  = model.item(index, para_word_scale_index).text()
-        group = model.item(index, para_group_and_code_index).text().split('_')[0]
-        code = model.item(index, para_group_and_code_index).text().split('_')[1]
-
-        title = model.item(index, para_title_index ).text()
-        comment = '\t//{0:>5} {1:>4} {2:>20}'.format(group, code, title)
-
-
-    # 배열구조로 된 parameter index 리스트의 카운트 리스트를 만들어줌 
-    re_array_type = re.compile(r'([\w]+)_[0-9]{1,2}')
-    para_array_type_list = {} 
-    for para_index_str in para_indexes:
-        if( re_array_type.match( para_index_str ) ):
-            trans_str = re_array_type.sub(r'\1', para_index_str)
-            if( trans_str not in para_array_type_list ):
-                para_array_type_list[trans_str] = 1
-            else:
-                para_array_type_list[trans_str] = para_array_type_list[trans_str]  + 1
-
-    para_array_type_lines = []
-    for key, value in para_array_type_list.items():
-        para_array_type_lines.append('#define\tCNT_{0:<40}{1}'.format(key, value))
-
-    header_template = \
-'''{0}
-#ifndef DRIVE_PARA_DATA_STORAGE_AUTO_H_
-#define DRIVE_PARA_DATA_STORAGE_AUTO_H_
-
-typedef enum eDrvParaDataDiv
-{{
-	E_DATA_DIV_1,
-	E_DATA_DIV_10,
-	E_DATA_DIV_100,
-	E_DATA_DIV_1K,
-	E_DATA_DIV_10K,
-	E_DATA_DIV_100K,
-
-	TOTAL_DATA_DIV
-
-}}E_DRV_PARA_DATA_DIV;
-
-typedef enum eDrvParaSetErr
-{{
-	E_DRV_PARA_ERR_NONE,
-	E_DRV_PARA_WRONG_INDEX,
-	E_DRV_PARA_RANGE_OVER,
-	E_DRV_PARA_TRANS_LIMITED
-}}E_DRV_PARA_SET_ERR;
-
-{1}
-
-typedef enum eDrvParaMsgVariIdx	   //Drive Parameter Message Variable Index Enumeration
-{{
-\t {2}
-\t,E_MSG_VARI_END
-
-}}E_DRV_PARA_MSG_VARI_IDX;
-
-#endif 
-'''
-
-    para_indexes_lines.sort()
-
-    para_enums = [ ret.split('|')[0]  for ret in para_indexes_lines ]
-    para_scales = [ ret.split('|')[1]  for ret in para_indexes_lines ]
-
-    file_contents = header_template.format(
-        banner,
-        '\n'.join( para_array_type_lines),
-        '\n\t,'.join('TES')
-    )
-    with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
-        f.write(file_contents)
-    pass
-
-
-
-    src_template = \
-'''{0}
-#include "BaseDefine.H"
-#include "DrvPara_DataStorage_AutoGen.h"
-
-typedef struct sDrvParaDataScaleType	//소수점 표현하는 Data
-{{
-	E_DRV_PARA_DATA_DIV eFloatScale;		//Floating 변수로 전환할때의 소수점 자리값
-	E_DRV_PARA_DATA_DIV eWordScale;			//uint16_t Type으로 Data를 변화할때 잘라낼 자리값
-}}S_DRV_PARA_DATA_SCALE;
-
-static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =	
-{{
-\t {1}
-}};
-'''
-    file_contents = src_template.format(
-        banner,
-        '\n\t,'.join(para_scales)
-    )
-    # with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
-    #     f.write(file_contents)
-    # pass

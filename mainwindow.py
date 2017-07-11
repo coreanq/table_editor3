@@ -721,7 +721,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         mk.make_add_title_eng(source_path, self.model_title)
         mk.make_kpdpara_msg(source_path, self.model_msg_info, self.model_msg_values)
         mk.make_kpdpara_table(source_path, self.model_parameters, self.model_group)
-        mk.make_drv_para_data_storage(source_path, self.model_parameters)
 
         return True
 
@@ -912,7 +911,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 items[col_info.index('Comment')]
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 
-                            # columns  = [ci.para_col_info_for_view().index('통신주소')]
+                            columns  = []
                             self.addRowToModel(self.model_parameters, view_col_list, editing_prohibit_columns = columns)
                         except IndexError:
                             print('error occur')
