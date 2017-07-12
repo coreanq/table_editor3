@@ -109,7 +109,7 @@ typedef struct
 
 
 typedef struct {
-	uint16_t	wGrpAndCode;		// Grp And Code number
+	uint16_t	wCommAddr;			// CommAddr 
 	uint16_t	wTitleIdx;			// LCD entry data
 	uint8_t		bAtValue;
 

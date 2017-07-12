@@ -351,7 +351,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
     # table.c 소스내 group info 용 template 
     group_info_lines  = []
-    group_info_template ='{{T_{0:<10},{1:<30}, {2:<30}}}'
+    group_info_template ='{{  T_{0:<7},{1:>30}, {2:>30}}}'
 
     # table.c 소스내 index 를 통해 group table address 접근 하기 위한 소스 파일 
     table_addr_lines = [] 
@@ -453,7 +453,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
             header_enum_lines.append(
-                    "{0:<20} = {1:<10}//{2:<20}{3:>10}{4:<30}  -  {5}".format(
+                    "#define {0:<20} {1:<10}//{2:<20}{3:>10}{4:<30}  -  {5}".format(
                             group_and_code, 
                             comm_addr, 
                             title_name, 
@@ -500,7 +500,6 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 #include "KpdPara_Table.H"
 #include "KPD_Title_Enum.H"
 #include "KpdPara_Msg.H"
-#include "KpdPara_ShowParaVari.H"
 #include "DrvPara_DataStorage.H"
 
 static const S_TABLE_X_TYPE t_astAllGrp[ALL_GRP_CODE_TOTAL] = {{
@@ -510,9 +509,9 @@ static const S_TABLE_X_TYPE t_astAllGrp[ALL_GRP_CODE_TOTAL] = {{
 static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
 {2}
 }};\n\n
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx)
+const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrpIdx)
 {{
-return &t_astGrpInfo[wGrpIdx];
+    return &t_astGrpInfo[bGrpIdx];
 }}
 
 static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
@@ -528,7 +527,7 @@ static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 	while( wLeftIndex <= wRightIndex )
 	{{
 		wMidIndex = (wLeftIndex + wRightIndex) / 2;
-		wSrcAddr = t_astAllGrp[wMidIndex].wGrpAndCode;
+		wSrcAddr = t_astAllGrp[wMidIndex].wCommAddr;
 		// 찾으려는 값이 중앙값보다 작으면  right index 를 mid - 1로 둔다. 
 		if( wSrcAddr > wInputAddr )
 			wRightIndex = wMidIndex - 1;
@@ -546,19 +545,19 @@ static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 	return blSearchData;
 }}
 
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wCodeIdx)
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum)
 {{
 	const S_TABLE_X_TYPE* pstTable = NULL;
-    uint16_t wGrpAndCode = GET_PARA_TABLE_ADDR(wGrpIdx, wCodeIdx);
+    uint16_t wCommAddr = GET_PARA_TABLE_ADDR(bGrp, bCodeNum);
 	uint16_t wSearchedIndex = 0;
-	pstTable = KpdParaTableGetTableAddrArg1(wGrpAndCode);
+	pstTable = KpdParaTableGetTableAddrFromCommAddr(wCommAddr);
 	return pstTable;
 }}
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode)
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr)
 {{
 	const S_TABLE_X_TYPE* pstTable = NULL;
 	uint16_t wSearchedIndex = 0;
-	if( KpdParaAddrBinarySearch( wGrpAndCode, &wSearchedIndex) )
+	if( KpdParaAddrBinarySearch( wCommAddr, &wSearchedIndex) )
 	{{
 		pstTable = &t_astAllGrp[wSearchedIndex];
 	}}
@@ -567,6 +566,58 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode)
 
 	return pstTable;
 }}
+
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition)
+{{
+    const S_TABLE_X_TYPE * pstTable = NULL;
+    uint16_t wStartIndex = 0;
+    if( bGrp < GROUP_TOTAL ) 
+    {{
+        if( bPosition < t_astGrpInfo[bGrp].bGrpSize )
+        {{
+            wStartIndex = t_astGrpInfo[bGrp].wStratIndex;
+            pstTable = &t_astAllGrp[wStartIndex + bPosition];
+        }}
+        else
+        {{
+			pstTable = NULL;
+            MSG_ERR("bPosition");
+        }}
+    }}
+    else
+    {{
+		pstTable = NULL;
+        MSG_ERR("GROUP TOTAL");
+    }}
+    return pstTable;
+}}
+
+// 지정 그룹부터의 bPosition 만큼 배열 index 를 증가한 CommAddr 값을 리턴함 
+uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition )
+{{
+	uint16_t wCommAddr = 0;
+	uint16_t wStartIndex = 0;
+    if( bGrp < GROUP_TOTAL ) 
+    {{
+        if( bPosition < t_astGrpInfo[bGrp].bGrpSize )
+        {{
+            wStartIndex = t_astGrpInfo[bGrp].wStratIndex;
+            wCommAddr = t_astAllGrp[wStartIndex + bPosition].wCommAddr;
+        }}
+        else
+        {{
+			wCommAddr = 0;
+            MSG_ERR("bPosition");
+        }}
+    }}
+    else
+    {{
+		wCommAddr = 0;
+        MSG_ERR("GROUP TOTAL");
+    }}
+	return wCommAddr;
+}}
+
 '''
     # 맨 마지막 콤마 삭제 
     last_str = para_vars[-1]
@@ -599,14 +650,11 @@ enum eGrpIndex{{
     grp_and_code_enum_template = \
 '''
 \n
-enum eGrpAndCodeIndex{{
-\t {0}
-\t,GROUP_AND_CODE_TOTAL
-}};
+{0}
 \n
 '''
     grp_and_code_indexes = grp_and_code_enum_template.format(
-        '\n\t,'.join(header_enum_lines)
+        '\n'.join(header_enum_lines)
     )
 
 
@@ -619,12 +667,14 @@ enum eGrpAndCodeIndex{{
 #define PARA_START_ADDR	                    0x1000u
 #define GRP_OFFSET_MUL			            0x100
 #define GET_PARA_TABLE_ADDR(bGrp, bCode)	(PARA_START_ADDR + (((uint16_t)(bGrp) * GRP_OFFSET_MUL) + (uint16_t)(bCode)))
-#define GET_GRP(wGrpAndCode)	(((wGrpAndCode) & 0xff00) >> 16)  & 0xff
-#define GET_CODE(wGrpAndCode)	((wGrpAndCode) & 0xff) 
+#define GET_GRP(wCommAddr)	(((wCommAddr) & 0x0f00) >> 16)  & 0xff
+#define GET_CODE_NUM(wCommAddr)	((wCommAddr) & 0xff) 
 \n
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint16_t wGrpIdx);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wCodeIdx);
+const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrp);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition);
+uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
 {1}
 {2}
 \n
@@ -647,68 +697,80 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wC
         f.write(file_contents)
     pass
 
-# def make_kfunc_head(source_path, parameters_model, group_model):
-#     col_info = ci.para_col_info_for_view()
-#     model = parameters_model
-#     key_col_info = ci.group_col_info()
-#     key_model = group_model
+def make_drv_para_data_storage(source_path, para_additional_info_model):
+    col_info = ci.para_col_info_for_view()
+    model = parameters_model
+    para_word_scale_index = col_info.index('KpdWordScale')
+    para_float_scale_index = col_info.index('KpdFloatScale')
+    para_title_index = col_info.index('Code TITLE')
+    para_group_and_code_index = col_info.index('GrpAndCode')
 
-#     key_row = key_model.rowCount()
+    para_indexes = [] # duplication 제거를 위한 para_index 저장 
+    para_indexes_lines  = [] # generation 을 위한 line  index_line | scale _line 합쳐진 형태임 
 
-#     cmd_key_func_lines = []
-#     after_enter_key_func_lines = []
+    for index in range(model.rowCount() ):
 
-#     # key model 에서 key 값을 추출하여 key_value 모델에서 find 함 
-#     key_func_list = [] # 중복 제거를 위해 사용 
-#     for row_index in range(key_row):
-#         # 그룹 정보 추출 
-#         key_group_name = key_model.item(row_index, key_col_info.index('Group')).text() 
+        float_scale = model.item(index, para_float_scale_index).text()
+        word_scale  = model.item(index, para_word_scale_index).text()
+        group = model.item(index, para_group_and_code_index).text().split('_')[0]
+        code = model.item(index, para_group_and_code_index).text().split('_')[1]
 
-#         # 해당 하는 그룹의 아이템 정보를 얻음 
-#         find_items = model.findItems(key_group_name, column = col_info.index('Group'))
+        title = model.item(index, para_title_index ).text()
+        comment = '\t//{0:>5} {1:>4} {2:>20}'.format(group, code, title)
 
-#         for find_item in find_items:
-#             find_row_index = find_item.row()
 
-#             key_func = model.item(find_row_index, col_info.index('KPD 함수')).text()
-#             code_num = model.item(find_row_index, col_info.index('Code#')).text()
-#             kpd_type = model.item(find_row_index, col_info.index('KPD 타입')).text()
+    # 배열구조로 된 parameter index 리스트의 카운트 리스트를 만들어줌 
+    re_array_type = re.compile(r'([\w]+)_[0-9]{1,2}')
+    para_array_type_list = {} 
+    for para_index_str in para_indexes:
+        if( re_array_type.match( para_index_str ) ):
+            trans_str = re_array_type.sub(r'\1', para_index_str)
+            if( trans_str not in para_array_type_list ):
+                para_array_type_list[trans_str] = 1
+            else:
+                para_array_type_list[trans_str] = para_array_type_list[trans_str]  + 1
 
-#             if('NULL' not in key_func):
-#                 if( key_func not in key_func_list ):
-#                     key_func_list.append(key_func)
-#                     arg = '{0:<40}//({1},{2:>2})'.format(key_func, key_group_name, code_num)
-#                     if(kpd_type == 'AfterEnter'):
-#                         after_enter_key_func_lines.append(arg)
-#                     else:
-#                         cmd_key_func_lines.append(arg)
+    para_array_type_lines = []
+    for key, value in para_array_type_list.items():
+        para_array_type_lines.append('#define\tCNT_{0:<40}{1}'.format(key, value))
 
-#     header_template = \
-# '''{0}
-# #ifndef KFUNC_INDEX_H
-# #define KFUNC_INDEX_H
-# \n
-# enum eKpdFuncIndex{{
-#      KFUNC_NULL
-# \t,{1}
-# \t,KFUNC_START_AFTER_ENT_FUNC = 1000
-# \t,{2}
+   
+    para_indexes_lines.sort()
 
-# }};
-# \n
-# #define TOTAL_KFUNC_CMD_ENT                  {3} 
-# #define TOTAL_KFUNC_AFTER_ENT                {4} 
-# \n
-# #endif   //KFUNC_INDEX_H
-# '''
+    para_enums = [ ret.split('|')[0]  for ret in para_indexes_lines ]
+    para_scales = [ ret.split('|')[1]  for ret in para_indexes_lines ]
 
-#     file_contents = header_template.format(
-#         banner, 
-#         '\n\t,'.join(cmd_key_func_lines),
-#         '\n\t,'.join(after_enter_key_func_lines),
-#         len(cmd_key_func_lines),
-#         len(after_enter_key_func_lines)
-#     )
-#     with open(source_path + os.path.sep + rd.KPD_FUNC_HEAD_HEADER_FILE, 'w', encoding='utf8') as f:
-#         f.write(file_contents)
-#     pass
+    file_contents = header_template.format(
+        banner,
+        '\n'.join( para_array_type_lines),
+        '\n\t,'.join('TES')
+    )
+    with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
+        f.write(file_contents)
+    pass
+
+
+
+    src_template = \
+'''{0}
+#include "BaseDefine.H"
+#include "DrvPara_DataStorage_AutoGen.h"
+
+typedef struct sDrvParaDataScaleType	//소수점 표현하는 Data
+{{
+	E_DRV_PARA_DATA_DIV eFloatScale;		//Floating 변수로 전환할때의 소수점 자리값
+	E_DRV_PARA_DATA_DIV eWordScale;			//uint16_t Type으로 Data를 변화할때 잘라낼 자리값
+}}S_DRV_PARA_DATA_SCALE;
+
+static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =	
+{{
+\t {1}
+}};
+'''
+    file_contents = src_template.format(
+        banner,
+        '\n\t,'.join(para_scales)
+    )
+    # with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
+    #     f.write(file_contents)
+    # pass#     pass
