@@ -351,7 +351,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
     # table.c 소스내 group info 용 template 
     group_info_lines  = []
-    group_info_template ='{{T_{0:<10},{1:<20}}}'
+    group_info_template ='{{T_{0:<10},{1:<30}, {2:<30}}}'
 
     # table.c 소스내 index 를 통해 group table address 접근 하기 위한 소스 파일 
     table_addr_lines = [] 
@@ -363,8 +363,10 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
     group_index_lines = []   # group index 정의용 #define GROUP_MAK ...
     header_enum_lines = []   # MAK_000, MAK_001 enum 을 만들기 위함 
-    header_define_lines = [] # grp total count 정보 용  #define GRP_MAK_CODE_TOTAL 24
-    header_define_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
+    header_grp_size_define_lines = [] # grp total count 정보 용  #define GRP_MAK_CODE_TOTAL 24
+    header_grp_size_define_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
+    header_grp_start_index_define_lines = []
+    header_grp_start_index_define_template = '#define GRP_{0}_START_INDEX\t{1}'
 
     total_code_count = 0
     # key model(grp info) 에서 group 값을 추출하여 para table 모델에서 find 함 
@@ -374,7 +376,9 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
         group_info_lines.append( 
             group_info_template.format(
-                key_group_name.upper(), 'GRP_' + key_group_name.upper() + '_CODE_TOTAL'
+                key_group_name.upper(), 
+                'GRP_' + key_group_name.upper() + '_START_INDEX',
+                'GRP_' + key_group_name.upper() + '_CODE_TOTAL'
             )
         )
 
@@ -398,16 +402,25 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
         per_group_item_count = len(find_items)
         total_code_count += per_group_item_count
 
-        header_define_lines.append( 
-            header_define_template.format(
+        header_grp_size_define_lines.append( 
+            header_grp_size_define_template.format(
                 key_group_name.upper(),
                 per_group_item_count
             )
         )
 
         # group info 를 정보를 토대로 해당하는 그룹에 맞는 아이템만 찾아냄 
-        for find_item in find_items:
+        for count, find_item in enumerate(find_items):
             find_row_index = find_item.row()
+
+            if( count == 0 ):
+                header_grp_start_index_define_lines.append( 
+                    header_grp_start_index_define_template.format(
+                        key_group_name.upper(), 
+                        find_row_index
+                    )
+                )
+
             group_and_code = model.item(find_row_index, col_info.index('GrpAndCode')).text()
             group_name = group_and_code.split('_')[0]
             code_num = group_and_code.split('_')[1]
@@ -614,17 +627,20 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg1(uint16_t wGrpAndCode);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrArg2(uint16_t wGrpIdx, uint16_t wCodeIdx);
 {1}
 {2}
+\n
 {3}
+{4}
 \n
 \n\n
 #endif   //_KPD_TABLE_H
 '''
     # 하나의 테이블이므로 전체 크기를 define 으로 추가함 
-    header_define_lines.append('#define ALL_GRP_CODE_TOTAL\t{0}'.format(total_code_count))
+    header_grp_size_define_lines.append('#define ALL_GRP_CODE_TOTAL\t{0}'.format(total_code_count))
     file_contents = header_template.format(
         banner,
         group_indexes, 
-        '\n'.join(header_define_lines),
+        '\n'.join(header_grp_size_define_lines),
+        '\n'.join(header_grp_start_index_define_lines),
         grp_and_code_indexes
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:

@@ -142,6 +142,7 @@ typedef struct
 
 typedef struct {
 	uint16_t	wGrpTitle;
+	uint16_t    wStratIndex; // 전체 배열상에서 그룹이 시작하는 시작 index
 	uint8_t		bGrpSize;
 } S_GROUP_X_TYPE;
 
