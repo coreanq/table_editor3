@@ -199,8 +199,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setColumnHidden( col_info.index('Title Index'), True )
         view.setColumnHidden( col_info.index('ParaVar'), True )
         view.setColumnHidden( col_info.index('KpdFunc'), True )
-        view.setColumnHidden( col_info.index('KpdFloatScale'), True )
-        view.setColumnHidden( col_info.index('KpdWordScale'), True )
         view.setColumnHidden( col_info.index('최대 EDS'), True )
         view.setColumnHidden( col_info.index('최소 EDS'), True )
 
@@ -701,8 +699,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         return True
 
     def make_base_file(self, source_path):
-        #기본 키패드 title 파일이나, struct_unit 파일은 내부에서 리소스로 가지고 있다가 만들어줌 
-        filelist = [rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE, 
+        #기본 키패드 title 파일이나, 기타 파일은 내부에서 리소스로 가지고 있다가 만들어줌 
+        filelist = [ 
                     rd.KPD_BASIC_TITLE_SRC_FILE ]
 
         for file in filelist:
@@ -725,7 +723,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         mk.make_kpd_title(source_path, self.model_title)
         mk.make_kpdpara_msg(source_path, self.model_msg_info, self.model_msg_values)
         mk.make_kpdpara_table(source_path, self.model_parameters, self.model_group)
-
+        mk.make_drv_para_data_storage(source_path, self.model_parameters)
         return True
 
     def check_has_any_file_for_write(self, source_path):

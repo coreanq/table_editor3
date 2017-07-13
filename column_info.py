@@ -47,8 +47,8 @@ _parameters_view_columns_info = [
     'AtValue',
     'ParaVar', # 사용안함 이전 버전 상위버전 변환시 필요함 
     'KpdFunc', # 사용안함 이전 버전 상위버전 변환시 필요함 
-    'KpdFloatScale', # 숨김 컬럼 
-    'KpdWordScale',  # 숨김 컬럼 
+    'KpdFloatScale',  
+    'KpdWordScale',   
     'DataFunc실행여부', 
     '공장설정값',
     '최대값', 

@@ -17,7 +17,8 @@ ATTR_ADD  = 0x1000
 
 banner = '''\
 //------------------------------------------------------------------------------
-//      Auto generated from TABLE EDITOR {0} V{1}    {2}
+//      Auto generated from TABLE EDITOR {0} Ver:{1}    {2}
+//      Do not modify this source file
 //------------------------------------------------------------------------------
 '''.format(
     version.TABLE_EDITOR_NUMBER, 
@@ -723,75 +724,69 @@ def make_drv_para_data_storage(source_path, parameters_model):
     model = parameters_model
     para_word_scale_index = col_info.index('KpdWordScale')
     para_float_scale_index = col_info.index('KpdFloatScale')
-    para_title_index = col_info.index('Code TITLE')
     para_group_and_code_index = col_info.index('GrpAndCode')
 
-    para_indexes = [] # duplication 제거를 위한 para_index 저장 
-    para_indexes_lines  = [] # generation 을 위한 line  index_line | scale _line 합쳐진 형태임 
+    data_line_template = '{{ {0:>10}, {1:>20}, {2:>20}, 0 }}'
+    lines = []
 
     for index in range(model.rowCount() ):
-
         float_scale = model.item(index, para_float_scale_index).text()
         word_scale  = model.item(index, para_word_scale_index).text()
-        group = model.item(index, para_group_and_code_index).text().split('_')[0]
-        code = model.item(index, para_group_and_code_index).text().split('_')[1]
-
-        title = model.item(index, para_title_index ).text()
-        comment = '\t//{0:>5} {1:>4} {2:>20}'.format(group, code, title)
-
-
-    # 배열구조로 된 parameter index 리스트의 카운트 리스트를 만들어줌 
-    re_array_type = re.compile(r'([\w]+)_[0-9]{1,2}')
-    para_array_type_list = {} 
-    for para_index_str in para_indexes:
-        if( re_array_type.match( para_index_str ) ):
-            trans_str = re_array_type.sub(r'\1', para_index_str)
-            if( trans_str not in para_array_type_list ):
-                para_array_type_list[trans_str] = 1
-            else:
-                para_array_type_list[trans_str] = para_array_type_list[trans_str]  + 1
-
-    para_array_type_lines = []
-    for key, value in para_array_type_list.items():
-        para_array_type_lines.append('#define\tCNT_{0:<40}{1}'.format(key, value))
-
-   
-    para_indexes_lines.sort()
-
-    para_enums = [ ret.split('|')[0]  for ret in para_indexes_lines ]
-    para_scales = [ ret.split('|')[1]  for ret in para_indexes_lines ]
-
-    file_contents = header_template.format(
-        banner,
-        '\n'.join( para_array_type_lines),
-        '\n\t,'.join('TES')
-    )
-    with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_HEADER_AUTO, 'w', encoding='utf8') as f:
-        f.write(file_contents)
-    pass
-
+        grp_code = model.item(index, para_group_and_code_index).text()
+        lines.append(
+            data_line_template.format( 
+                grp_code, 
+                float_scale, 
+                word_scale
+            )
+        )
 
 
     src_template = \
 '''{0}
-#include "BaseDefine.H"
-#include "DrvPara_DataStorage_AutoGen.h"
+#include "BaseDefine.h"
+#include "DrvPara_DataStorage.h"
+#include "KpdPara_Table.h"
 
-typedef struct sDrvParaDataScaleType	//소수점 표현하는 Data
-{{
-	E_DRV_PARA_DATA_DIV eFloatScale;		//Floating 변수로 전환할때의 소수점 자리값
-	E_DRV_PARA_DATA_DIV eWordScale;			//uint16_t Type으로 Data를 변화할때 잘라낼 자리값
-}}S_DRV_PARA_DATA_SCALE;
+typedef struct {{ 
+	const uint16_t      wCommAddr;
+	const uint16_t      wFloatScale;
+	const uint16_t      wWordScale;
+	int32_t		        lData;
+}}S_DRV_PARA_DATA;
 
-static const S_DRV_PARA_DATA_SCALE t_astDrvParaDataScale[E_DATA_VARI_END] =	
+
+static const int32_t t_alDrvParaDivSlongData[TOTAL_DATA_DIV] =	//int32_t Type의 Scale Data
 {{
-\t {1}
+	1,			//E_DATA_DIV_1
+	10,			//E_DATA_DIV_10
+	100,		//E_DATA_DIV_100
+	1000,		//E_DATA_DIV_1K
+	10000,		//E_DATA_DIV_10K
+	100000		//E_DATA_DIV_100K
 }};
+
+static const float t_afDrvParaDivFloatData[TOTAL_DATA_DIV] =	//float Type의 Scale Data
+{{
+	1.0,			//E_DATA_DIV_1
+	10.0,			//E_DATA_DIV_10
+	100.0,			//E_DATA_DIV_100
+	1000.0,			//E_DATA_DIV_1K
+	10000.0,		//E_DATA_DIV_10K
+	100000.0		//E_DATA_DIV_100K
+}};
+
+//Drive Parameter Data값이 저장되어 있는 Data Storage 변수
+static S_DRV_PARA_DATA t_astDrvParaData[ALL_GRP_CODE_TOTAL] = 
+{{
+\t{1}
+}};
+
 '''
     file_contents = src_template.format(
         banner,
-        '\n\t,'.join(para_scales)
+        ',\n\t'.join(lines)
     )
-    # with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
-    #     f.write(file_contents)
-    # pass#     pass
+    with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
+        f.write(file_contents)
+    pass
