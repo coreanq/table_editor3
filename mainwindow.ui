@@ -20,7 +20,7 @@
       <item>
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>파일 버전:</string>
+         <string>정보:</string>
         </property>
        </widget>
       </item>

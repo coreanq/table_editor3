@@ -56,8 +56,8 @@ parsing_files = (
 re_extract_kpd_para_unit = re.compile(r'(?P<para_unit>{[^{}]*(U_[^,=]+[,]?)+[^{}]*})')
 re_parse_kpd_para_unit_params = re.compile(r'(U_[^,= ]+)')
 
-re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Z0-9]{2,3})grp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
-re_check_params = re.compile(r'[^\n]*{(?P<parameters>[^\n]+)}[^\n].?(?P<comment>[^\n]+)')
+re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Za-z0-9]{2,3}).rp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
+re_check_params = re.compile(r'[^\n]*{(?P<parameters>[^\n]+)}[^\n][, ]+(?P<comment>[^\n]+)')
 re_parse_params = re.compile(r'(\([A-Za-z_0-9*]+\))?&?([^,{}\n;]+)')
 re_parse_comment = re.compile(r'"([^\n]+)"((\[EDS :([-0-9]*)[,]?([-0-9 ]*)\])?\/\/([^\n]*))*')
 
@@ -129,7 +129,7 @@ def read_para_table(contents):
                 # print(comment_list)
                 # (WORD)blahblah
                 # item[0] item[1]
-                yield (group_name, *[item[1].strip() for item in find_list], *comment_list )
+                yield (group_name, *list( map( lambda x: x[1].strip(), find_list ) ), *comment_list )
 
 def read_para_msg(contents):
     find_list = []

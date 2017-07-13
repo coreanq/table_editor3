@@ -3,29 +3,30 @@ import sys
 from PyQt5.QtCore import QStringListModel
 # file 을 읽고 파싱 후  올라오는 column 정보 
 _parameters_file_columns_info_old = [ 
-    'Group',
+    'Group', # key column
     'Code#' , 
     'AtValue',
     'TitleIndex', 
     'ParaVar', 
     'KpdFunc',
-    'DefaultVal',
-    'MaxVal', 
-    'MinVal', 
-    'Msg',
-    'Unit', 
+    '공장설정값',
+    '최대값', 
+    '최소값', 
+    '폼메시지',
+    '단위', 
     'Attribute', 
     'ShowVar',
     'ShowVal',
     'MaxEDS', 
     'MinEDS',
-    'Comment' 
+    '설명' 
 ]
 # version 4 이상 file 을 파싱후 올라오는 column  정보 
 _parameters_file_columns_info = [
+    'Group', # key column  단순 all 값만 옴 
     'GrpAndCode', 
-    'Title Index',
     'AtValue',
+    'TitleIndex',
     'DataFunc실행여부', 
     '공장설정값',
     '최대값', 
@@ -42,8 +43,8 @@ _parameters_file_columns_info = [
 _parameters_view_columns_info = [
     'Group', # 숨김 컬럼 key column 왼쪽 컬럼 클릭시 사용하기 위한 용도 
     'GrpAndCode', 
-    'Title Index', # 숨김 컬럼 
-    'Code TITLE',
+    'TitleIndex', # 숨김 컬럼 
+    'CodeTITLE',
     'AtValue',
     'ParaVar', # 사용안함 이전 버전 상위버전 변환시 필요함 
     'KpdFunc', # 사용안함 이전 버전 상위버전 변환시 필요함 
@@ -67,6 +68,7 @@ _parameters_view_columns_info = [
 _group_columns_info = [
     'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
     'Group'
+    # 'GroupSize'
 ]
 # table editor version 2, 3
 _group_columns_info_old = [
@@ -81,7 +83,7 @@ _title_columns_info = [
    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
    'Title',
    'Enum 이름',
-   'Title Index',
+   'TitleIndex',
    'Data'
 ]
 _variable_columns_info = [
@@ -93,7 +95,7 @@ _variable_columns_info = [
 _msg_values_columns_info = [
     'MsgName',
     'MsgComment',
-    'Title Index',
+    'TitleIndex',
     'Title', 
     'AtValue' 
 ]
@@ -117,6 +119,9 @@ _unit_with_msg = {
 
 def para_col_info_for_file_old():
     return _parameters_file_columns_info_old
+
+def para_col_info_for_file():
+    return _parameters_file_columns_info
 
 def para_col_info_for_view():
     return _parameters_view_columns_info

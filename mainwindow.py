@@ -52,7 +52,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_msg_values = QStandardItemModel(self)
         self.model_proxy_msg_values = QSortFilterProxyModel(self)
         
-        self.model_para_indexes  = QStandardItemModel(self) 
         self.model_var = QStandardItemModel(self)
         self.model_proxy_var = QSortFilterProxyModel(self)
         
@@ -196,7 +195,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_parameters.setHorizontalHeaderLabels(col_info)
         view.setModel(self.model_proxy_parameters) 
         view.setColumnHidden( col_info.index('Group'), True)
-        view.setColumnHidden( col_info.index('Title Index'), True )
+        view.setColumnHidden( col_info.index('TitleIndex'), True )
         view.setColumnHidden( col_info.index('ParaVar'), True )
         view.setColumnHidden( col_info.index('KpdFunc'), True )
         view.setColumnHidden( col_info.index('최대 EDS'), True )
@@ -224,7 +223,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setModel(self.model_proxy_msg_values)
         view.setColumnHidden(col_info.index('MsgName'), True)
         view.setColumnHidden(col_info.index('MsgComment'), True)
-        view.setColumnHidden(col_info.index('Title Index'), True )
+        view.setColumnHidden(col_info.index('TitleIndex'), True )
         
 
         # title view init 
@@ -279,7 +278,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def setFileVersion(self, table_editor_number, table_editor_version):
         self.table_editor_number = table_editor_number
         self.table_editor_version = table_editor_version 
-        self.lblVersion.setText('Table Editor ' + table_editor_number + '  V'+ table_editor_version )
+        if( int(table_editor_number) == 0 ):
+            self.lblVersion.setText('Table data is too old')
+        else:
+            self.lblVersion.setText('Table Editor ' + table_editor_number + '  Ver:'+ table_editor_version )
         self.sigFileVersionChanged.emit()
         pass
 
@@ -364,7 +366,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_title.clear()
         self.model_var.clear()
         self.model_group.clear()
-        self.model_para_indexes.clear()
         
         self.initView()
         # 셀크기를 유지하기 위해 사용 
@@ -542,7 +543,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view = self.viewParameter
         delegate = self.delegate_parameters_view
         col_info = ci.para_col_info_for_view()
-        col_index = col_info.index('Code TITLE')
+        col_index = col_info.index('CodeTITLE')
         cmb_model_column_index = ci.title_col_info().index('Title')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
                 cmb_model_column = cmb_model_column_index )
@@ -801,8 +802,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         else:
                             col_info = ci.group_col_info()
-                            dummy_key = items[col_info['Dummy Key']]
-                            group_name = items[col_info['Group']]
+                            dummy_key = items[col_info.index('Dummy Key')]
+                            group_name = items[col_info.index('Group')]
+                            # group_size = items[col_info.index('GroupSize')]
+
                         input_list = [dummy_key, group_name]
                         self.addRowToModel(self.model_group, input_list)
                         pass
@@ -811,11 +814,16 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for items in rd.read_para_table(contents):
                         col_info = None 
 
-                        para_index, max_value, min_value =  '', '', ''
+                        max_value, min_value =  '', ''
 
                         kpd_word_scale, kpd_float_scale = '', ''
 
                         group_name, code_name, group_and_code = '', '', ''
+
+                        para_vari, kpd_func_name = '','' 
+                        max_eds , min_eds = '', ''
+
+                        comment = ''
 
                         no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
 
@@ -827,12 +835,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
                             para_vari = items[col_info.index('ParaVar')]
                             kpd_func_name = items[col_info.index('KpdFunc')]
-                            max_value = items[col_info.index('MaxVal')]
-                            min_value = items[col_info.index('MinVal')]
 
-                            para_index = group_and_code 
                             kpd_word_scale = 'E_DATA_DIV_1'
                             kpd_float_scale = 'E_DATA_DIV_1'
+                            max_eds = items[col_info.index('MaxEDS')]
+                            min_eds = items[col_info.index('MinEDS')]
+                            comment = items[col_info.index('설명')]
 
                             # attribute 설정 
                             arg = items[col_info.index('Attribute')] 
@@ -843,49 +851,40 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                             attribute  = arg_num
 
-                            if( attribute & mk.ATTR_NO_COMM ):
-                                no_comm = True 
-                            if( attribute & mk.ATTR_READ_ONLY ):
-                                read_only = True
-                            if( attribute & mk.ATTR_NO_CHANGE_ON_RUN ):
-                                no_change_on_run = True 
-                            if( attribute & mk.ATTR_ZERO_INPUT ):
-                                zero_input = True 
+                            if( attribute & mk.ATTR_NO_COMM ): no_comm = 'true' 
+                            else: no_comm = 'false'
+
+                            if( attribute & mk.ATTR_READ_ONLY ): read_only = 'true'
+                            else: read_only = 'false'
+
+                            if( attribute & mk.ATTR_NO_CHANGE_ON_RUN ): no_change_on_run = 'true' 
+                            else: no_change_on_run = 'false'
+
+                            if( attribute & mk.ATTR_ZERO_INPUT ): zero_input = 'true' 
+                            else: zero_input = 'false'
 
                         else:
-                            col_info = ci.para_col_info_for_file_view()
-                            group_name = items[col_info.index('Group')]
-                            code_name = items[col_info.index('Code#')]
-                            group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
+                            col_info = ci.para_col_info_for_file()
+                            group_and_code = items[col_info.index('GrpAndCode')]
+                            group_name =  group_and_code.split('_')[0]
+                            code_name = group_and_code.split('_')[1]
 
-                            para_index = items[col_info.index('Para Index')].upper()
-                            para_index = para_index.replace('E_DATA_CMD_', '' )
-                            max_value = items[col_info.index('최대값')].upper()
-                            min_value = items[col_info.index('최소값')].upper()
-                            kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
-                            kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
-
-                        
-                        # 통신 어드레스 계산 
-                        find_items= self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
-                        group_num = 0 
-
-                        for find_item in find_items:
-                            group_num  =  find_item.row()
-
-                        if( code_name == ''):
-                            code_num = 0
-                        else:
-                            code_num = int(code_name)
-
-                        comm_addr = self.makeAddrValue(group_num, code_num)
+                            read_only = items[col_info.index('읽기전용')]
+                            no_change_on_run = items[col_info.index('운전중변경불가')]
+                            zero_input = items[col_info.index('0입력가능')]
+                            no_comm = items[col_info.index('통신쓰기금지')]
+                            comment = items[-1]
+                            
+                            # TODO: kpd_word_scale 추가 
+                            # kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
+                            # kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
+                        max_value = items[col_info.index('최대값')].upper()
+                        min_value = items[col_info.index('최소값')].upper()
 
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         at_value = items[col_info.index('AtValue')]
-
                         title = mk.make_title_with_at_value(title, at_value)
 
-                        self.addRowToModel(self.model_para_indexes, (para_index,) )
 
                         try : 
                             view_col_list = [ 
@@ -899,18 +898,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 kpd_word_scale,
                                 kpd_float_scale,
                                 'true',
-                                items[col_info.index('DefaultVal')],
+                                items[col_info.index('공장설정값')],
                                 max_value,
                                 min_value,
-                                'true' if read_only else 'false' , 
-                                'true' if no_change_on_run else 'false' , 
-                                'true' if zero_input else 'false' , 
-                                'true' if no_comm else 'false' , 
-                                items[col_info.index('Msg')].replace('MSG_', ''),
-                                items[col_info.index('Unit')],
-                                items[col_info.index('MaxEDS')],
-                                items[col_info.index('MinEDS')],
-                                items[col_info.index('Comment')]
+                                read_only, 
+                                no_change_on_run , 
+                                zero_input, 
+                                no_comm, 
+                                items[col_info.index('폼메시지')].replace('MSG_', ''),
+                                items[col_info.index('단위')],
+                                max_eds,
+                                min_eds, 
+                                comment
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 
                             columns  = []
@@ -955,7 +954,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE.lower()):
                     msg_list = [] 
                     col_info = ci.msg_values_col_info()
-                    title_index = col_info.index('Title Index')
+                    title_index = col_info.index('TitleIndex')
                     at_value_index = col_info.index('AtValue')
                     for items in rd.read_para_msg(contents):
                         msg_name = items[col_info.index('MsgName')]

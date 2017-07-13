@@ -99,7 +99,7 @@ def make_kpd_title(source_path, title_model):
 
         title = row_items[col_info.index('Title')]
         enum_name = row_items[col_info.index('Enum 이름')]
-        title_index = row_items[col_info.index('Title Index')]
+        title_index = row_items[col_info.index('TitleIndex')]
         data = row_items[col_info.index('Data')]
 
         if( title_index == ''):
@@ -242,7 +242,7 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
             msg_comment = model.item(find_row_index, col_info.index('MsgComment')).text()
             title_name = model.item(find_row_index, col_info.index('Title')).text()
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
-            enum_name = model.item(find_row_index, col_info.index('Title Index')).text()
+            enum_name = model.item(find_row_index, col_info.index('TitleIndex')).text()
             title_name = make_title_with_at_value(title_name, at_value)
             comma = ','
 
@@ -447,8 +447,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             group_name = group_and_code.split('_')[0]
             code_num = group_and_code.split('_')[1]
 
-            title_name = model.item(find_row_index, col_info.index('Code TITLE')).text()
-            title_enum_name =  model.item(find_row_index, col_info.index('Title Index')).text()
+            title_name = model.item(find_row_index, col_info.index('CodeTITLE')).text()
+            title_enum_name =  model.item(find_row_index, col_info.index('TitleIndex')).text()
             
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
             title_name = make_title_with_at_value(title_name, at_value) # at value 적용 
@@ -475,7 +475,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
             header_enum_lines.append(
-                    "#define {0:<20} {1:<10}//{2:<20}{3:>10}{4:<30}  -  {5}".format(
+                    "#define {0:<20} {1:<10}//{2:<20}{3:>10}{4:<30}  {5}".format(
                             group_and_code, 
                             comm_addr, 
                             title_name, 
