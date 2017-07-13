@@ -1,6 +1,5 @@
 <RCC>
   <qresource>
-    <file>base/KpdPara_StructUnit.h</file>
     <file>base/KPD_TBL_MSG_ENG.c</file>
   </qresource>
 </RCC>

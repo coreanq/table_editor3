@@ -199,6 +199,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setColumnHidden( col_info.index('Title Index'), True )
         view.setColumnHidden( col_info.index('ParaVar'), True )
         view.setColumnHidden( col_info.index('KpdFunc'), True )
+        view.setColumnHidden( col_info.index('KpdFloatScale'), True )
+        view.setColumnHidden( col_info.index('KpdWordScale'), True )
+        view.setColumnHidden( col_info.index('최대 EDS'), True )
+        view.setColumnHidden( col_info.index('최소 EDS'), True )
 
 
         # parameter view detail init
@@ -718,7 +722,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         return True
 
     def make_model_to_file(self, source_path):
-        mk.make_add_title_eng(source_path, self.model_title)
+        mk.make_kpd_title(source_path, self.model_title)
         mk.make_kpdpara_msg(source_path, self.model_msg_info, self.model_msg_values)
         mk.make_kpdpara_table(source_path, self.model_parameters, self.model_group)
 

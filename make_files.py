@@ -79,7 +79,7 @@ def make_title_with_at_value(title, at_value, padding = ''):
 
     return result
 
-def make_add_title_eng(source_path, title_model):
+def make_kpd_title(source_path, title_model):
     col_info = ci.title_col_info()
     model = title_model 
     row = model.rowCount()
@@ -106,12 +106,16 @@ def make_add_title_eng(source_path, title_model):
         else:
             title_index_num = int(title_index)
 
+        comma = ','
+        if( row_index == row ):
+            comma = ' '
+    
         # enum_list 생성용  for kpd_title_enum.h
         if( title_index_num == 1000):
-            enum_list.append('T_TotalDefaultTitleSize')
-            enum_list.append(r'{0:<32} = START_ADD_TITLE_INDEX//{1}'.format(enum_name, title_index))
+            enum_list.append('T_TotalDefaultTitleSize,')
+            enum_list.append('{0:<32} = START_ADD_TITLE_INDEX, //{1}'.format(enum_name, title_index))
         else:
-            enum_list.append(r'{0:<32}//{1}'.format(enum_name, title_index))
+            enum_list.append('{0:<32}{1}//{2}'.format(enum_name, comma,  title_index))
 
         if( title_index_num < 1000):
             continue
@@ -122,7 +126,17 @@ def make_add_title_eng(source_path, title_model):
         find_list = re_split.findall(data)
         add_title_size = len(find_list)
         find_merge = ','.join('0x'+item for item in find_list )
-        rows.append(r'{{{0}}}//{1:<5}"{2:<20}"{3}'.format(find_merge, title_index, title, enum_name))
+        comma = ','
+        if( row_index == row - 1 ):
+            comma = ' '
+        rows.append('\t{{{0}}}{1}\t//{2:<5}"{3:<20}"{4}'.format(
+                find_merge, 
+                comma, 
+                title_index, 
+                title, 
+                enum_name
+            )
+        )
     # print('\n'.join(rows))
 
     
@@ -131,12 +145,12 @@ def make_add_title_eng(source_path, title_model):
 #include "BaseDefine.H"
 #include "AddTitle_Eng.H"\n\n\n
 const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{ 
- {1}
+{1}
 }};
 '''
     file_contents = src_template.format(
         banner, 
-        '\n,'.join(rows)
+        '\t\n'.join(rows)
         )
 
     with open(source_path + os.path.sep + rd.KPD_ADD_TITLE_SRC_FILE, 'w', encoding='utf8') as f:
@@ -171,7 +185,7 @@ extern const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 #define START_ADD_TITLE_INDEX 1000
 
 enum{{ 
-  {1}
+\t{1}
 }};
 {2}
 #endif
@@ -184,7 +198,7 @@ enum{{
 
     file_contents = kpd_title_enum_header_template.format(
         banner, 
-        '\n ,'.join(enum_list), 
+        '\n\t'.join(enum_list), 
         have_add_title
         )
     with open(source_path + os.path.sep + rd.KPD_ENUM_TITLE_HEADER_FILE, 'w', encoding='utf8') as f:
@@ -206,7 +220,7 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
     lines = []
     msg_var_template = \
 '''{0:<90}//MSG_{1:<20}//{2}
-\t {3}
+\t{3}
 }};
 '''
     msg_name_count = 0 # 각 msg name 에 몇개의 인자가 있는지 나타냄 yesno msg 의 경우 2개 
@@ -229,12 +243,18 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
             enum_name = model.item(find_row_index, col_info.index('Title Index')).text()
             title_name = make_title_with_at_value(title_name, at_value)
+            comma = ','
 
-            lines.append('{{{0:<20},{1:<5}}}                       //"{2}"'.format(enum_name, at_value, title_name))
+            if( find_items[-1] == find_item ):
+                comma = ' ' 
+            lines.append('{{{0:<20},{1:<5}}}{2}           //"{3}"'.format(
+                enum_name, 
+                at_value, 
+                comma, 
+                title_name)
+                )
             msg_name_count =msg_name_count + 1
 
-
-        
         msg_var_banner = 'static const S_MSG_TYPE t_ast{0}[MSG_COUNT_{1}] = {{'\
             .format(msg_name, 
                     msg_name.upper() 
@@ -245,7 +265,7 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
                 msg_var_banner,
                 msg_name, 
                 msg_comment, 
-                '\n\t,'.join(lines))
+                '\n\t'.join(lines))
         )
         lines.clear()
         msg_name_count_list.append([msg_name, msg_name_count])
@@ -264,10 +284,10 @@ static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], uint16_t wMsgNum)
 \n\n
 {1}\n
 static const S_MSG_TYPE * t_pastMsgDataTbl[MSG_TOTAL] = {{
-\t {2}
+\t{2}
 }};
 static const uint16_t t_awMsgDataSize[MSG_TOTAL] = {{
-\t {3}
+\t{3}
 }};\n
 static S_MSG_TYPE KpdParaGetMsg(const S_MSG_TYPE astMsgType[], uint16_t wMsgNum)
 {{
@@ -291,14 +311,17 @@ return t_awMsgDataSize[wMsgIdx];
     for msg_name, msg_name_count in msg_name_count_list:
         msg_data_tbl_lines.append('t_ast{0}'.format(msg_name))
         msg_data_size_lines.append('MSG_COUNT_{0}'.format(msg_name.upper()))
-        msg_data_enum_lines.append('MSG_{0:<36}//{1:0>3}'.format(msg_name, msg_enum_count))
+        msg_data_enum_lines.append('MSG_{0:<30},//{1:0>3}'.format(msg_name, msg_enum_count))
         msg_enum_count = msg_enum_count + 1
+
+    # 한라인 추가 되므로  msg_total 
+    msg_data_enum_lines.append('MSG_{0:<30} //{1:0>3}'.format('TOTAL', msg_enum_count))
 
     file_contents = source_template.format(  
         banner,
         '\n'.join(msg_vars),
-        '\n\t,'.join(msg_data_tbl_lines),
-        '\n\t,'.join(msg_data_size_lines) 
+        ',\n\t'.join(msg_data_tbl_lines),
+        ',\n\t'.join(msg_data_size_lines) 
         )
     with open(source_path + os.path.sep + rd.KPD_PARA_MSG_SRC_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
@@ -312,7 +335,7 @@ return t_awMsgDataSize[wMsgIdx];
 #include "KpdPara_StructUnit.H"
     
 enum{{  //MSG들의 Index 값
-\t\t {1}
+\t{1}
 }};
 \n
 {2}
@@ -322,15 +345,13 @@ uint16_t KpdParaGetMsgSize(uint16_t wMsgIdx);
 #endif  //KEYPAD_MESSAG_H
 
 '''
-    # 한라인 추가 되므로  msg_total 
-    msg_data_enum_lines.append('MSG_{0:<36}//{1:0>3}'.format('TOTAL', msg_enum_count))
     msg_define_lines = []
     for msg_name, msg_name_count in msg_name_count_list:
         msg_define_lines.append('#define MSG_COUNT_{0:<30}{1}'.format(msg_name.upper(), msg_name_count))
 
     file_contents = header_template.format(  
         banner,
-        '\n\t\t,'.join(msg_data_enum_lines),
+        '\n\t'.join(msg_data_enum_lines),
         '\n'.join(msg_define_lines) 
         )
     with open(source_path + os.path.sep + rd.KPD_PARA_MSG_HEADER_FILE, 'w', encoding='utf8') as f:
@@ -469,20 +490,20 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             if( 'DATAMSG' in unit ):
                 form_msg = 'MSG_' + form_msg
             
-            format_str = ( '{{{0:>8},{1:>5},{2:>20},{3:>20},{4:>20},'
-                            '{5:>6},{6:>10},{7:>10},{8:>10},{9:>6},'
-                            '{10:>6},{11:>6},{12:>6},{13:>20},{14:>20}'
-                            '}}{15}//"{16:<30}"//{17}' )
+            format_str = ( '{{{0:>8},{1:>5},{2:>20},{3:>6},{4:>10},'
+                            '{5:>10},{6:>10},{7:>6},{8:>6},{9:>6},'
+                            '{10:>6},{11:>20},{12:>20}}}{13} //"{14:<30}"'
+                            '//{15}' )
 
             if( find_item == find_items[-1] ):
                 comment = comment + '\n\n'
 
             para_vars_lines.append(
                 format_str.format(\
-                        group_and_code,     at_value,           title_enum_name,    para_word_scale,       para_float_scale,    
-                        data_func_run,      default_val,        max_val,            min_val,               read_only,
-                        no_change_on_run,   zero_input,         no_comm,            form_msg,              unit, 
-                        ',',                title_name,         comment
+                        group_and_code,     at_value,           title_enum_name,    data_func_run,      default_val,        
+                        max_val,            min_val,            read_only,          no_change_on_run,   zero_input,
+                        no_comm,            form_msg,           unit,                ',',                title_name,         
+                        comment
                 )
             )
         
@@ -638,13 +659,13 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition )
 '''
 \n
 enum eGrpIndex{{
-\t {0}
-\t,GROUP_TOTAL
+\t{0},
+\tGROUP_TOTAL
 }};
 \n
 '''
     group_indexes = group_index_template.format(
-        '\n\t,'.join(group_index_lines)
+        ',\n\t'.join(group_index_lines)
     )
 
     grp_and_code_enum_template = \
@@ -697,7 +718,7 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
         f.write(file_contents)
     pass
 
-def make_drv_para_data_storage(source_path, para_additional_info_model):
+def make_drv_para_data_storage(source_path, parameters_model):
     col_info = ci.para_col_info_for_view()
     model = parameters_model
     para_word_scale_index = col_info.index('KpdWordScale')

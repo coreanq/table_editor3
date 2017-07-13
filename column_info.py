@@ -26,8 +26,6 @@ _parameters_file_columns_info = [
     'GrpAndCode', 
     'Title Index',
     'AtValue',
-    'KpdFloatScale',
-    'KpdWordScale',
     'DataFunc실행여부', 
     '공장설정값',
     '최대값', 
@@ -42,15 +40,15 @@ _parameters_file_columns_info = [
 ]
 # table view 에서 보여지는 column 의 정보 
 _parameters_view_columns_info = [
-    'Group', # 왼쪽 컬럼 클릭시 사용하기 위한 용도 
+    'Group', # 숨김 컬럼 key column 왼쪽 컬럼 클릭시 사용하기 위한 용도 
     'GrpAndCode', 
-    'Title Index',
+    'Title Index', # 숨김 컬럼 
     'Code TITLE',
     'AtValue',
     'ParaVar', # 사용안함 이전 버전 상위버전 변환시 필요함 
     'KpdFunc', # 사용안함 이전 버전 상위버전 변환시 필요함 
-    'KpdFloatScale',
-    'KpdWordScale',
+    'KpdFloatScale', # 숨김 컬럼 
+    'KpdWordScale',  # 숨김 컬럼 
     'DataFunc실행여부', 
     '공장설정값',
     '최대값', 
@@ -61,8 +59,8 @@ _parameters_view_columns_info = [
     '통신쓰기금지', 
     '폼메시지', 
     '단위', 
-    '최대 EDS',
-    '최소 EDS',
+    '최대 EDS', # 사용안함 이전 버전 상위버전 변환시 필요함 
+    '최소 EDS', # 사용안함 이전 버전 상위버전 변환시 필요함 
     '설명'
 ]
 # table editor version 4
