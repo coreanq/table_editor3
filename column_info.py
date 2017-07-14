@@ -86,6 +86,12 @@ _title_columns_info = [
    'TitleIndex',
    'Data'
 ]
+_data_storage_columns_info = [
+    'GrpAndCode', 
+    'FloatScale',
+    'WordScale',
+    'Data'
+]
 _variable_columns_info = [
     'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
     'Variable',
@@ -126,6 +132,9 @@ def para_col_info_for_file():
 def para_col_info_for_view():
     return _parameters_view_columns_info
     
+def data_storage_columns_info():
+    return _data_storage_columns_info
+
 def title_col_info():
     return _title_columns_info
     

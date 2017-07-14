@@ -8,12 +8,12 @@ import io
 
 KPD_ADD_TITLE_SRC_FILE = 'AddTitle_Eng.c'
 KPD_ADD_TITLE_HEADER_FILE = 'AddTitle_Eng.H'
-KPD_BASIC_TITLE_SRC_FILE='KPD_TBL_MSG_ENG.c'
+KPD_BASIC_TITLE_SRC_FILE= 'KPD_TBL_MSG_ENG.c'
 KPD_ENUM_TITLE_HEADER_FILE = 'KPD_Title_Enum.H'
 
 KPD_PARA_MSG_SRC_FILE =  'KpdPara_Msg.c'
 KPD_PARA_MSG_HEADER_FILE = 'KpdPara_Msg.h'
-KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'KpdPara_StructUnit.h'
+KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'KpdPara_StructUnit.h'  # 자동생성 할필요는 없으나 읽을때 필요한 자료 이므로 생성 
 KPD_PARA_TABLE_SRC_FILE = 'KpdPara_Table.c'
 KPD_PARA_TABLE_HEADER_FILE = 'KpdPara_Table.h'
 
@@ -27,11 +27,11 @@ DRVPARA_DATASTORAGE_SRC_AUTO = 'DrvPara_DataStorage_AutoGen.c'
 # write 에 사용하는 파일 리스트 정의
 make_files = (
     KPD_ADD_TITLE_SRC_FILE,
-    KPD_ADD_TITLE_HEADER_FILE,
+    KPD_ADD_TITLE_HEADER_FILE, 
     KPD_BASIC_TITLE_SRC_FILE,
     KPD_ENUM_TITLE_HEADER_FILE,
     KPD_PARA_MSG_SRC_FILE,
-    KPD_PARA_MSG_HEADER_FILE,
+    KPD_PARA_MSG_HEADER_FILE, 
     KPD_PARA_STRUCT_UNIT_HEADER_FILE,
     KPD_PARA_TABLE_SRC_FILE,
     KPD_PARA_TABLE_HEADER_FILE,
@@ -46,8 +46,9 @@ parsing_files = (
     KPD_ADD_TITLE_SRC_FILE,
     KPD_PARA_MSG_SRC_FILE,
     KPD_PARA_STRUCT_UNIT_HEADER_FILE,
-    KPD_PARA_TABLE_SRC_FILE, 
-    KPD_PARA_VAR_HEADER_FILE,
+    KPD_PARA_TABLE_SRC_FILE,
+    # KPD_PARA_VAR_HEADER_FILE,
+    DRVPARA_DATASTORAGE_SRC_AUTO # parameter table 보다 항상 나중에 읽어야 함 
 )               
 
 
@@ -85,9 +86,10 @@ re_parse_kpd_var_define = re.compile(r'#define (K_[A-Z_0-9]+)\s+([0-9]+)')
 re_parse_kpd_var = re.compile(r'(k_[a]?w[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?s*\/\/([^\n]*)?')
 re_parse_kpd_var_only = re.compile(r'k_[a]?w([a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?', re.I)
 
-# re_extract_enum_title = re.compile(r'enum{\s*([,]?T_[^\n]+\s+)+};')
-# re_check_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+')
-# re_parse_enum_title = re.compile(r'(T_[^\n\s]+)[^\n]+(\/\/[^\n]+)')
+re_extract_data_storage = re.compile(r'(?P<data_storage_info>static S_DRV_PARA_DATA t_astDrvParaData[^;]+\}\;)')
+re_get_para_line  = re.compile(r'[^\n]*{(?P<parameters>[^\n]+)}')
+re_get_parameters = re.compile(r'([^,{}\n;]+)')
+
 
 def read_kpd_para_struct_unit(contents):
     search_obj = re_extract_kpd_para_unit.search(contents)
@@ -159,8 +161,8 @@ def read_para_msg(contents):
 def read_grp_info(contents):
     match = re_extract_grp_info.search(contents)
     if( match ):
-        group_info_data = match.group('group_info_data') 
-        buf = io.StringIO(group_info_data) 
+        info_data = match.group('group_info_data') 
+        buf = io.StringIO(info_data) 
         for line in buf.readlines():
             search_line_obj = re_check_grp_info.search(line)
             if(search_line_obj):
@@ -174,35 +176,19 @@ def read_grp_info(contents):
                 yield ('', result[0].replace('T_', '').strip(), *ret_vals )
     
 
-
-def read_kpd_para_var(contents):
-    var_type = "WORD"
-    defines_dict = {}
-    buf = io.StringIO(contents) 
-    for line in buf.readlines():
-        find_list = re_parse_kpd_declaration.findall(line)
-        if( len(find_list) ):
-            # extern WORD ...
-            var_type = find_list[0]
-            continue
-        find_list  = re_parse_kpd_var_define.findall(line)
-        if( len(find_list) ):
-            # [('K_AWAOCONST', '2')]
-            defines_dict[find_list[0][0]] = find_list[0][1]
-            continue
-        find_list = re_parse_kpd_var.findall(line)
-        if( len(find_list) ):
-            # example
-            #,k_awMotNoloadCurr[K_AWMOTNOLOADCURR]              //PJW 2005/02/22
-            # (group0         )(group1(group2)   )              (group3       )
-            try: 
-                array_footer = '['+ str(defines_dict[find_list[0][2]]) + ']'
-            except KeyError:
-                array_footer = ""  
-            # ('dummy_key', 'k_wUnlmtCarrFreqSel': ['WORD', '//변수설명'] )
-            yield ('', find_list[0][0] + array_footer, var_type, find_list[0][3]) 
-            continue
-    pass
+def read_data_storage_info(contents):
+    match = re_extract_data_storage.search(contents)
+    if( match ):
+        info_data = match.group('data_storage_info') 
+        buf = io.StringIO(info_data) 
+        for line in buf.readlines():
+            search_line_obj = re_get_para_line.search(line)
+            if(search_line_obj):
+                data_part = search_line_obj.group('parameters')
+                find_list = re_get_parameters.findall(data_part) 
+                result = []
+                ret_vals = list(map(lambda x: x.strip(), find_list ))
+                yield ret_vals
 
 
 def read_basic_title(contents):
@@ -259,19 +245,48 @@ def read_add_title(contents):
                 yield ('', *comment_list, data_string) 
     pass
 
+def read_kpd_para_var(contents):
+    var_type = "WORD"
+    defines_dict = {}
+    buf = io.StringIO(contents) 
+    for line in buf.readlines():
+        find_list = re_parse_kpd_declaration.findall(line)
+        if( len(find_list) ):
+            # extern WORD ...
+            var_type = find_list[0]
+            continue
+        find_list  = re_parse_kpd_var_define.findall(line)
+        if( len(find_list) ):
+            # [('K_AWAOCONST', '2')]
+            defines_dict[find_list[0][0]] = find_list[0][1]
+            continue
+        find_list = re_parse_kpd_var.findall(line)
+        if( len(find_list) ):
+            # example
+            #,k_awMotNoloadCurr[K_AWMOTNOLOADCURR]              //PJW 2005/02/22
+            # (group0         )(group1(group2)   )              (group3       )
+            try: 
+                array_footer = '['+ str(defines_dict[find_list[0][2]]) + ']'
+            except KeyError:
+                array_footer = ""  
+            # ('dummy_key', 'k_wUnlmtCarrFreqSel': ['WORD', '//변수설명'] )
+            yield ('', find_list[0][0] + array_footer, var_type, find_list[0][3]) 
+            continue
+    pass
+
 
 # 파일 이름 별로 파싱 루틴을 다르게 적용하지만 실제로 파일에 관계 없이 동작하도록 해야함. 
 def test_read():
-    TARGET_DIR = r'D:\download\1'
+    TARGET_DIR = r'd:\download\3_work\Drive_SW_Platform\src\branches\NewEraPlatform_kpd_index\Source\Inverter\OSLayer\DataStorage'
     for root, directories, filenames in os.walk(TARGET_DIR):
         # print(root, directories, filenames)
         for filename in filenames:
             if( filename.lower() in parsing_files):
                 contents = ""
-                filePath = root + os.sep + filename
+                filePath = root + os.sep + filename.lower()
                 with open(filePath, 'r', encoding='utf8') as f:
                     contents = f.read()
-                if(filename.lower() == KPD_PARA_TABLE_SRC_FILE ):
+                if(filename.lower() == KPD_PARA_TABLE_SRC_FILE.lower() ):
                     for item in read_para_table(contents):
                         # print(item)
                         pass
@@ -279,24 +294,27 @@ def test_read():
                         # print(item)
                         pass
                     pass
-                elif( filename.lower() == KPD_PARA_MSG_SRC_FILE):
+                elif( filename.lower() == KPD_PARA_MSG_SRC_FILE.lower()):
                     for item in read_para_msg(contents):
                         # print(item)
                         pass
-                elif( filename.lower() == KPD_BASIC_TITLE_SRC_FILE):
+                elif( filename.lower() == KPD_BASIC_TITLE_SRC_FILE.lower()):
                     for item in read_basic_title(contents):
                         pass 
                         # print(item)
-                elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE ):
+                elif( filename.lower() == KPD_ADD_TITLE_SRC_FILE.lower() ):
                     for item in read_add_title(contents):
                         # print(item)
                         pass
                     pass
-                elif( filename.lower() == KPD_PARA_VAR_HEADER_FILE):
-                    for item in read_kpd_para_var(contents):
-                        # print(item)
+                elif( filename.lower() == DRVPARA_DATASTORAGE_SRC_AUTO.lower() ):
+                    for item in read_data_storage_info(contents):
+                        print(item)
+                # elif( filename.lower() == KPD_PARA_VAR_HEADER_FILE):
+                #     for item in read_kpd_para_var(contents):
+                #       print(item)
                         pass
-                elif( filename.lower() == KPD_PARA_STRUCT_UNIT_HEADER_FILE ):
+                elif( filename.lower() == KPD_PARA_STRUCT_UNIT_HEADER_FILE.lower() ):
                     for item in read_kpd_para_struct_unit(contents):
                         print(item) 
                         pass
@@ -319,6 +337,6 @@ def test_write():
 
    
 if __name__ == '__main__':
-    # test_read() 
+    test_read() 
     test_write()
     print('finished')

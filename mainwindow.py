@@ -701,7 +701,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     def make_base_file(self, source_path):
         #기본 키패드 title 파일이나, 기타 파일은 내부에서 리소스로 가지고 있다가 만들어줌 
-        filelist = [ 
+        filelist = [rd.KPD_PARA_STRUCT_UNIT_HEADER_FILE , 
                     rd.KPD_BASIC_TITLE_SRC_FILE ]
 
         for file in filelist:
@@ -950,7 +950,27 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                     # self.model_parameters.item(row, col).setText(grp_name + '_{0:0>3}'.format(code_name) + ' (' + value  + ')' )
                                     self.model_parameters.item(row, col).setText(grp_name + '_{0:0>3}'.format(code_name) )
 
+                elif( filename.lower() == rd.DRVPARA_DATASTORAGE_SRC_AUTO.lower() ):
+                    for items in rd.read_data_storage_info(contents):   
+                        key_column = ci.para_col_info_for_view().index('GrpAndCode')
+                        float_scale_column = ci.para_col_info_for_view().index('KpdFloatScale')
+                        word_scale_column = ci.para_col_info_for_view().index('KpdWordScale')
+
+                        grp_and_code = items[ ci.data_storage_columns_info().index('GrpAndCode') ]
+                        float_scale = items[ ci.data_storage_columns_info().index('FloatScale') ]
+                        word_scale = items[ ci.data_storage_columns_info().index('WordScale') ]
+                        data = items[ ci.data_storage_columns_info().index('Data') ]
+
+                        find_items = self.model_parameters.findItems(grp_and_code, column = key_column)
+                        find_row = 0
+                        # 한개만 찾아짐 
+                        for find_item in find_items:
+                            find_row = find_item.row()
                         
+                        self.model_parameters.setItem(find_row, float_scale_column, QStandardItem(float_scale) )
+                        self.model_parameters.setItem(find_row, word_scale_column, QStandardItem(word_scale) )
+                        pass
+                    pass
                 elif( filename.lower() == rd.KPD_PARA_MSG_SRC_FILE.lower()):
                     msg_list = [] 
                     col_info = ci.msg_values_col_info()
