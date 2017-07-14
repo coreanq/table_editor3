@@ -553,9 +553,9 @@ static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 		// 찾으려는 값이 중앙값보다 작으면  right index 를 mid - 1로 둔다. 
 		if( wSrcAddr > wInputAddr )
 			wRightIndex = wMidIndex - 1;
-		// 찾으려는 값이 중앙값보다 크면  left index 를 mid - 1 로 둔다. 
+		// 찾으려는 값이 중앙값보다 크면  left index 를 mid + 1 로 둔다. 
 		else if( wSrcAddr < wInputAddr ) 
-			wLeftIndex = wMidIndex - 1;
+			wLeftIndex = wMidIndex + 1;
 		// 찾은 경우 값 대입 후  return
 		else
 		{{
