@@ -714,7 +714,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                 resource_fd.close()
             else:
-                print(resource_fd.errorString())
+                print("ERROR" + " " + resource_fd.errorString())
             
             with open(source_file_path, 'w', encoding= 'utf8') as f:
                 f.write(str(contents))
@@ -827,9 +827,21 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         no_comm, read_only, no_change_on_run, zero_input = False, False, False, False
 
-                        # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
+                        # col info 를 먼저 저장함 
                         if( int(self.table_editor_number) < 4 ):
                             col_info = ci.para_col_info_for_file_old()
+                        else:
+                            col_info = ci.para_col_info_for_file()
+
+                        max_value = items[col_info.index('최대값')].upper()
+                        min_value = items[col_info.index('최소값')].upper()
+
+                        title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
+                        at_value = items[col_info.index('AtValue')]
+                        title = mk.make_title_with_at_value(title, at_value)
+
+                        # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
+                        if( int(self.table_editor_number) < 4 ):
                             group_name = items[col_info.index('Group')]
                             code_name = items[col_info.index('Code#')]
                             group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
@@ -840,6 +852,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             kpd_float_scale = 'E_DATA_DIV_1'
                             max_eds = items[col_info.index('MaxEDS')]
                             min_eds = items[col_info.index('MinEDS')]
+
+                            min_max_list = [min_value, max_value] 
+
+                            # 이전 버전에는 min, max 에 변수가 들어 갔으므로 eds 적용해줌 
+                            for count, value in enumerate(min_max_list):
+                                ret = rd.re_parse_kpd_var_only.match(value)
+                                if( ret and count == 0 ):
+                                    min_value = min_eds
+                                elif ( ret and count == 1):
+                                    max_value = max_eds
+                                    
                             comment = items[col_info.index('설명')]
 
                             # attribute 설정 
@@ -864,7 +887,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             else: zero_input = 'false'
 
                         else:
-                            col_info = ci.para_col_info_for_file()
                             group_and_code = items[col_info.index('GrpAndCode')]
                             group_name =  group_and_code.split('_')[0]
                             code_name = group_and_code.split('_')[1]
@@ -875,16 +897,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             no_comm = items[col_info.index('통신쓰기금지')]
                             comment = items[-1]
                             
-                            # TODO: kpd_word_scale 추가 
-                            # kpd_word_scale = items[col_info.index('KpdWordScale')].upper()
-                            # kpd_float_scale = items[col_info.index('KpdFloatScale')].upper()
-                        max_value = items[col_info.index('최대값')].upper()
-                        min_value = items[col_info.index('최소값')].upper()
-
-                        title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
-                        at_value = items[col_info.index('AtValue')]
-                        title = mk.make_title_with_at_value(title, at_value)
-
 
                         try : 
                             view_col_list = [ 
@@ -918,37 +930,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             print('error occur')
                             print(items)
                         
-                    # old table 의 kpd 값을 GrpAndCode 인덱스로 변경 
-                    if( int(self.table_editor_number) < 4 ):
-                        for row in range(self.model_parameters.rowCount()):
-                            col_info = ci.para_col_info_for_view()
-                            grp_and_code_col = col_info.index('GrpAndCode')
-                            para_vari_col    = col_info.index('ParaVar')
-
-                            max_value_col = col_info.index('최대값')
-                            min_value_col = col_info.index('최소값')
-
-                            col_list = [max_value_col, min_value_col] 
-
-                            for col in col_list:
-                                target_item = self.model_parameters.item(row, col) 
-                                value = target_item.text() 
-                                # k_awTemp[0]
-                                # 0: All 
-                                # 1: Temp 
-                                # 2: [0]
-                                # 3: 0  
-                                ret = rd.re_parse_kpd_var_only.match(value)
-                                if( ret ):
-                                    find_list = self.model_parameters.findItems(value, column = para_vari_col )
-                                    grp_name, code_name = '', ''
-                                    for kpd_vari_item in find_list:
-                                        kpd_vari_row = kpd_vari_item.row()
-                                        grp_name, code_name  = self.model_parameters.item(kpd_vari_row, grp_and_code_col).text().split('_')
-                                        break
-                                    # for debug
-                                    # self.model_parameters.item(row, col).setText(grp_name + '_{0:0>3}'.format(code_name) + ' (' + value  + ')' )
-                                    self.model_parameters.item(row, col).setText(grp_name + '_{0:0>3}'.format(code_name) )
 
                 elif( filename.lower() == rd.DRVPARA_DATASTORAGE_SRC_AUTO.lower() ):
                     for items in rd.read_data_storage_info(contents):   
@@ -959,7 +940,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         grp_and_code = items[ ci.data_storage_columns_info().index('GrpAndCode') ]
                         float_scale = items[ ci.data_storage_columns_info().index('FloatScale') ]
                         word_scale = items[ ci.data_storage_columns_info().index('WordScale') ]
-                        data = items[ ci.data_storage_columns_info().index('Data') ]
 
                         find_items = self.model_parameters.findItems(grp_and_code, column = key_column)
                         find_row = 0

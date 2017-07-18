@@ -89,8 +89,7 @@ _title_columns_info = [
 _data_storage_columns_info = [
     'GrpAndCode', 
     'FloatScale',
-    'WordScale',
-    'Data'
+    'WordScale'
 ]
 _variable_columns_info = [
     'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬

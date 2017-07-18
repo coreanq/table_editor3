@@ -726,21 +726,29 @@ def make_drv_para_data_storage(source_path, parameters_model):
     para_float_scale_index = col_info.index('KpdFloatScale')
     para_group_and_code_index = col_info.index('GrpAndCode')
 
-    data_line_template = '{{ {0:>10}, {1:>20}, {2:>20}, 0 }}'
-    lines = []
+    scale_line_template = '{{ {0:>10}, {1:>20}, {2:>20} }}'
+    scale_lines = []
+    data_lines = []
 
     for index in range(model.rowCount() ):
         float_scale = model.item(index, para_float_scale_index).text()
         word_scale  = model.item(index, para_word_scale_index).text()
         grp_code = model.item(index, para_group_and_code_index).text()
-        lines.append(
-            data_line_template.format( 
+        scale_lines.append(
+            scale_line_template.format( 
                 grp_code, 
                 float_scale, 
                 word_scale
             )
         )
 
+    for index in range(model.rowCount() ):
+        grp_code = model.item(index, para_group_and_code_index).text()
+        data_lines.append(
+               '{{ {0:>10}, 0 }}'.format(
+                grp_code 
+            )
+        )
 
     src_template = \
 '''{0}
@@ -748,13 +756,21 @@ def make_drv_para_data_storage(source_path, parameters_model):
 #include "DrvPara_DataStorage.h"
 #include "KpdPara_Table.h"
 
-typedef struct {{ 
-	const uint16_t      wCommAddr;
-	const uint16_t      wFloatScale;
-	const uint16_t      wWordScale;
-	int32_t		        lData;
+//플래쉬에 저장되는 것은 para_data 뿐이며, 저장공간을 절약하기 위해 Scale(from table editor) 과 분리함 
+#pragma pack(push, 1)
+
+typedef struct {{
+	uint16_t      wCommAddr;
+	int32_t		  lData;
 }}S_DRV_PARA_DATA;
 
+typedef struct {{
+	uint16_t      wCommAddr;
+	uint16_t      wFloatScale;
+	uint16_t      wWordScale;
+}}S_DRV_PARA_SCALE;
+
+#pragma pack(pop)
 
 static const int32_t t_alDrvParaDivSlongData[TOTAL_DATA_DIV] =	//int32_t Type의 Scale Data
 {{
@@ -776,16 +792,22 @@ static const float t_afDrvParaDivFloatData[TOTAL_DATA_DIV] =	//float Type의 Sca
 	100000.0		//E_DATA_DIV_100K
 }};
 
-//Drive Parameter Data값이 저장되어 있는 Data Storage 변수
+//Drive Parameter Data값이 저장되어 있는 변수
 static S_DRV_PARA_DATA t_astDrvParaData[ALL_GRP_CODE_TOTAL] = 
 {{
 \t{1}
 }};
 
+//Drive Parameter Scale 값이 저장되어 있는 변수 
+static const S_DRV_PARA_SCALE t_astDrvParaScale[ALL_GRP_CODE_TOTAL] = 
+{{
+\t{2}
+}};
 '''
     file_contents = src_template.format(
         banner,
-        ',\n\t'.join(lines)
+        ',\n\t'.join(data_lines),
+        ',\n\t'.join(scale_lines)
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
         f.write(file_contents)

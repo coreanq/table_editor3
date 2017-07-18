@@ -58,7 +58,7 @@ re_extract_kpd_para_unit = re.compile(r'(?P<para_unit>{[^{}]*(U_[^,=]+[,]?)+[^{}
 re_parse_kpd_para_unit_params = re.compile(r'(U_[^,= ]+)')
 
 re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Za-z0-9]{2,3}).rp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
-re_check_params = re.compile(r'[^\n]*{(?P<parameters>[^\n]+)}[^\n][, ]+(?P<comment>[^\n]+)')
+re_check_params = re.compile(r'[^\n]*{(?P<parameters>[^\n]+)}[^\n\/]+(?P<comment>[^\n]+)')
 re_parse_params = re.compile(r'(\([A-Za-z_0-9*]+\))?&?([^,{}\n;]+)')
 re_parse_comment = re.compile(r'"([^\n]+)"((\[EDS :([-0-9]*)[,]?([-0-9 ]*)\])?\/\/([^\n]*))*')
 
@@ -86,8 +86,8 @@ re_parse_kpd_var_define = re.compile(r'#define (K_[A-Z_0-9]+)\s+([0-9]+)')
 re_parse_kpd_var = re.compile(r'(k_[a]?w[a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?s*\/\/([^\n]*)?')
 re_parse_kpd_var_only = re.compile(r'k_[a]?w([a-zA-Z_0-9]+)(\[([a-zA-Z_0-9]+)\])?', re.I)
 
-re_extract_data_storage = re.compile(r'(?P<data_storage_info>static S_DRV_PARA_DATA t_astDrvParaData[^;]+\}\;)')
-re_get_para_line  = re.compile(r'[^\n]*{(?P<parameters>[^\n]+)}')
+re_extract_data_storage = re.compile(r'(?P<data_storage_info>static const S_DRV_PARA_SCALE t_astDrvParaScale[^;]+\}\;)')
+re_get_para_line  = re.compile(r'[^\n{]*{(?P<parameters>[^\n]+)}')
 re_get_parameters = re.compile(r'([^,{}\n;]+)')
 
 
