@@ -274,6 +274,18 @@ def read_kpd_para_var(contents):
             continue
     pass
 
+# k_w  로된 변수 이름을 enum 타임으로 쓸수 있는 형태로 변환 
+def changeParaName2Enum(para_vari):
+    name = ''
+    match = re_parse_kpd_var_only.search(para_vari)
+    if( match ):
+        var_name  = match.group(1)
+        array_index = match.group(3)
+        if( array_index != '' and array_index != None):
+            name = '{0}_{1:>02}'.format ( var_name.upper(), array_index)
+        else:
+            name = '{0}'.format ( var_name.upper())
+    return name
 
 # 파일 이름 별로 파싱 루틴을 다르게 적용하지만 실제로 파일에 관계 없이 동작하도록 해야함. 
 def test_read():

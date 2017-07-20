@@ -8,6 +8,7 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelInde
 
 import mainwindow_ui 
 import proxy_model
+import kpd_vari_changer as kc
 
 import view_delegate as cbd 
 import view_key_eater as ve
@@ -163,6 +164,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.actionAddMsg.triggered.connect(actionAddFunc('Msg'))
         self.actionAddVar.triggered.connect(actionAddFunc('Var'))
         self.actionAddTitle.triggered.connect(actionAddFunc('Title'))
+        self.actionKpdVariChange.triggered.connect(actionAddFunc('KpdVariChange'))
+
+
         pass
 
         # keypad index column 이 변경된 경우 해당하는 model 데이터를 업데이트 시켜줘야함 
@@ -345,6 +349,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             items = [QStandardItem() for x in range(len(ci.title_col_info()))]
             model.appendRow(items)
             pass
+        elif( action_name =='KpdVariChange'):
+            current_path = self.lineSourcePath.text() 
+            split_list = current_path.split('/')
+
+            target_list = []
+            for item in split_list:
+                target_list.append(item)
+                if( item == 'Source'):
+                    break
+
+            target_path = '/'.join(target_list)
+            kc.chage_kpd_vari(self.model_parameters, target_path)
+            print(util.whoami() )
 
         pass
     def createAction(self):
@@ -818,7 +835,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         kpd_word_scale, kpd_float_scale = '', ''
 
-                        group_name, code_name, group_and_code = '', '', ''
+                        group_name, code_name, name = '', '', ''
 
                         para_vari, kpd_func_name = '','' 
                         max_eds , min_eds = '', ''
@@ -830,8 +847,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         # col info 를 먼저 저장함 
                         if( int(self.table_editor_number) < 4 ):
                             col_info = ci.para_col_info_for_file_old()
+                            self.actionKpdVariChange.setEnabled(True)
                         else:
                             col_info = ci.para_col_info_for_file()
+                            self.actionKpdVariChange.setEnabled(False)
 
                         max_value = items[col_info.index('최대값')].upper()
                         min_value = items[col_info.index('최소값')].upper()
@@ -840,13 +859,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         at_value = items[col_info.index('AtValue')]
                         title = mk.make_title_with_at_value(title, at_value)
 
+                        group_name = items[col_info.index('Group')]
+                        code_name = items[col_info.index('Code#')]
                         # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
                         if( int(self.table_editor_number) < 4 ):
-                            group_name = items[col_info.index('Group')]
-                            code_name = items[col_info.index('Code#')]
-                            group_and_code = '{0}_{1:>03}'.format( group_name, code_name )
                             para_vari = items[col_info.index('ParaVar')]
                             kpd_func_name = items[col_info.index('KpdFunc')]
+
+                            name = rd.changeParaName2Enum(para_vari)
 
                             kpd_word_scale = 'E_DATA_DIV_1'
                             kpd_float_scale = 'E_DATA_DIV_1'
@@ -887,10 +907,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             else: zero_input = 'false'
 
                         else:
-                            group_and_code = items[col_info.index('GrpAndCode')]
-                            group_name =  group_and_code.split('_')[0]
-                            code_name = group_and_code.split('_')[1]
-
+                            name = items[col_info.index('Name')]
                             read_only = items[col_info.index('읽기전용')]
                             no_change_on_run = items[col_info.index('운전중변경불가')]
                             zero_input = items[col_info.index('0입력가능')]
@@ -901,7 +918,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         try : 
                             view_col_list = [ 
                                 group_name,
-                                group_and_code,
+                                code_name, 
+                                name, 
                                 items[col_info.index('TitleIndex')],
                                 title, 
                                 items[col_info.index('AtValue')], 
@@ -933,15 +951,15 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                 elif( filename.lower() == rd.DRVPARA_DATASTORAGE_SRC_AUTO.lower() ):
                     for items in rd.read_data_storage_info(contents):   
-                        key_column = ci.para_col_info_for_view().index('GrpAndCode')
+                        key_column = ci.para_col_info_for_view().index('Name')
                         float_scale_column = ci.para_col_info_for_view().index('KpdFloatScale')
                         word_scale_column = ci.para_col_info_for_view().index('KpdWordScale')
 
-                        grp_and_code = items[ ci.data_storage_columns_info().index('GrpAndCode') ]
+                        name = items[ ci.data_storage_columns_info().index('Name') ]
                         float_scale = items[ ci.data_storage_columns_info().index('FloatScale') ]
                         word_scale = items[ ci.data_storage_columns_info().index('WordScale') ]
 
-                        find_items = self.model_parameters.findItems(grp_and_code, column = key_column)
+                        find_items = self.model_parameters.findItems(name, column = key_column)
                         find_row = 0
                         # 한개만 찾아짐 
                         for find_item in find_items:

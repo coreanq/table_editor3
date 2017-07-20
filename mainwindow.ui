@@ -183,6 +183,8 @@
     <addaction name="actionInsert"/>
     <addaction name="actionDelete"/>
     <addaction name="actionFind"/>
+    <addaction name="separator"/>
+    <addaction name="actionKpdVariChange"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -254,6 +256,14 @@
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionKpdVariChange">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>KpdVariChange</string>
    </property>
   </action>
  </widget>

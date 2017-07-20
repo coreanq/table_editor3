@@ -384,7 +384,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 '''
 
     group_index_lines = []   # group index 정의용 #define GROUP_MAK ...
-    header_enum_lines = []   # MAK_000, MAK_001 enum 을 만들기 위함 
+    header_name_enum_lines = []   # unique name enum 을 만들기 위함 
     header_grp_size_define_lines = [] # grp total count 정보 용  #define GRP_MAK_CODE_TOTAL 24
     header_grp_size_define_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
     header_grp_start_index_define_lines = []
@@ -443,9 +443,10 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
                     )
                 )
 
-            group_and_code = model.item(find_row_index, col_info.index('GrpAndCode')).text()
-            group_name = group_and_code.split('_')[0]
-            code_num = group_and_code.split('_')[1]
+            name = model.item(find_row_index, col_info.index('Name')).text()
+            group_name = model.item(find_row_index, col_info.index('Group')).text()
+            code_num = model.item(find_row_index, col_info.index('Code#')).text()
+            grp_and_code = '{0}_{1:>02}'.format( group_name.upper() , code_num )
 
             title_name = model.item(find_row_index, col_info.index('CodeTITLE')).text()
             title_enum_name =  model.item(find_row_index, col_info.index('TitleIndex')).text()
@@ -474,10 +475,11 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             comm_addr = hex(makeCodeAddr(grp_row_index, int(code_num)))
 
             # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
-            header_enum_lines.append(
-                    "#define {0:<20} {1:<10}//{2:<20}{3:>10}{4:<30}  {5}".format(
-                            group_and_code, 
+            header_name_enum_lines.append(
+                    "#define {0:<30} {1:<10}//{2:<10}{3:<20}{4:>10}{5:<30}  {6}".format(
+                            name, 
                             comm_addr, 
+                            grp_and_code,
                             title_name, 
                             '', 
                             kpd_vari,
@@ -491,17 +493,17 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             if( 'DATAMSG' in unit ):
                 form_msg = 'MSG_' + form_msg
             
-            format_str = ( '{{{0:>8},{1:>5},{2:>20},{3:>6},{4:>10},'
-                            '{5:>10},{6:>10},{7:>6},{8:>6},{9:>6},'
-                            '{10:>6},{11:>20},{12:>20}}}{13} //"{14:<30}"'
-                            '//{15}' )
+            format_str = ( '/* {0:>8} */ {{{1:<30},{2:>5},{3:>20},{4:>6},{5:>8},'
+                            '{6:>8},{7:>8},{8:>6},{9:>6},{10:>6},'
+                            '{11:>6},{12:>25},{13:>25}}}{14} //"{15:<30}"'
+                            '//{16}' )
 
             if( find_item == find_items[-1] ):
                 comment = comment + '\n\n'
 
             para_vars_lines.append(
                 format_str.format(\
-                        group_and_code,     at_value,           title_enum_name,    data_func_run,      default_val,        
+                        grp_and_code,       name,               at_value,           title_enum_name,    data_func_run,      default_val,        
                         max_val,            min_val,            read_only,          no_change_on_run,   zero_input,
                         no_comm,            form_msg,           unit,                ',',                title_name,         
                         comment
@@ -669,16 +671,6 @@ enum eGrpIndex{{
         ',\n\t'.join(group_index_lines)
     )
 
-    grp_and_code_enum_template = \
-'''
-\n
-{0}
-\n
-'''
-    grp_and_code_indexes = grp_and_code_enum_template.format(
-        '\n'.join(header_enum_lines)
-    )
-
 
     header_template = \
 '''{0}
@@ -701,6 +693,7 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
 {2}
 \n
 {3}
+\n
 {4}
 \n
 \n\n
@@ -713,7 +706,7 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
         group_indexes, 
         '\n'.join(header_grp_size_define_lines),
         '\n'.join(header_grp_start_index_define_lines),
-        grp_and_code_indexes
+        '\n'.join(header_name_enum_lines)
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
@@ -724,16 +717,16 @@ def make_drv_para_data_storage(source_path, parameters_model):
     model = parameters_model
     para_word_scale_index = col_info.index('KpdWordScale')
     para_float_scale_index = col_info.index('KpdFloatScale')
-    para_group_and_code_index = col_info.index('GrpAndCode')
+    para_name_index = col_info.index('Name')
 
-    scale_line_template = '{{ {0:>10}, {1:>20}, {2:>20} }}'
+    scale_line_template = '{{ {0:<30}, {1:>20}, {2:>20} }}'
     scale_lines = []
     data_lines = []
 
     for index in range(model.rowCount() ):
         float_scale = model.item(index, para_float_scale_index).text()
         word_scale  = model.item(index, para_word_scale_index).text()
-        grp_code = model.item(index, para_group_and_code_index).text()
+        grp_code = model.item(index, para_name_index).text()
         scale_lines.append(
             scale_line_template.format( 
                 grp_code, 
@@ -743,9 +736,9 @@ def make_drv_para_data_storage(source_path, parameters_model):
         )
 
     for index in range(model.rowCount() ):
-        grp_code = model.item(index, para_group_and_code_index).text()
+        grp_code = model.item(index, para_name_index).text()
         data_lines.append(
-               '{{ {0:>10}, 0 }}'.format(
+               '{{ {0:<30}, 0 }}'.format(
                 grp_code 
             )
         )

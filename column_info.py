@@ -24,7 +24,8 @@ _parameters_file_columns_info_old = [
 # version 4 이상 file 을 파싱후 올라오는 column  정보 
 _parameters_file_columns_info = [
     'Group', # key column  단순 all 값만 옴 
-    'GrpAndCode', 
+    'Code#', 
+    'Name',
     'AtValue',
     'TitleIndex',
     'DataFunc실행여부', 
@@ -42,7 +43,8 @@ _parameters_file_columns_info = [
 # table view 에서 보여지는 column 의 정보 
 _parameters_view_columns_info = [
     'Group', # 숨김 컬럼 key column 왼쪽 컬럼 클릭시 사용하기 위한 용도 
-    'GrpAndCode', 
+    'Code#', 
+    'Name',
     'TitleIndex', # 숨김 컬럼 
     'CodeTITLE',
     'AtValue',
@@ -87,7 +89,7 @@ _title_columns_info = [
    'Data'
 ]
 _data_storage_columns_info = [
-    'GrpAndCode', 
+    'Name', 
     'FloatScale',
     'WordScale'
 ]
