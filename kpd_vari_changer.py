@@ -26,8 +26,8 @@ FIXME: 한줄에 키패드 변수 2개 이상 나오는 경우
 k_wLoopMaxTime = k_wLoopMeanTime  --> 오류남 
 '''
 
-# re group info: [0]: all [1]:& [2]:k_123kd [3] =  or ==
-re_kpd_var = re.compile(r'[^\w](\&)?(k_w[\w]+)\s*([\=]*)')
+# re group info: [0]: all [?]: &a-z [1]: 123kd [2]: = or ==
+re_kpd_var = re.compile(r'[^\w\&](k_w[\w]+)\s*([\=]*)')
 # re group info: [0]: all [1]: & [2]: 123kd [3]: abc -1  [4]: = or ==
 re_kpd_var_array  = re.compile(r'(\&)?k_aw([\w]+)\[([\w -]+)\]\s*([\=]*)')
 
@@ -61,8 +61,8 @@ def chage_kpd_vari(parameter_model, target_dir):
 
             # finding keypad variable  대입문은 찾지 않는다.
             for match_obj in find_objs:
-                if( match_obj.group(1) == None and match_obj.group(3) != '=' ):
-                    keypad_vari_name = match_obj.group(2)
+                if( match_obj.group(2) != '=' ):
+                    keypad_vari_name = match_obj.group(1)
                     name = ''
 
                     items = parameter_model.findItems(keypad_vari_name, column = ci.para_col_info_for_view().index('ParaVar'))
@@ -89,35 +89,38 @@ def chage_kpd_vari(parameter_model, target_dir):
             print(file_path)
 
         isSearch = False
-        for count, line in enumerate(pre_contents):
-            # kpd fnc 의 mak_000 형태의 변수 변환 
-            find_objs = re_grp_and_code.finditer(line)
-
-            for match_obj in find_objs:
-                grp_and_code = match_obj.group(1).strip()
-                src_grp_name = grp_and_code.split('_')[0]
-                src_code_name = grp_and_code.split('_')[1]
-
-                items = parameter_model.findItems(src_grp_name, column = ci.para_col_info_for_view().index('Group'))
-                for item in items:
-                    row = item.row()
-                    searched_code_name = parameter_model.item(row, column = ci.para_col_info_for_view().index('Code#')).text()
-
-                    if( src_code_name == '{0:>03}'.format(searched_code_name) ):
-                        para_vari_name = parameter_model.item(row, column =ci.para_col_info_for_view().index('ParaVar')).text()
-                        name = rd.changeParaName2Enum(para_vari_name)
-
-                        ret = line.replace(grp_and_code,  name , )
-                        print(line + '->' + ret )
-                        line = ret
-                        isSearch = True 
+        contents.clear()
 
 
-            contents.append(line)
-        if( isSearch ) : 
-            with open(file_path , 'w', encoding= 'utf8') as f:
-                f.writelines(contents)
-            print(file_path)
+        # for count, line in enumerate(pre_contents):
+        #     # kpd func 의 mak_000 형태의 변수 변환 
+        #     find_objs = re_grp_and_code.finditer(line)
+
+        #     for match_obj in find_objs:
+        #         grp_and_code = match_obj.group(1).strip()
+        #         src_grp_name = grp_and_code.split('_')[0]
+        #         src_code_name = grp_and_code.split('_')[1]
+
+        #         items = parameter_model.findItems(src_grp_name, column = ci.para_col_info_for_view().index('Group'))
+        #         for item in items:
+        #             row = item.row()
+        #             searched_code_name = parameter_model.item(row, column = ci.para_col_info_for_view().index('Code#')).text()
+
+        #             if( src_code_name == '{0:>03}'.format(searched_code_name) ):
+        #                 para_vari_name = parameter_model.item(row, column =ci.para_col_info_for_view().index('ParaVar')).text()
+        #                 name = rd.changeParaName2Enum(para_vari_name)
+
+        #                 ret = line.replace(grp_and_code,  name , )
+        #                 print(line + '->' + ret )
+        #                 line = ret
+        #                 isSearch = True 
+
+
+        #     contents.append(line)
+        # if( isSearch ) : 
+        #     with open(file_path , 'w', encoding= 'utf8') as f:
+        #         f.writelines(contents)
+        #     print(file_path)
 
             # finding keypad_array varialbe
             # find_objs = re_kpd_var_array.finditer(line)
@@ -140,12 +143,12 @@ def chage_kpd_vari(parameter_model, target_dir):
             #                 ) 
             #         # print(line + '\t\t\t  ----> ' + ret )
             #         line = ret
-            #         isSearch = True
-        if( isSearch ) : 
-            with open(file_path , 'w', encoding= 'utf8') as f:
-                f.writelines(contents)
-            print(file_path)
-        isSearch = False
+        #     #         isSearch = True
+        # if( isSearch ) : 
+        #     with open(file_path , 'w', encoding= 'utf8') as f:
+        #         f.writelines(contents)
+        #     print(file_path)
+        # isSearch = False
 
 
 if __name__ == '__main__' :
