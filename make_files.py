@@ -493,7 +493,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             if( 'DATAMSG' in unit ):
                 form_msg = 'MSG_' + form_msg
             
-            format_str = ( '/* {0:>8} */ {{{1:<30},{2:>5},{3:>20},{4:>6},{5:>8},'
+            format_str = ( '/* {0:>8} */ {{{1:<30},{2:>20},{3:>5},{4:>6},{5:>8},'
                             '{6:>8},{7:>8},{8:>6},{9:>6},{10:>6},'
                             '{11:>6},{12:>25},{13:>25}}}{14} //"{15:<30}"'
                             '//{16}' )
@@ -503,7 +503,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             para_vars_lines.append(
                 format_str.format(\
-                        grp_and_code,       name,               at_value,           title_enum_name,    data_func_run,      default_val,        
+                        grp_and_code,       name,               title_enum_name,    at_value,           data_func_run,      default_val,        
                         max_val,            min_val,            read_only,          no_change_on_run,   zero_input,
                         no_comm,            form_msg,           unit,                ',',                title_name,         
                         comment
@@ -787,19 +787,16 @@ static const float t_afDrvParaDivFloatData[TOTAL_DATA_DIV] =	//float Type의 Sca
 
 //Drive Parameter Data값이 저장되어 있는 변수
 static S_DRV_PARA_DATA t_astDrvParaData[ALL_GRP_CODE_TOTAL] = 
-{{
-\t{1}
-}};
+{{0}};
 
 //Drive Parameter Scale 값이 저장되어 있는 변수 
 static const S_DRV_PARA_SCALE t_astDrvParaScale[ALL_GRP_CODE_TOTAL] = 
 {{
-\t{2}
+\t{1}
 }};
 '''
     file_contents = src_template.format(
         banner,
-        ',\n\t'.join(data_lines),
         ',\n\t'.join(scale_lines)
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
