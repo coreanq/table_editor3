@@ -681,7 +681,7 @@ enum eGrpIndex{{
 #define PARA_START_ADDR	                    0x1000u
 #define GRP_OFFSET_MUL			            0x100
 #define GET_PARA_TABLE_ADDR(bGrp, bCode)	(PARA_START_ADDR + (((uint16_t)(bGrp) * GRP_OFFSET_MUL) + (uint16_t)(bCode)))
-#define GET_GRP(wCommAddr)	(((wCommAddr) & 0x0f00) >> 16)  & 0xff
+#define GET_GRP(wCommAddr)	(((wCommAddr) & 0x0f00) >> 8)  & 0xff
 #define GET_CODE_NUM(wCommAddr)	((wCommAddr) & 0xff) 
 \n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrp);
@@ -753,14 +753,14 @@ def make_drv_para_data_storage(source_path, parameters_model):
 #pragma pack(push, 1)
 
 typedef struct {{
-	uint16_t      wCommAddr;
-	int32_t		  lData;
+	const uint16_t      wCommAddr;
+	int32_t		        lData;
 }}S_DRV_PARA_DATA;
 
 typedef struct {{
-	uint16_t      wCommAddr;
-	uint16_t      wFloatScale;
-	uint16_t      wWordScale;
+	uint16_t            wCommAddr;
+	uint16_t            wFloatScale;
+	uint16_t            wWordScale;
 }}S_DRV_PARA_SCALE;
 
 #pragma pack(pop)
@@ -787,16 +787,19 @@ static const float t_afDrvParaDivFloatData[TOTAL_DATA_DIV] =	//float Type의 Sca
 
 //Drive Parameter Data값이 저장되어 있는 변수
 static S_DRV_PARA_DATA t_astDrvParaData[ALL_GRP_CODE_TOTAL] = 
-{{0}};
+{{
+\t{1}
+}};
 
 //Drive Parameter Scale 값이 저장되어 있는 변수 
 static const S_DRV_PARA_SCALE t_astDrvParaScale[ALL_GRP_CODE_TOTAL] = 
 {{
-\t{1}
+\t{2}
 }};
 '''
     file_contents = src_template.format(
         banner,
+        ',\n\t'.join(data_lines),
         ',\n\t'.join(scale_lines)
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
