@@ -550,7 +550,7 @@ static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 	
 	while( wLeftIndex <= wRightIndex )
 	{{
-		wMidIndex = (wLeftIndex + wRightIndex) / 2;
+		wMidIndex = wLeftIndex + (wRightIndex - wLeftIndex)/2 ;
 		wSrcAddr = t_astAllGrp[wMidIndex].wCommAddr;
 		// 찾으려는 값이 중앙값보다 작으면  right index 를 mid - 1로 둔다. 
 		if( wSrcAddr > wInputAddr )
