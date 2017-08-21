@@ -533,13 +533,14 @@ static const S_TABLE_X_TYPE t_astAllGrp[ALL_GRP_CODE_TOTAL] = {{
 static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{ 
 {2}
 }};\n\n
+
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrpIdx)
 {{
     return &t_astGrpInfo[bGrpIdx];
 }}
 
 static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
-{{
+{
 	uint16_t wMidIndex = 0;
 	uint16_t wLeftIndex = 0;
 	uint16_t wRightIndex = 0;
@@ -569,24 +570,39 @@ static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 	return blSearchData;
 }}
 
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum)
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset)
 {{
 	const S_TABLE_X_TYPE* pstTable = NULL;
     uint16_t wCommAddr = GET_PARA_TABLE_ADDR(bGrp, bCodeNum);
-	uint16_t wSearchedIndex = 0;
-	pstTable = KpdParaTableGetTableAddrFromCommAddr(wCommAddr);
+	pstTable = KpdParaTableGetTableAddrFromCommAddr(wCommAddr, iOffset);
 	return pstTable;
 }}
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr)
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, int16_t iOffset)
 {{
-	const S_TABLE_X_TYPE* pstTable = NULL;
-	uint16_t wSearchedIndex = 0;
-	if( KpdParaAddrBinarySearch( wCommAddr, &wSearchedIndex) )
+	uint8_t bGrp = GET_GRP(wCommAddr);
+    const S_TABLE_X_TYPE* pstTable = NULL;
+    
+	if( bGrp < GROUP_TOTAL )
 	{{
-		pstTable = &t_astAllGrp[wSearchedIndex];
+        uint16_t wSearchedIndex = 0;
+		uint16_t wGrpSize = t_astGrpInfo[bGrp].bGrpSize;
+		uint16_t wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
+		if( KpdParaAddrBinarySearch( wCommAddr, &wSearchedIndex)  == true )
+		{{
+			uint32_t ulOffsetIndex = ((int32_t)(wSearchedIndex - wStartIndex + iOffset)) % wGrpSize;
+			uint32_t ulFindedIndex = wStartIndex + ulOffsetIndex;
+			pstTable = &t_astAllGrp[ulFindedIndex];
+		}}
+		else
+		{{
+			MSG_ERR("wCommAddr search Error");
+			pstTable = NULL;
+		}}
 	}}
 	else
-		pstTable = NULL;
+	{{
+		MSG_ERR("GrpSize overflow")
+	}}
 
 	return pstTable;
 }}
@@ -599,7 +615,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_
     {{
         if( bPosition < t_astGrpInfo[bGrp].bGrpSize )
         {{
-            wStartIndex = t_astGrpInfo[bGrp].wStratIndex;
+            wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
             pstTable = &t_astAllGrp[wStartIndex + bPosition];
         }}
         else
@@ -611,7 +627,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_
     else
     {{
 		pstTable = NULL;
-        MSG_ERR("GROUP TOTAL");
+        MSG_ERR("GrpSize overflow");
     }}
     return pstTable;
 }}
@@ -625,7 +641,7 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition )
     {{
         if( bPosition < t_astGrpInfo[bGrp].bGrpSize )
         {{
-            wStartIndex = t_astGrpInfo[bGrp].wStratIndex;
+            wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
             wCommAddr = t_astAllGrp[wStartIndex + bPosition].wCommAddr;
         }}
         else
@@ -685,8 +701,9 @@ enum eGrpIndex{{
 #define GET_CODE_NUM(wCommAddr)	((wCommAddr) & 0xff) 
 \n
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrp);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum);
+// wCommAddr 을 기준으로 해당 그룹 내에서 offset 위치만큼의 Table Addr 을 리턴함 0 인 경우 input 어드레스의 Table Addr 리턴  
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, int16_t iOffset);
+const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition);
 uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
 {1}
