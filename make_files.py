@@ -540,7 +540,7 @@ const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrpIdx)
 }}
 
 static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
-{
+{{
 	uint16_t wMidIndex = 0;
 	uint16_t wLeftIndex = 0;
 	uint16_t wRightIndex = 0;
