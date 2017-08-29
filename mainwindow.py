@@ -742,6 +742,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         mk.make_kpdpara_msg(source_path, self.model_msg_info, self.model_msg_values)
         mk.make_kpdpara_table(source_path, self.model_parameters, self.model_group)
         mk.make_drv_para_data_storage(source_path, self.model_parameters)
+        mk.make_drv_para_data_from_array(source_path, self.model_parameters)
         return True
 
     def check_has_any_file_for_write(self, source_path):
