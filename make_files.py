@@ -831,7 +831,8 @@ def make_drv_para_data_from_array(source_path, parameters_model):
     para_name_index = col_info.index('Name')
 
     define_size_list = []
-    case_list = []
+    read_case_list = []
+    write_case_list = []
 
     re_grp_and_code_array = re.compile(r'(?P<para_name>[\w]+)_[0-9]{2,2}')
 
@@ -846,13 +847,24 @@ def make_drv_para_data_from_array(source_path, parameters_model):
                 grp_code_array_dict[para_name] = []
             grp_code_array_dict[para_name].append(grp_code)
 
-    data_from_array_case_template = '''
+    read_para_case_template = '''
     case {}_00: 
     {{
-        uint16_t wBuffer[{}_ARRAY_SIZE] = {{0}};
-        uint16_t wArrayIndex = 0;
-        {}
-        wValue = wbuffer[bPosition];
+        uint16_t wAddrList[{}_ARRAY_SIZE] = {{
+            {}
+        }};
+        wValue = DriveParaReadData( wAddrList[bPosition], SENDER_SYSTEM );
+    }}
+    break;
+'''
+
+    write_para_case_template = '''
+    case {}_00: 
+    {{
+        uint16_t wAddrList[{}_ARRAY_SIZE] = {{
+            {}
+        }};
+        DriveParaWriteData( wAddrList[bPosition], wData, SENDER_SYSTEM );
     }}
     break;
 '''
@@ -860,23 +872,41 @@ def make_drv_para_data_from_array(source_path, parameters_model):
     for key, array_value in grp_code_array_dict.items():
         define_size_str = '#define {:<40}\t\t{}'.format( key + "_ARRAY_SIZE", len(array_value) )
         define_size_list.append(define_size_str) 
-        buffer_list = []
-        for index in range(len(array_value)):
-            buffer_list.append('wBuffer[wArrayIndex++] = DriveParaReadData({}_{:02}, SENDER_SYSTEM);'.format(key, index ) )
 
-        case_list.append (
-            data_from_array_case_template.format( 
-                key, key, '\n\t\t'.join(buffer_list) 
+        read_case_list.append (
+            read_para_case_template.format( 
+                key, key, ',\n\t\t\t'.join(array_value) 
             )
         ) 
+
+        write_case_list.append (
+            write_para_case_template.format( 
+                key, key, ',\n\t\t\t'.join(array_value) 
+            )
+        ) 
+
     
-    data_from_array_template = '''
+
+    para_template = '''
 {}
 
 
-uint16_t DrvParaReadFromArrayData(uint16_t wStartIndex, uint8_t bPosition)
+uint16_t DriveParaReadFromArrayData(uint16_t wStartIndex, uint8_t bPosition)
 {{
     uint16_t wValue = 0;
+    switch(wStartIndex)
+    {{
+    {}
+    default:
+        wValue = 0;
+        MSG_ERR("wStartIndex\\n");
+    break;
+    }}
+    return wValue;
+}}
+
+void DriveParaWriteToArrayData(uint16_t wStartIndex, uint8_t bPosition, uint16_t wData)
+{{
     switch(wStartIndex)
     {{
     {}
@@ -886,12 +916,12 @@ uint16_t DrvParaReadFromArrayData(uint16_t wStartIndex, uint8_t bPosition)
     }}
 }}
 '''
-
-    file_contents = data_from_array_template.format(
+    file_contents = para_template.format(
         '\n'.join(define_size_list),
-        '\t\t'.join(case_list)
+        '\t\t'.join(read_case_list),
+        '\t\t'.join(write_case_list)
     )
 
-    with open(source_path + os.path.sep + "test.c", 'w', encoding='utf8') as f:
+    with open(source_path + os.path.sep + "DrivePara_IO.c", 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass
