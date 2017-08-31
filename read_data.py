@@ -13,7 +13,7 @@ KPD_ENUM_TITLE_HEADER_FILE = 'KPD_Title_Enum.H'
 
 KPD_PARA_MSG_SRC_FILE =  'KpdPara_Msg.c'
 KPD_PARA_MSG_HEADER_FILE = 'KpdPara_Msg.h'
-KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'KpdPara_StructUnit.h'  # 자동생성 할필요는 없으나 읽을때 필요한 자료 이므로 생성 
+KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'KpdPara_StructUnit.H'  # 자동생성 할필요는 없으나 읽을때 필요한 자료 이므로 생성 
 KPD_PARA_TABLE_SRC_FILE = 'KpdPara_Table.c'
 KPD_PARA_TABLE_HEADER_FILE = 'KpdPara_Table.h'
 
@@ -57,7 +57,8 @@ parsing_files = (
 re_extract_kpd_para_unit = re.compile(r'(?P<para_unit>{[^{}]*(U_[^,=]+[,]?)+[^{}]*})')
 re_parse_kpd_para_unit_params = re.compile(r'(U_[^,= ]+)')
 
-re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Za-z0-9]{2,3}).rp[^;]+\}\;)') # 한개의 그룹 뽑아냄 
+re_extract_grp = re.compile(r'(?P<group_data>S_TABLE_X_TYPE t_ast(?P<group_name>[A-Za-z0-9]{2,3}).rp[^;]+\}\;)') # old table 에서 한개의 그룹 뽑아냄 
+re_extract_new_grp = re.compile(r'\/\*[\s]*(?P<group_name>[A-Z]{2,5})_[0-9]{2,2}[\s]*\*\/')                                      # new table 에서 한개의 그룹 뽑아냄 
 re_check_params = re.compile(r'[^\n]*{(?P<parameters>[^\n]+)}[^\n\/]+(?P<comment>[^\n]+)')
 re_parse_params = re.compile(r'(\([A-Za-z_0-9*]+\))?&?([^,{}\n;]+)')
 re_parse_comment = re.compile(r'"([^\n]+)"((\[EDS :([-0-9]*)[,]?([-0-9 ]*)\])?\/\/([^\n]*))*')
@@ -108,7 +109,7 @@ def read_para_table_version(contents):
          table_editor_version = search_obj.group('table_editor_version')
     return '0' if table_editor_number == '' else table_editor_number, '0' if table_editor_version == '' else table_editor_version
     
-def read_para_table(contents):
+def read_para_table(contents, is_new_table = False):
     find_list = []
     search_grp_iter = re_extract_grp.finditer(contents)
     for match in search_grp_iter:
@@ -119,6 +120,10 @@ def read_para_table(contents):
         for line in buf.readlines():
             search_line_obj = re_check_params.search(line)
             if(search_line_obj):
+                if( is_new_table):
+                    search_grp_obj = re_extract_new_grp.search(line)
+                    if( search_grp_obj ):
+                        group_name = search_grp_obj.group('group_name')
                 data_part =  search_line_obj.group('parameters')
                 comment_part = search_line_obj.group('comment')
                 find_list = re_parse_params.findall(data_part)

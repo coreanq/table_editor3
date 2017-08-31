@@ -200,16 +200,16 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setModel(self.model_proxy_parameters) 
         view.setColumnHidden( col_info.index('Group'), True)
         view.setColumnHidden( col_info.index('TitleIndex'), True )
-        view.setColumnHidden( col_info.index('ParaVar'), True )
-        view.setColumnHidden( col_info.index('KpdFunc'), True )
-        view.setColumnHidden( col_info.index('최대 EDS'), True )
-        view.setColumnHidden( col_info.index('최소 EDS'), True )
+        # view.setColumnHidden( col_info.index('ParaVar'), True )
+        # view.setColumnHidden( col_info.index('KpdFunc'), True )
+        # view.setColumnHidden( col_info.index('최대 EDS'), True )
+        # view.setColumnHidden( col_info.index('최소 EDS'), True )
 
 
         # parameter view detail init
-        view = self.viewParameterDetail
-        self.model_proxy_parameters_detail.setSourceModel(self.model_parameters)
-        view.setModel(self.model_proxy_parameters_detail) 
+        # view = self.viewParameterDetail
+        # self.model_proxy_parameters_detail.setSourceModel(self.model_parameters)
+        # view.setModel(self.model_proxy_parameters_detail) 
 
         # msg info view init 
         col_info = ci.msg_info_col_info()
@@ -694,13 +694,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         comm_addr = '0x{0}'.format( comm_addr[2:].upper() )
         return comm_addr
 
-    def makeEEPAddrValue(self, group_num, code_num ):
-        eep_addr = hex(0x0200 + (16 * 2 * 7 * group_num) + (code_num * 2 + 16) )
-        eep_addr = '0x{0}'.format( eep_addr[2:].upper() )
-        return eep_addr
-
-
- 
     def make_backup_file(self, source_path):
         if( not os.path.exists(source_path) ) :
             return False
@@ -828,8 +821,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         self.addRowToModel(self.model_group, input_list)
                         pass
 
-                    # parameter table parameter 값 읽기  
-                    for items in rd.read_para_table(contents):
+                    # parameter table parameter 값 읽기 
+                    is_new_table = True if int(self.table_editor_number) >= 4 else False 
+                    for items in rd.read_para_table(contents, is_new_table):
                         col_info = None 
 
                         max_value, min_value =  '', ''
@@ -840,6 +834,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         para_vari, kpd_func_name = '','' 
                         max_eds , min_eds = '', ''
+
+                        comm_addr = ''
 
                         comment = ''
 
@@ -861,9 +857,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         title = mk.make_title_with_at_value(title, at_value)
 
                         group_name = items[col_info.index('Group')]
-                        code_name = items[col_info.index('Code#')]
+
                         # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
                         if( int(self.table_editor_number) < 4 ):
+                            code_name = items[col_info.index('Code#')]
                             para_vari = items[col_info.index('ParaVar')]
                             kpd_func_name = items[col_info.index('KpdFunc')]
 
@@ -906,6 +903,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                             if( attribute & mk.ATTR_ZERO_INPUT ): zero_input = 'true' 
                             else: zero_input = 'false'
+                            find_items = self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
+
+                            # 한개만 찾아짐 
+                            row = 0
+                            for item in find_items:
+                                row = item.row()
+                                
+                            comm_addr = self.makeAddrValue(row, int(code_name))
 
                         else:
                             name = items[col_info.index('Name')]
@@ -913,6 +918,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             no_change_on_run = items[col_info.index('운전중변경불가')]
                             zero_input = items[col_info.index('0입력가능')]
                             no_comm = items[col_info.index('통신쓰기금지')]
+                            comm_addr = items[col_info.index('통신주소')]
+                            code_name = str(int(int(comm_addr, 0) & 0xff))
                             comment = items[-1]
                             
 
@@ -924,8 +931,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 items[col_info.index('TitleIndex')],
                                 title, 
                                 items[col_info.index('AtValue')], 
-                                para_vari,
-                                kpd_func_name,
                                 kpd_word_scale,
                                 kpd_float_scale,
                                 'true',
@@ -938,8 +943,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 no_comm, 
                                 items[col_info.index('폼메시지')].replace('MSG_', ''),
                                 items[col_info.index('단위')],
-                                max_eds,
-                                min_eds, 
+                                comm_addr,
                                 comment
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 

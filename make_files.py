@@ -446,6 +446,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             name = model.item(find_row_index, col_info.index('Name')).text()
             group_name = model.item(find_row_index, col_info.index('Group')).text()
             code_num = model.item(find_row_index, col_info.index('Code#')).text()
+            if( code_num == ''):
+                code_num = '0'
             grp_and_code = '{0}_{1:>02}'.format( group_name.upper() , code_num )
 
             title_name = model.item(find_row_index, col_info.index('CodeTITLE')).text()
@@ -453,8 +455,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
             title_name = make_title_with_at_value(title_name, at_value) # at value 적용 
-            kpd_vari = model.item(find_row_index, col_info.index('ParaVar')).text()
-            kpd_func_name  = model.item(find_row_index, col_info.index('KpdFunc')).text()
+            # kpd_vari = model.item(find_row_index, col_info.index('ParaVar')).text()
+            # kpd_func_name  = model.item(find_row_index, col_info.index('KpdFunc')).text()
 
             para_word_scale = model.item(find_row_index, col_info.index('KpdWordScale')).text()
             para_float_scale = model.item(find_row_index, col_info.index('KpdFloatScale')).text()
@@ -476,14 +478,14 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
             header_name_enum_lines.append(
-                    "#define {0:<30} {1:<10}//{2:<10}{3:<20}{4:>10}{5:<30}  {6}".format(
+                    "#define {0:<30} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
                             name, 
                             comm_addr, 
                             grp_and_code,
                             title_name, 
-                            '', 
-                            kpd_vari,
-                            kpd_func_name
+                            '' 
+                            # kpd_vari,
+                            # kpd_func_name
 
                     ) 
                 )
@@ -495,8 +497,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             
             format_str = ( '/* {0:>8} */ {{{1:<30},{2:>20},{3:>5},{4:>6},{5:>8},'
                             '{6:>8},{7:>8},{8:>6},{9:>6},{10:>6},'
-                            '{11:>6},{12:>25},{13:>25}}}{14} //"{15:<30}"'
-                            '//{16}' )
+                            '{11:>6},{12:>25},{13:>25},{14:>10}}}{15} //"{16:<30}"'
+                            '//{17}' )
 
             if( find_item == find_items[-1] ):
                 comment = comment + '\n\n'
@@ -505,7 +507,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
                 format_str.format(\
                         grp_and_code,       name,               title_enum_name,    at_value,           data_func_run,      default_val,        
                         max_val,            min_val,            read_only,          no_change_on_run,   zero_input,
-                        no_comm,            form_msg,           unit,                ',',                title_name,         
+                        no_comm,            form_msg,           unit,               comm_addr,          ',',                title_name,         
                         comment
                 )
             )
