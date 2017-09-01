@@ -1,10 +1,10 @@
 import os, sys, shutil, re, json, copy
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView,  \
                             QAction, QFileDialog, QMessageBox, QMenu
-from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
+from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor, QBrush 
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, \
                          QRegExp, Qt, QItemSelectionModel, QItemSelection,  QStringListModel,\
-                         QFile, QObject, QEvent
+                         QFile, QObject, QEvent, QRegularExpression
 
 import mainwindow_ui 
 import proxy_model
@@ -101,9 +101,15 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 CONFIG_FILE = copy.deepcopy(jsonConfig)
                 if( '최근폴더' in jsonConfig ):
                     self.lineSourcePath.setText(jsonConfig['최근폴더'])
+                
+        source_path = self.lineSourcePath.text()
+        if( source_path != ''):
+            self.onOpen(source_path)
         pass
 
     def createConnection(self):
+        self.btnCheck.clicked.connect(self.btnCheckClicked)
+
         self.viewGroup.selectionModel().currentChanged.connect(self.onViewGroupSelectionChanged)
         # self.viewGroup.clicked.connect(self.onViewGroupClicked)  
         self.viewMsgInfo.selectionModel().currentChanged.connect(self.onViewMsgInfoSelectionChanged)
@@ -387,6 +393,30 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.initView()
         # 셀크기를 유지하기 위해 사용 
         self.initDelegate()
+
+    def onOpen(self, dir_path):
+        ret_val  = []
+        
+        if( not os.path.isdir(dir_path) ):
+            ret_val.append('존재하지 않는 디렉토리')
+
+        self.initModelAndView()
+
+        ret, error_string = self.readDataFromFile(dir_path) 
+
+        if( ret == False ):
+            ret_val.append(error_string)
+
+        if( len(ret_val) == 0 ):
+            self.lineSourcePath.setText(dir_path)
+            QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
+            CONFIG_FILE['최근폴더']= dir_path
+
+        else:
+            self.initModelAndView()
+            QMessageBox.critical(self, '실패', ' | '.join(ret_val))
+
+
         
     @pyqtSlot(QAction)
     def onMenuFileActionTriggered(self, action):
@@ -402,27 +432,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             
             if( selected_dir == ''):
                 return 
-
-            ret_val  = []
-            
-            if( not os.path.isdir(selected_dir) ):
-                ret_val.append('존재하지 않는 디렉토리')
-
-            self.initModelAndView()
-
-            ret, error_string = self.readDataFromFile(selected_dir) 
-
-            if( ret == False ):
-                ret_val.append(error_string)
-
-            if( len(ret_val) == 0 ):
-                self.lineSourcePath.setText(selected_dir)
-                QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
-                CONFIG_FILE['최근폴더']= selected_dir
-
-            else:
-                self.initModelAndView()
-                QMessageBox.critical(self, '실패', ' | '.join(ret_val))
+            self.onOpen(selected_dir)
 
             pass
         elif( action_type == 'Save'):
@@ -537,7 +547,15 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def onMenuAboutActionTriggered(self, action):
         print(action.text())
 
-  
+    
+    def setLineDelegateAttribute(self, model, view, delegate, columns = [], validator = None):
+        for col_index in columns:
+            delegate.setEditable(col_index,  True ) 
+            delegate.setEditorType(col_index, 'lineedit')
+            if( validator ):
+                delegate.setValidator(col_index, validator )
+            view.setItemDelegateForColumn(col_index, delegate)
+        pass
 
     def setCmbDelegateAttribute(self, model, view, delegate, columns = [], editable = False, 
         width = 0, cmb_model_column = 0):
@@ -593,11 +611,46 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes )
 
-        # model = QStringListModel( ['AfterEnter', 'Cmd']) 
-        # view  = self.viewParameter
-        # delegate = self.delegate_parameters_view
-        # col_indexes = [ col_info.index('KPD 타입') ]
-        # self.setCmbDelegateAttribute(model, view, delegate, col_indexes, width = 80)
+        # code validator 설정
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
+        col_indexes = [ 
+            col_info.index('Code#')
+        ]
+        reg_ex = QRegularExpression('[0-9]{1,2}')
+        self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex)
+
+        # 공장 설정값 , 최대, 최소 validator 설정
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
+        col_indexes = [ 
+            col_info.index('최대값'), 
+            col_info.index('최소값'), 
+            col_info.index('공장설정값')
+        ]
+        reg_ex = QRegularExpression('[0-9]{1,8}')
+        self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex)
+
+
+        # 공장 설정값 , 최대, 최소 validator 설정
+        view  = self.viewParameter
+        delegate = self.delegate_parameters_view
+        col_indexes = [ 
+            col_info.index('Name')
+        ]
+        reg_ex = QRegularExpression('[A-Z]+[_A-Z0-9]*')
+        self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex)
+
+        # group 설정 
+        model = self.model_group
+        view  = self.viewGroup
+        delegate = self.delegate_group_view  
+        col_info = ci.group_col_info()
+        col_indexes = [ 
+            col_info.index('Group')
+        ]
+        reg_ex = QRegularExpression('[A-Z]+[_A-Z0-9]*')
+        self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex) 
 
         # msg view delegate 설정 
         model = self.model_title
@@ -636,9 +689,61 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             delegate_model = ci.unit_with_msg()['Other']
         self.setCmbDelegateAttribute(delegate_model, view, delegate, [form_msg_col], 
                 editable = False,  width = 150, cmb_model_column = cmb_model_col)
-
         pass 
 
+    @pyqtSlot()
+    def btnCheckClicked(self):
+        err_list = [] 
+        grp_code_list = []
+        name_list = []
+
+        col_info = ci.para_col_info_for_view()
+        grp_name_index = col_info.index('Group')
+        code_index = col_info.index('Code#')
+        name_index = col_info.index('Name')
+
+        for row_index in range(self.model_parameters.rowCount()):
+            grp_item = self.model_parameters.item(row_index, grp_name_index)
+            code_item = self.model_parameters.item(row_index, code_index)
+            name_item = self.model_parameters.item(row_index, name_index)
+
+            loop_list = [grp_item, code_item, name_item ]
+            for item in loop_list:
+                item.setBackground(QBrush(QColor(Qt.white)))
+
+            grp_code_list.append( '{}_{:0>2}'.format(grp_item.text() , code_item.text()) ) 
+            name_list.append(name_item.text() )
+
+
+        code_err_result_list = []
+        name_err_result_list = []
+        # code 중복 check 
+        for row_index, value in enumerate(grp_code_list):
+            if( grp_code_list.count(value) > 1 ):
+                code_err_result_list.append( [row_index, value])
+
+        for row_index, value in code_err_result_list:
+            item = self.model_parameters.item(row_index, code_index)
+            item.setBackground(QBrush(QColor(Qt.red)))
+
+        # 변수 이름 중복 check 
+        for row_index, value in enumerate(name_list):
+            if( name_list.count(value) > 1 ):
+                name_err_result_list.append( [row_index, grp_code_list[row_index]])
+
+        for row_index, value in name_err_result_list:
+            item = self.model_parameters.item(row_index, name_index)
+            item.setBackground(QBrush(QColor(Qt.red)))
+        pass
+
+        if( len(code_err_result_list) or len (name_err_result_list)):
+            QMessageBox.critical(self, '오류', '* code 오류: \n\t{}\n* name 오류:\n\t{}'.format( 
+                '\n\t'.join([ x[1] for x in code_err_result_list] ),
+                '\n\t'.join([ x[1] for x in name_err_result_list] )
+                ))
+            return code_err_result_list + name_err_result_list
+        else:
+            return [] 
 
     @pyqtSlot(QModelIndex, QModelIndex)
     def onViewGroupSelectionChanged(self, current, previous):
@@ -947,7 +1052,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 comment
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 
-                            columns  = []
+                            columns  = [ ci.para_col_info_for_view().index('통신주소')]
                             self.addRowToModel(self.model_parameters, view_col_list, editing_prohibit_columns = columns)
                         except IndexError:
                             print('error occur')

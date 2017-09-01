@@ -1,7 +1,7 @@
 import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAbstractItemView, QHeaderView, QStyledItemDelegate, QComboBox, QLineEdit
-from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor
+from PyQt5.QtGui  import QStandardItemModel, QStandardItem, QClipboard, QColor, QRegularExpressionValidator
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QSortFilterProxyModel, QModelIndex, QRegExp, Qt, QItemSelectionModel, QStringListModel
 import util
 
@@ -42,6 +42,7 @@ class ViewDelegate(QStyledItemDelegate):
         col_info_dict = self.cols_info.get(col, {})
 
         model = col_info_dict.get('model', QStandardItemModel() )
+        validator = col_info_dict.get('validator', None) 
         editable = col_info_dict.get('editable', False ) 
         editor_type = col_info_dict.get('editor_type', 'none')
         cmb_model_column = col_info_dict.get('cmb_model_column', 0)
@@ -49,6 +50,8 @@ class ViewDelegate(QStyledItemDelegate):
 
         if( editor_type == 'lineedit' ):
             editor = QLineEdit(parent)
+            if( validator ):
+                editor.setValidator(QRegularExpressionValidator(validator))
             pass
         elif( editor_type == 'combobox'):
             editor = QComboBox(parent)
@@ -56,7 +59,6 @@ class ViewDelegate(QStyledItemDelegate):
             editor.setEditable(editable) 
             editor.setModelColumn(cmb_model_column)
 
-            pass
         return editor
 
     def setEditorData(self, editor, index):
