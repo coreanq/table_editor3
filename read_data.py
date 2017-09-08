@@ -16,6 +16,7 @@ KPD_PARA_MSG_HEADER_FILE = 'KpdPara_Msg.h'
 KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'KpdPara_StructUnit.H'  # 자동생성 할필요는 없으나 읽을때 필요한 자료 이므로 생성 
 KPD_PARA_TABLE_SRC_FILE = 'KpdPara_Table.c'
 KPD_PARA_TABLE_HEADER_FILE = 'KpdPara_Table.h'
+DRIVEPARA_IO_EXPANSION_FILE = 'DrivePara_IO_expand.c'
 
 # for old version 
 KPD_PARA_VAR_SRC_FILE = 'KpdPara_Vari.c'
@@ -35,9 +36,8 @@ make_files = (
     KPD_PARA_STRUCT_UNIT_HEADER_FILE,
     KPD_PARA_TABLE_SRC_FILE,
     KPD_PARA_TABLE_HEADER_FILE,
-    KPD_PARA_VAR_SRC_FILE,
-    KPD_PARA_VAR_HEADER_FILE,
-    DRVPARA_DATASTORAGE_SRC_AUTO
+    DRVPARA_DATASTORAGE_SRC_AUTO, 
+    DRIVEPARA_IO_EXPANSION_FILE
 )
 
 # read 에 사용하는 파싱 파일 리스트 정의 

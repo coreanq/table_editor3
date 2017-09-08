@@ -15,11 +15,11 @@
         {
             "taskName": "makercc",
             // resource output file 을 .ui 파일에서 사용하려면 _rc 를 붙여줘야 함 
-            "args": ["pyrcc5.exe", "resource.qrc", "-o", "resource_rc.py"]
+            "args": ["C:\\ProgramData\\Anaconda3\\Library\\bin\\pyrcc5.exe", "resource.qrc", "-o", "resource_rc.py"]
         },
         {
             "taskName": "makeui",
-            "args": ["pyuic5", "mainwindow.ui", "-o", "mainwindow_ui.py"],
+            "args": ["C:\\ProgramData\\Anaconda3\\Library\\bin\\pyuic5", "mainwindow.ui", "-o", "mainwindow_ui.py"],
             "isBuildCommand": true
         } 
     ]

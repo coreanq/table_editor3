@@ -19,14 +19,14 @@ import util
 import version
 import make_files as mk 
 
-CONFIG_FILE_NAME = "te4_config.json"
-CONFIG_FILE = {}
+CONFIG_FILE_NAME = "TableEditor4_config.json"
+CONFIG = {}
 
 class CloseEventEater(QObject):
     def eventFilter(self, obj, event):
         if( event.type() == QEvent.Close):
-            file_contents = json.dumps(CONFIG_FILE, ensure_ascii= False, indent=2)
-            with open(CONFIG_FILE_NAME, 'w', encoding='utf8' ) as f:
+            file_contents = json.dumps(CONFIG, ensure_ascii= False, indent=2)
+            with open(os.path.curdir + os.path.sep + CONFIG_FILE_NAME, 'w', encoding='utf8' ) as f:
                 f.write(file_contents)
             return True
         else:
@@ -97,8 +97,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             with open(CONFIG_FILE_NAME, 'r', encoding='utf8') as f:
                 file_contents = f.read()
                 jsonConfig = json.loads(file_contents)
-                global CONFIG_FILE
-                CONFIG_FILE = copy.deepcopy(jsonConfig)
+                global CONFIG
+                CONFIG = copy.deepcopy(jsonConfig)
                 if( '최근폴더' in jsonConfig ):
                     self.lineSourcePath.setText(jsonConfig['최근폴더'])
                 
@@ -410,7 +410,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         if( len(ret_val) == 0 ):
             self.lineSourcePath.setText(dir_path)
             QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
-            CONFIG_FILE['최근폴더']= dir_path
+            CONFIG['최근폴더']= dir_path
 
         else:
             self.initModelAndView()
@@ -803,7 +803,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         if( not os.path.exists(source_path) ) :
             return False
 
-        target_path = os.path.curdir + os.path.sep + source_path + os.path.sep + 'backup'
+        target_path = source_path + '\\backup'
         if( not os.path.exists(target_path) ):
             os.mkdir(target_path)
         
@@ -1340,6 +1340,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 if __name__ == '__main__': 
     app = QApplication(sys.argv)
     form = MainWindow()
+    # widget = uic.loadUi("main_wnd.ui") # ide 에서 code completion 이 지원안되므로 사용안함 
     closeEventEater = CloseEventEater()
     form.installEventFilter(closeEventEater)
     form.setWindowTitle('TableEditor4 V' + version.VERSION_INFO)

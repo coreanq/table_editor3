@@ -8,6 +8,7 @@
             "stopOnEntry": true,
             "externalConsole": false, 
             "program": "${file}",
+            "pythonPath": "${config:python.pythonPath}",
             "debugOptions": [
                 "WaitOnAbnormalExit",
                 "WaitOnNormalExit",

@@ -446,8 +446,6 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             name = model.item(find_row_index, col_info.index('Name')).text()
             group_name = model.item(find_row_index, col_info.index('Group')).text()
             code_num = model.item(find_row_index, col_info.index('Code#')).text()
-            if( code_num == ''):
-                code_num = '0'
             grp_and_code = '{0}_{1:>02}'.format( group_name.upper() , code_num )
 
             title_name = model.item(find_row_index, col_info.index('CodeTITLE')).text()
@@ -924,6 +922,6 @@ void DriveParaWriteToArrayData(uint16_t wStartIndex, uint8_t bPosition, uint16_t
         '\t\t'.join(write_case_list)
     )
 
-    with open(source_path + os.path.sep + "DrivePara_IO.c", 'w', encoding='utf8') as f:
+    with open(source_path + os.path.sep + "DrivePara_IO_expand.c", 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass
