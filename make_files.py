@@ -160,12 +160,12 @@ const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{
 
     header_template= \
 '''{0}
-#ifndef ADD_TITLE_ENG_H
-#define ADD_TITLE_ENG_H\n\n
+#ifndef ADD_TITLE_ENG_H_
+#define ADD_TITLE_ENG_H_\n\n
 #define TOTAL_ADD_TITLE       {1} 
 #define ADD_TITLE_SIZE        {2} 
 extern const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
-#endif   //ADD_TITLE_ENG_H 
+#endif   //ADD_TITLE_ENG_H_
 '''
 
     file_contents = header_template.format(
@@ -180,8 +180,8 @@ extern const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 
     kpd_title_enum_header_template= \
 '''{0}
-#ifndef KPD_TITLE_ENUM_H
-#define KPD_TITLE_ENUM_H
+#ifndef KPD_TITLE_ENUM_H_
+#define KPD_TITLE_ENUM_H_
 
 #define START_ADD_TITLE_INDEX 1000
 
@@ -330,8 +330,8 @@ return t_awMsgDataSize[wMsgIdx];
 
     header_template =  \
 '''{0}
-#ifndef KEYPAD_MESSAG_H
-#define KEYPAD_MESSAG_H
+#ifndef KEYPAD_MESSAGE_H_
+#define KEYPAD_MESSAGE_H_
     
 #include "KpdPara_StructUnit.H"
     
@@ -343,7 +343,7 @@ enum{{  //MSG들의 Index 값
 \n\n
 S_MSG_TYPE KpdParaGetMsgData(uint16_t wMsgIdx, uint16_t wMsgNum);
 uint16_t KpdParaGetMsgSize(uint16_t wMsgIdx);
-#endif  //KEYPAD_MESSAG_H
+#endif  //KEYPAD_MESSAGE_H_
 
 '''
     msg_define_lines = []
@@ -690,8 +690,8 @@ enum eGrpIndex{{
 
     header_template = \
 '''{0}
-#ifndef _KPD_TABLE_H
-#define _KPD_TABLE_H
+#ifndef KPD_TABLE_H_
+#define KPD_TABLE_H_
 #include "KpdPara_StructUnit.H"
 
 #define PARA_START_ADDR	                    0x1000u
@@ -714,7 +714,7 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
 {4}
 \n
 \n\n
-#endif   //_KPD_TABLE_H
+#endif   //KPD_TABLE_H_
 '''
     # 하나의 테이블이므로 전체 크기를 define 으로 추가함 
     header_grp_size_define_lines.append('#define ALL_GRP_CODE_TOTAL\t{0}'.format(total_code_count))

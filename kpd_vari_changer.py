@@ -34,9 +34,6 @@ re_kpd_var_array  = re.compile(r'(\&)?k_aw([\w]+)\[([\w -]+)\]\s*([\=]*)')
 re_grp_and_code = re.compile(r'([A-Z0-9]{2,3}_[0-9]{3})')
 
 
-target_dir = 'd:\\download\\3_work\\Drive_SW_Platform\\src\\branches\\NewEraPlatform_kpd_index\\Source\\Inverter\\'
-
-
 def chage_kpd_vari(parameter_model, target_dir):
     target_file_list = []
     # file list gathering
@@ -91,65 +88,65 @@ def chage_kpd_vari(parameter_model, target_dir):
         isSearch = False
         contents.clear()
 
+def addExternC(target_dir):
+    re_header_guard_start = re.compile(r'#define[\s]+([A-Z_]+_H_)')
+    exception_list = ['CarrierFreqByTemp.h', 'rtwtypes.h']
+    target_file_list = []
+    for (dirpath, dirnames, filenames) in os.walk(target_dir):
+        for name in filenames:
+            extension_name = os.path.splitext(name)[1].lower() 
+            if( extension_name == '.h' ):
+                if( 'stm32' not in name.lower()):
+                    if( name not in exception_list ):
+                        target_file_list.append(dirpath + os.path.sep + name)
+    # print('\n'.join(target_file_list))
 
-        # for count, line in enumerate(pre_contents):
-        #     # kpd func 의 mak_000 형태의 변수 변환 
-        #     find_objs = re_grp_and_code.finditer(line)
+    header_start = '''
+#if defined(__cplusplus)
+extern "C" {
+#endif
+'''
+    header_end = '''\n#if defined(__cplusplus)
+}
+#endif\n
+'''
+    # open file and read line by line and print keypad variable 
+    for file_path in target_file_list:
+        pre_contents = [] # 변환되기전 파일에서 읽은 데이터 
+        contents = []
+        with open(file_path, 'r', encoding='utf8') as f:
+            pre_contents = f.readlines()
+        
+        isSearch = False
+        header_start_pos = -1 
+        header_end_pos = -1
 
-        #     for match_obj in find_objs:
-        #         grp_and_code = match_obj.group(1).strip()
-        #         src_grp_name = grp_and_code.split('_')[0]
-        #         src_code_name = grp_and_code.split('_')[1]
+        for count, line in enumerate(pre_contents):
+            find_obj = re_header_guard_start.search(line)
+            if(find_obj):
+                header_start_pos = count; 
+                break
+        
+        isSearch = False
+        if( header_start_pos != -1):
+            isSearch = True
+            pre_contents.insert( header_start_pos +1,  header_start )
+        
+        if( isSearch ) : 
+            for count, line in enumerate(pre_contents[::-1]):
+                if( '#endif' in line ):
+                    pre_contents.insert(len(pre_contents) - count -1,  header_end )
+                    break
+                pass
 
-        #         items = parameter_model.findItems(src_grp_name, column = ci.para_col_info_for_view().index('Group'))
-        #         for item in items:
-        #             row = item.row()
-        #             searched_code_name = parameter_model.item(row, column = ci.para_col_info_for_view().index('Code#')).text()
+            with open(file_path , 'w', encoding= 'utf8') as f:
+                f.writelines(pre_contents)
 
-        #             if( src_code_name == '{0:>03}'.format(searched_code_name) ):
-        #                 para_vari_name = parameter_model.item(row, column =ci.para_col_info_for_view().index('ParaVar')).text()
-        #                 name = rd.changeParaName2Enum(para_vari_name)
+            print(''.join(pre_contents))
+            print('------------------------------------------------------------------')
 
-        #                 ret = line.replace(grp_and_code,  name , )
-        #                 print(line + '->' + ret )
-        #                 line = ret
-        #                 isSearch = True 
-
-
-        #     contents.append(line)
-        # if( isSearch ) : 
-        #     with open(file_path , 'w', encoding= 'utf8') as f:
-        #         f.writelines(contents)
-        #     print(file_path)
-
-            # finding keypad_array varialbe
-            # find_objs = re_kpd_var_array.finditer(line)
-            # for match_obj in find_objs:
-            #     if( match_obj.group(1) == None and match_obj.group(4) != '=' ):
-            #         index_str = ''
-            #         if( match_obj.group(3) == '0'):
-            #             index_str = ''
-            #         else:
-            #             index_str  = '+ ' + match_obj.group(3)
-
-            #         finded_word = match_obj.group(0)
-            #         ret  = line.replace(finded_word,
-            #                     r'DrvParaGetWordData(E_DATA_CMD_{0}_00 {1} ) {2}'.format(
-            #                         match_obj.group(2).upper(),
-            #                         index_str,
-            #                         match_obj.group(4)
-            #                     ),
-            #                     1 # 같은 줄에 같은 이름의 k_wAsrSLPGain, k_wAsrSLPGain2 변수가 있는 경우 문제 생기므로 하나만 변경 
-            #                 ) 
-            #         # print(line + '\t\t\t  ----> ' + ret )
-            #         line = ret
-        #     #         isSearch = True
-        # if( isSearch ) : 
-        #     with open(file_path , 'w', encoding= 'utf8') as f:
-        #         f.writelines(contents)
-        #     print(file_path)
-        # isSearch = False
-
+    pass
 
 if __name__ == '__main__' :
+    addExternC(r'd:\\download\\3_work\\Drive_SW_Platform\\src\\trunk\\NewEraPlatform\\Source\\Inverter')
     pass
