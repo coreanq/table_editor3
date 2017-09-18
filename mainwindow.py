@@ -628,7 +628,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             col_info.index('최소값'), 
             col_info.index('공장설정값')
         ]
-        reg_ex = QRegularExpression('[0-9]{1,8}')
+        reg_ex = QRegularExpression('[-]?[0-9]{1,8}')
         self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex)
 
 
@@ -810,7 +810,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         for file in rd.make_files:
             source_file_path = source_path + os.path.sep + file
             target_file_path = target_path + os.path.sep + file
-            shutil.move(source_file_path, target_file_path)
+            if( os.path.isfile(source_file_path) ):
+                shutil.move(source_file_path, target_file_path)
 
         return True
 

@@ -161,10 +161,20 @@ const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE] = {{
     header_template= \
 '''{0}
 #ifndef ADD_TITLE_ENG_H_
-#define ADD_TITLE_ENG_H_\n\n
+#define ADD_TITLE_ENG_H_\n
+
+#if defined(__cplusplus)
+extern "C" {{
+#endif
+
 #define TOTAL_ADD_TITLE       {1} 
 #define ADD_TITLE_SIZE        {2} 
 extern const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
+
+#if defined(__cplusplus)
+}}
+#endif
+
 #endif   //ADD_TITLE_ENG_H_
 '''
 
@@ -183,12 +193,21 @@ extern const uint16_t g_awAddTitleEng[TOTAL_ADD_TITLE][ADD_TITLE_SIZE];\n
 #ifndef KPD_TITLE_ENUM_H_
 #define KPD_TITLE_ENUM_H_
 
+#if defined(__cplusplus)
+extern "C" {{
+#endif
+
 #define START_ADD_TITLE_INDEX 1000
 
 enum{{ 
 \t{1}
 }};
 {2}
+
+#if defined(__cplusplus)
+}}
+#endif
+
 #endif
 '''
     enum_list.append('T_TotalAddTitleSize')
@@ -332,6 +351,10 @@ return t_awMsgDataSize[wMsgIdx];
 '''{0}
 #ifndef KEYPAD_MESSAGE_H_
 #define KEYPAD_MESSAGE_H_
+
+#if defined(__cplusplus)
+extern "C" {{
+#endif
     
 #include "KpdPara_StructUnit.H"
     
@@ -343,6 +366,11 @@ enum{{  //MSG들의 Index 값
 \n\n
 S_MSG_TYPE KpdParaGetMsgData(uint16_t wMsgIdx, uint16_t wMsgNum);
 uint16_t KpdParaGetMsgSize(uint16_t wMsgIdx);
+
+#if defined(__cplusplus)
+}}
+#endif
+
 #endif  //KEYPAD_MESSAGE_H_
 
 '''
@@ -692,6 +720,11 @@ enum eGrpIndex{{
 '''{0}
 #ifndef KPD_TABLE_H_
 #define KPD_TABLE_H_
+
+#if defined(__cplusplus)
+extern "C" {{
+#endif
+
 #include "KpdPara_StructUnit.H"
 
 #define PARA_START_ADDR	                    0x1000u
@@ -713,7 +746,10 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
 \n
 {4}
 \n
-\n\n
+\n
+#if defined(__cplusplus)
+}}
+#endif
 #endif   //KPD_TABLE_H_
 '''
     # 하나의 테이블이므로 전체 크기를 define 으로 추가함 
