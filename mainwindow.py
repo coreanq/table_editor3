@@ -155,6 +155,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
         self.model_parameters.dataChanged.connect(self.onModelParameterDataChanged)
 
+        # title 변경 추가시 수행 
+        self.model_title.dataChanged.connect(self.onModelTitleDataChanged)
+
+        # msg value 변경 추가시 수행
+        self.model_msg_values.dataChanged.connect(self.onModelMsgValuesTitleDataChanged )
+        self.model_title.dataChanged.connect(self.onModelTitleDataChanged)
+
+
         self.menuFile.triggered[QAction].connect(self.onMenuFileActionTriggered)
         self.menuEdit.triggered[QAction].connect(self.onMenuEditActionTriggered)
         self.menuAbout.triggered[QAction].connect(self.onMenuAboutActionTriggered)
@@ -171,9 +179,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.actionAddVar.triggered.connect(actionAddFunc('Var'))
         self.actionAddTitle.triggered.connect(actionAddFunc('Title'))
         self.actionKpdVariChange.triggered.connect(actionAddFunc('KpdVariChange'))
-
-
-        pass
 
         # keypad index column 이 변경된 경우 해당하는 model 데이터를 업데이트 시켜줘야함 
         self.model_parameters.dataChanged.connect( self.onParameterModelChanged )
@@ -206,11 +211,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setModel(self.model_proxy_parameters) 
         view.setColumnHidden( col_info.index('Group'), True)
         view.setColumnHidden( col_info.index('TitleIndex'), True )
-        # view.setColumnHidden( col_info.index('ParaVar'), True )
-        # view.setColumnHidden( col_info.index('KpdFunc'), True )
-        # view.setColumnHidden( col_info.index('최대 EDS'), True )
-        # view.setColumnHidden( col_info.index('최소 EDS'), True )
-
 
         # parameter view detail init
         # view = self.viewParameterDetail
@@ -298,62 +298,21 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot(str)
     def onAddActionTriggered(self, action_name):
         if( action_name == 'Group'):
-            model = self.model_group
-            items = [QStandardItem() for x in range(len(ci.group_col_info()))]
-            model.appendRow(items)
+            self.onGroupViewInserted()
             pass
         # 왼쪽 창에서 선택한 행의 값을 기준으로 오른쪽창의 행을 추가 하기 위한 루틴 
         elif( action_name == 'Para'):
-            model = self.model_parameters
-            key_view = self.viewGroup
-            items = [QStandardItem() for x in range(len(ci.para_col_info_for_view()))]
-
-            selection_model = key_view.selectionModel()
-            row_indexes = selection_model.selectedRows()
-
-            if( len(row_indexes) == 0 ):
-                QMessageBox.critical(self, '오류', '왼쪽 창에서 행이 선택 되지 않았습니다.')
-                return  
-            
-            key_value = self.model_proxy_parameters.filterRegExp().pattern()
-            key_value = key_value.replace('^', '')
-            key_value = key_value.replace('$', '')
-            items[ ci.para_col_info_for_view().index('Group')] = QStandardItem(key_value)
-            model.appendRow(items)
+            self.onParameterViewInserted()
             pass
         elif( action_name == 'MsgInfo'):
-            model = self.model_msg_info
-            items = [QStandardItem() for x in range(len(ci.msg_info_col_info()))]
-            model.appendRow(items)
+            self.onMsgInfoViewInserted()
             pass
         # 왼쪽 창에서 선택한 행의 값을 기준으로 오른쪽창의 행을 추가 하기 위한 루틴 
         elif( action_name == 'Msg'):
-            model = self.model_msg_values
-            key_view = self.viewMsgInfo
-            items = [QStandardItem() for x in range(len(ci.msg_values_col_info()))]
-
-            selection_model = key_view.selectionModel()
-            row_indexes = selection_model.selectedRows()
-
-            if( len(row_indexes) == 0 ):
-                QMessageBox.critical(self, '오류', '왼쪽 창에서 행이 선택 되지 않았습니다.')
-                return  
-            
-            key_value = self.model_proxy_msg_values.filterRegExp().pattern()
-            key_value = key_value.replace('^', '')
-            key_value = key_value.replace('$', '')
-            items[ ci.para_col_info_for_view().index('Group')] = QStandardItem(key_value)
-            model.appendRow(items)
-            pass
-        elif( action_name == 'Var'):
-            model = self.model_var
-            items = [QStandardItem() for x in range(len(ci.variable_col_info()))]
-            model.appendRow(items)
+            self.onMsgValueViewInserted()
             pass
         elif( action_name == 'Title'):
-            model = self.model_title
-            items = [QStandardItem() for x in range(len(ci.title_col_info()))]
-            model.appendRow(items)
+            self.onTitleViewInserted()
             pass
         elif( action_name =='KpdVariChange'):
             current_path = self.lineSourcePath.text() 
@@ -662,7 +621,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
                 cmb_model_column = cmb_model_column_index)
 
-       
     # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
     def onParameterViewUnitChanged(self, index): 
         col_info = ci.para_col_info_for_view()
@@ -690,6 +648,55 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.setCmbDelegateAttribute(delegate_model, view, delegate, [form_msg_col], 
                 editable = False,  width = 150, cmb_model_column = cmb_model_col)
         pass 
+
+    # title view 에서 title 변경에 따라서 Data 값을 변하게 해야 하기 때문에 따로 함수로 만들어 줌 
+    def onTitleViewTitleChanged(self, index):
+        col_info = ci.title_col_info()
+        model = self.model_title
+
+        data_col = col_info.index('Data')
+        title_col = col_info.index('Title')
+
+        title = model.item(index.row() , title_col).text()
+        title = '{:<14}'.format( title )
+
+        title_hex_list =  ['{:X}'.format(ord(ch)) for ch in title]
+
+        title_item = model.item(index.row(), title_col)
+        title_item.setText( title )
+
+        target_item = model.item(index.row(), data_col)
+        target_item.setText( ''.join(title_hex_list) )
+        pass
+
+    # title view 에서 title 변경에 따라서 Data 값을 변하게 해야 하기 때문에 따로 함수로 만들어 줌 
+    def onMsgValuesViewTitleChanged(self, index):
+        title_col_info = ci.title_col_info()
+        msg_values_col_info = ci.msg_values_col_info()
+        title_model = self.model_title
+        msg_values_model = self.model_msg_values
+
+        title_col_in_msg_values = msg_values_col_info.index('Title')
+        title_index_col_in_msg_values  = msg_values_col_info.index('TitleIndex')
+
+        title_col = title_col_info.index('Title')
+        title_index_col = title_col_info.index('TitleIndex')
+
+        title_in_msg_values = msg_values_model.item(index.row(), title_col_in_msg_values ).text()
+
+        # find title in title-model with msg_values_title
+        find_list = title_model.findItems(title_in_msg_values, column = title_col_info.index('Title'))
+
+        title_index = ''
+        for item in find_list:
+            row = item.row()
+            col = title_col_info.index('Enum 이름')
+            title_index = title_model.item(row, col).text()
+            break
+
+        item = msg_values_model.item(index.row(), msg_values_col_info.index('TitleIndex') )
+        item.setText(title_index)
+        pass
 
     @pyqtSlot()
     def btnCheckClicked(self):
@@ -1119,8 +1126,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             self.model_kpd_para_unit.appendRow(QStandardItem(item))
 
                 elif ( filename.lower() == rd.KPD_ADD_TITLE_SRC_FILE.lower() ):
+                    col_info = ci.title_col_info()
                     for items in rd.read_add_title(contents):
-                        self.addRowToModel(self.model_title, items)
+                        self.addRowToModel(self.model_title, items, editing_prohibit_columns = [col_info.index('Data')] )
                 pass
         return ret, error_string 
         pass
@@ -1139,12 +1147,16 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         model.appendRow(item_list)
         pass
 
-    def insertRowToModel(self, model, datas, insert_index, editing = True):
+    def insertRowToModel(self, model, data_list, insert_index, editing_prohibit_columns = [] ):
         item_list = []
-        for data in datas:
+        for col_count, data in enumerate(data_list):
             item = QStandardItem(data)
-            item.setEditable(editing)
-            item_list.append(item)
+            if( col_count in editing_prohibit_columns ):
+                item.setBackground(QColor(Qt.lightGray) )
+                item.setEditable(False)
+            else:
+                item.setEditable(True)
+            item_list.append(item)            
 
         # rowCount 는 1부터 시작 insert_index 는 0 부터  시작 
         if( insert_index+ 1 >= model.rowCount() ):
@@ -1170,17 +1182,50 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
     @pyqtSlot(QModelIndex, QModelIndex)
     def onModelParameterDataChanged(self, topLeft, bottomRight):
+        col_info = ci.para_col_info_for_view()
         topx = topLeft.row()
         topy = topLeft.column() 
 
         bottomx = bottomRight.row()
         bottomy = bottomRight.column()
 
-        unit_col = ci.para_col_info_for_view().index('단위')
-
-        if( unit_col  in range(topy, bottomy + 1) ):
+        col = col_info.index('단위')
+        # 변경된 데이터가 범위안에 있다면 
+        if( col  in range(topy, bottomy + 1) ):
             for row in range(topx, bottomx + 1):
-                self.onParameterViewUnitChanged( self.model_parameters.index(row, unit_col )  )
+                self.onParameterViewUnitChanged( self.model_parameters.index(row, col )  )
+            pass
+
+    @pyqtSlot(QModelIndex, QModelIndex)
+    def onModelTitleDataChanged(self, topLeft, bottomRight):
+        col_info = ci.title_col_info()
+        topx = topLeft.row()
+        topy = topLeft.column() 
+
+        bottomx = bottomRight.row()
+        bottomy = bottomRight.column()
+
+        col = col_info.index('Title')
+        # 변경된 데이터가 범위안에 있다면 
+        if( col  in range(topy, bottomy + 1) ):
+            for row in range(topx, bottomx + 1):
+                self.onTitleViewTitleChanged( self.model_title.index(row, col )  )
+            pass
+
+    @pyqtSlot(QModelIndex, QModelIndex)
+    def onModelMsgValuesTitleDataChanged(self, topLeft, bottomRight):
+        col_info = ci.msg_values_col_info()
+        topx = topLeft.row()
+        topy = topLeft.column() 
+
+        bottomx = bottomRight.row()
+        bottomy = bottomRight.column()
+
+        col = col_info.index('Title')
+        # 변경된 데이터가 범위안에 있다면 
+        if( col  in range(topy, bottomy + 1) ):
+            for row in range(topx, bottomx + 1):
+                self.onMsgValuesViewTitleChanged( self.model_title.index(row, col )  )
             pass
 
     def viewRowCopy(self, subject, view):
@@ -1202,7 +1247,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # print('\n'.join(rows))
         pass
 
-    def viewRowPaste(self, subject, view, source_model):
+    def viewRowPaste(self, subject, view, source_model,  editing_prohibit_columns = []):
         # view 의 model 은 proxy 모델이고 데이터를 추가 하기 위해서는 source model 이 필요함 
         clipboard = QApplication.clipboard()
         view_model = view.model() 
@@ -1221,12 +1266,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 for row in lists:
                     row_items = row.split(',')
                     row_items[0] = key_value
-                    self.insertRowToModel(source_model, row_items, insert_row)
+                    self.insertRowToModel(source_model, row_items, insert_row, editing_prohibit_columns)
                     insert_row = insert_row + 1
             break
         pass
 
-    def viewRowInsert(self, view, source_model):
+    def viewRowInsert(self, view, source_model, editing_prohibit_columns = []):
         # view 의 model 은 proxy 모델이고 데이터를 추가 하기 위해서는 source model 이 필요함 
         view_model = view.model() 
         key_value = view_model.filterRegExp().pattern() 
@@ -1239,7 +1284,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         row_items = [''] * view_model.columnCount()
         row_items[0] = key_value
-        self.insertRowToModel(source_model, row_items, insert_row)
+        self.insertRowToModel(source_model, row_items, insert_row, editing_prohibit_columns )
         pass
 
     def viewRowDelete(self, view):
@@ -1257,10 +1302,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowCopy('parameter', self.viewParameter )
     @pyqtSlot()
     def onParameterViewPasted(self):
-        self.viewRowPaste('parameter', self.viewParameter, self.model_parameters)
+        col_info = ci.para_col_info_for_view()
+        self.viewRowPaste('parameter', self.viewParameter, self.model_parameters, [col_info.index('통신주소')])
     @pyqtSlot()
     def onParameterViewInserted(self):
-        self.viewRowInsert(self.viewParameter, self.model_parameters)
+        col_info = ci.para_col_info_for_view()
+        self.viewRowInsert(self.viewParameter, self.model_parameters, [col_info.index('통신주소')])
     @pyqtSlot()
     def onParameterViewDeleted(self):
         self.viewRowDelete( self.viewParameter)
@@ -1310,11 +1357,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
     @pyqtSlot()
     def onTitleViewPasted(self):
-        self.viewRowPaste('title', self.viewTitle, self.model_title)
+        col_info = ci.title_col_info()
+        self.viewRowPaste('title', self.viewTitle, self.model_title, [col_info.index('Data')])
         pass
     @pyqtSlot()
     def onTitleViewInserted(self):
-        self.viewRowInsert(self.viewTitle, self.model_title)
+        col_info = ci.title_col_info()
+        self.viewRowInsert(self.viewTitle, self.model_title, [col_info.index('Data')])
         pass
     @pyqtSlot()
     def onTitleViewDeleted(self):

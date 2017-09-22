@@ -263,6 +263,7 @@ def make_kpdpara_msg(source_path, msg_info_model, msg_values_model ):
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()
             enum_name = model.item(find_row_index, col_info.index('TitleIndex')).text()
             title_name = make_title_with_at_value(title_name, at_value)
+            title_name = '{:<15}'.format(title_name)
             comma = ','
 
             if( find_items[-1] == find_item ):

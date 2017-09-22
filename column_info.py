@@ -96,6 +96,12 @@ _variable_columns_info = [
     'Type',
     'Description'
 ]
+_msg_info_columns_info = [
+    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
+    'MsgName',
+    'MsgComment'
+]
+
 _msg_values_columns_info = [
     'MsgName',
     'MsgComment',
@@ -103,12 +109,6 @@ _msg_values_columns_info = [
     'Title', 
     'AtValue' 
 ]
-_msg_info_columns_info = [
-    'Dummy Key',  # parameter 처럼 filtering 기능을 사용하지 않지만 사용함수가 공용이므로 dummy 만듬
-    'MsgName',
-    'MsgComment'
-]
-
 
 # unit 에 따른 msg 리스트 정의 
 _unit_with_msg = {
