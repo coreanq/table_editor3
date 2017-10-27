@@ -45,8 +45,8 @@ _parameters_view_columns_info = [
     'Group', # 숨김 컬럼 key column 왼쪽 컬럼 클릭시 사용하기 위한 용도 
     'Code#', # old table 용도로 new table 읽을시 감춰짐  
     'Name',
-    'TitleIndex', # 숨김 컬럼 
-    'CodeTITLE',
+    'TitleIndex', 
+    'Title',
     'AtValue',
     'KpdFloatScale',  
     'KpdWordScale',   
@@ -103,9 +103,9 @@ _msg_info_columns_info = [
 ]
 
 _msg_values_columns_info = [
-    'MsgName',
-    'MsgComment',
-    'TitleIndex',
+    'MsgName',    # 숨김 컬럼 
+    'MsgComment', # 숨김 컬럼 
+    'TitleIndex', 
     'Title', 
     'AtValue' 
 ]

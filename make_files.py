@@ -477,7 +477,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             code_num = model.item(find_row_index, col_info.index('Code#')).text()
             grp_and_code = '{0}_{1:>02}'.format( group_name.upper() , code_num )
 
-            title_name = model.item(find_row_index, col_info.index('CodeTITLE')).text()
+            title_name = model.item(find_row_index, col_info.index('Title')).text()
             title_enum_name =  model.item(find_row_index, col_info.index('TitleIndex')).text()
             
             at_value = model.item(find_row_index, col_info.index('AtValue')).text()

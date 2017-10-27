@@ -9,7 +9,7 @@
     "tasks" : [
         {
             "taskName": "pyflakes",
-            "args": ["pyflakes", "${file}"],
+            "args": ["C:\\ProgramData\\Anaconda3\\Library\\Scripts\\pyflakes.exe", "${file}"],
             "isBuildCommand": true
         },
         {

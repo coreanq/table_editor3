@@ -1,3 +1,3 @@
 import os
 TABLE_EDITOR_NUMBER = '4'
-VERSION_INFO = '0.1.2.0'
+VERSION_INFO = '0.1.3.0'

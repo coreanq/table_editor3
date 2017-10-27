@@ -153,15 +153,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
+
+        # 무한 datachanged event 발생을 막기 위하여 
+        # at_value 변경 --> Title 만 변경 
+        # title index 변경 --> Title 만 변경 
         self.model_parameters.dataChanged.connect(self.onModelParameterDataChanged)
 
         # title 변경 추가시 수행 
         self.model_title.dataChanged.connect(self.onModelTitleDataChanged)
 
-        # msg value 변경 추가시 수행
-        self.model_msg_values.dataChanged.connect(self.onModelMsgValuesTitleDataChanged )
-        self.model_title.dataChanged.connect(self.onModelTitleDataChanged)
-
+        # msg value data 변경 시 수행
+        self.model_msg_values.dataChanged.connect(self.onModelMsgValuesDataChanged )
 
         self.menuFile.triggered[QAction].connect(self.onMenuFileActionTriggered)
         self.menuEdit.triggered[QAction].connect(self.onMenuEditActionTriggered)
@@ -210,7 +212,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.model_parameters.setHorizontalHeaderLabels(col_info)
         view.setModel(self.model_proxy_parameters) 
         view.setColumnHidden( col_info.index('Group'), True)
-        view.setColumnHidden( col_info.index('TitleIndex'), True )
 
         # parameter view detail init
         # view = self.viewParameterDetail
@@ -233,8 +234,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view.setModel(self.model_proxy_msg_values)
         view.setColumnHidden(col_info.index('MsgName'), True)
         view.setColumnHidden(col_info.index('MsgComment'), True)
-        view.setColumnHidden(col_info.index('TitleIndex'), True )
-        
 
         # title view init 
         col_info = ci.title_col_info()
@@ -537,9 +536,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view = self.viewParameter
         delegate = self.delegate_parameters_view
         col_info = ci.para_col_info_for_view()
-        col_index = col_info.index('CodeTITLE')
-        cmb_model_column_index = ci.title_col_info().index('Title')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
+        col_index = col_info.index('TitleIndex')
+        cmb_model_column_index = ci.title_col_info().index('Enum 이름')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 120, 
                 cmb_model_column = cmb_model_column_index )
 
         model = self.model_kpd_para_unit
@@ -616,10 +615,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view  = self.viewMsgValue
         delegate = self.delegate_msg_view  
         col_info = ci.msg_values_col_info()
-        col_index = col_info.index('Title')
-        cmb_model_column_index = ci.title_col_info().index('Title')
+        col_index = col_info.index('TitleIndex')
+        cmb_model_column_index = ci.title_col_info().index('Enum 이름')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
                 cmb_model_column = cmb_model_column_index)
+
+        col_index = col_info.index('Title')
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150)
 
     # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
     def onParameterViewUnitChanged(self, index): 
@@ -649,6 +651,45 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 editable = False,  width = 150, cmb_model_column = cmb_model_col)
         pass 
 
+    # parameter view 에서 title index 변경에 따라서 Title 변하게 해야 하기 때문에 따로 함수로 만들어 줌
+    def onParameterViewTitleIndexChanged(self, index):
+        col_info = ci.para_col_info_for_view()
+        model = self.model_parameters
+
+        col_of_title = col_info.index('Title')
+        col_of_title_index = col_info.index('TitleIndex')
+        col_of_at_value = col_info.index('AtValue')
+
+        title_index = model.item(index.row(), col_of_title_index ).text()
+        title = self.searchTitlefromEnumName(title_index)
+
+        # at value 가지고 Title 적용  
+        at_value = model.item(index.row(), col_of_at_value ).text()
+        item = model.item(index.row(), col_of_title )
+        title = mk.make_title_with_at_value(title, at_value)
+        item.setText(title)
+        pass
+
+    # parameter view 에서 at value 변경에 따라서 Title 를 변하게 해야 하기 때문에 따로 함수로 만들어 줌
+    def onParameterViewAtValueChanged(self, index):
+        col_info = ci.para_col_info_for_view()
+        model = self.model_parameters
+
+        col_of_title = col_info.index('Title')
+        col_of_title_index  = col_info.index('TitleIndex')
+        col_of_at_value = col_info.index('AtValue')
+
+        # title index 로  title을 찾음 
+        title_index = model.item(index.row(), col_of_title_index).text()
+        title = self.searchTitlefromEnumName(title_index)
+
+        # at value 가지고 Title 적용  
+        at_value = model.item(index.row(), col_of_at_value ).text()
+        item = model.item(index.row(), col_of_title )
+        title = mk.make_title_with_at_value(title, at_value)
+        item.setText(title)
+        pass
+
     # title view 에서 title 변경에 따라서 Data 값을 변하게 해야 하기 때문에 따로 함수로 만들어 줌 
     def onTitleViewTitleChanged(self, index):
         col_info = ci.title_col_info()
@@ -669,33 +710,46 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         target_item.setText( ''.join(title_hex_list) )
         pass
 
-    # title view 에서 title 변경에 따라서 Data 값을 변하게 해야 하기 때문에 따로 함수로 만들어 줌 
-    def onMsgValuesViewTitleChanged(self, index):
+    # msgValues View  에서 title index 변경에 따라서 Title  값을 변하게 해야 하기 때문에 따로 함수로 만들어 줌 
+    def onMsgValuesViewTitleIndexChanged(self, index):
+        col_info = ci.msg_values_col_info()
+        model = self.model_msg_values
+
+        col_of_title = col_info.index('Title')
+        col_of_title_index = col_info.index('TitleIndex')
+        col_of_at_value = col_info.index('AtValue')
+
+        # title index 로  title을 찾음 
+        title_index = model.item(index.row(), col_of_title_index ).text()
+        title = self.searchTitlefromEnumName(title_index)
+
+        # at value 가지고 Title 적용  
+        at_value = model.item(index.row(), col_of_at_value ).text()
+        item = model.item(index.row(), col_of_title )
+        title = mk.make_title_with_at_value(title, at_value)
+        item.setText(title)
+        pass
+
+    # msg value view 에서 at value 변경에 따라서 Title 를 변하게 해야 하기 때문에 따로 함수로 만들어 줌
+    def onMsgValuesViewAtValueChanged(self, index):
+        col_info = ci.msg_values_col_info()
+        model = self.model_msg_values
+
         title_col_info = ci.title_col_info()
-        msg_values_col_info = ci.msg_values_col_info()
         title_model = self.model_title
-        msg_values_model = self.model_msg_values
 
-        title_col_in_msg_values = msg_values_col_info.index('Title')
-        title_index_col_in_msg_values  = msg_values_col_info.index('TitleIndex')
+        col_of_title = col_info.index('Title')
+        col_of_title_index  = col_info.index('TitleIndex')
+        col_of_at_value = col_info.index('AtValue')
 
-        title_col = title_col_info.index('Title')
-        title_index_col = title_col_info.index('TitleIndex')
+        title_index = model.item(index.row(), col_of_title_index).text()
+        title = self.searchTitlefromEnumName(title_index)
 
-        title_in_msg_values = msg_values_model.item(index.row(), title_col_in_msg_values ).text()
-
-        # find title in title-model with msg_values_title
-        find_list = title_model.findItems(title_in_msg_values, column = title_col_info.index('Title'))
-
-        title_index = ''
-        for item in find_list:
-            row = item.row()
-            col = title_col_info.index('Enum 이름')
-            title_index = title_model.item(row, col).text()
-            break
-
-        item = msg_values_model.item(index.row(), msg_values_col_info.index('TitleIndex') )
-        item.setText(title_index)
+        # at value 가지고 Title 적용  
+        at_value = model.item(index.row(), col_of_at_value ).text()
+        item = model.item(index.row(), col_of_title )
+        title = mk.make_title_with_at_value(title, at_value)
+        item.setText(title)
         pass
 
     @pyqtSlot()
@@ -793,6 +847,16 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         #     else:
         #         self.viewParameterDetail.setColumnHidden(count, True)
         pass
+
+    def searchTitleIndexFromTitle(self, titleWithoutAtValue):
+        col_info = ci.title_col_info()
+        items = self.model_title.findItems(titleWithoutAtValue, column =col_info.index('Title'))
+        for item in items:
+            row = item.row()
+            return self.model_title.item(row, col_info.index('Enum 이름')).text() 
+        return ('')
+        pass
+
     def searchTitlefromEnumName(self, enumName):
         col_info = ci.title_col_info()
         items = self.model_title.findItems(enumName, column =col_info.index('Enum 이름'))
@@ -1060,7 +1124,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 comment
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 
-                            columns  = [ ci.para_col_info_for_view().index('통신주소')]
+                            columns  = [ ci.para_col_info_for_view().index('통신주소'), 
+                                         ci.para_col_info_for_view().index('Title')
+                            ]
                             self.addRowToModel(self.model_parameters, view_col_list, editing_prohibit_columns = columns)
                         except IndexError:
                             print('error occur')
@@ -1105,7 +1171,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         title = mk.make_title_with_at_value(title, at_value )
 
                         insert_list =  msg_name, msg_comment, title_enum, title, at_value 
-                        self.addRowToModel(self.model_msg_values, insert_list)
+                        # 에디팅 불가능하게 만드는 컬럼 리스트 
+                        columns  = [ 
+                                    ci.msg_values_col_info().index('Title')
+                        ]
+                        self.addRowToModel(self.model_msg_values, insert_list, editing_prohibit_columns = columns)
                         pass
 
                     for item in msg_list:
@@ -1174,6 +1244,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         proxy_model = self.model_proxy_parameters
         source_index = proxy_model.mapToSource(index) 
 
+        # 단위나 폼 메시지 클릭 시 
         unit_col = ci.para_col_info_for_view().index('단위')
         form_msg_col = ci.para_col_info_for_view().index('폼메시지')
         if( index.column() == unit_col or index.column() == form_msg_col ):
@@ -1196,6 +1267,20 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 self.onParameterViewUnitChanged( self.model_parameters.index(row, col )  )
             pass
 
+        col = col_info.index('TitleIndex')
+        # 변경된 데이터가 범위안에 있다면 
+        if( col  in range(topy, bottomy + 1) ):
+            for row in range(topx, bottomx + 1):
+                self.onParameterViewTitleIndexChanged( self.model_parameters.index(row, col )  )
+            pass
+
+        col = col_info.index('AtValue')
+        # 변경된 데이터가 범위안에 있다면 
+        if( col  in range(topy, bottomy + 1) ):
+            for row in range(topx, bottomx + 1):
+                self.onParameterViewAtValueChanged( self.model_parameters.index(row, col )  )
+            pass
+
     @pyqtSlot(QModelIndex, QModelIndex)
     def onModelTitleDataChanged(self, topLeft, bottomRight):
         col_info = ci.title_col_info()
@@ -1213,7 +1298,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             pass
 
     @pyqtSlot(QModelIndex, QModelIndex)
-    def onModelMsgValuesTitleDataChanged(self, topLeft, bottomRight):
+    def onModelMsgValuesDataChanged(self, topLeft, bottomRight):
         col_info = ci.msg_values_col_info()
         topx = topLeft.row()
         topy = topLeft.column() 
@@ -1221,11 +1306,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         bottomx = bottomRight.row()
         bottomy = bottomRight.column()
 
-        col = col_info.index('Title')
+        col = col_info.index('TitleIndex')
         # 변경된 데이터가 범위안에 있다면 
         if( col  in range(topy, bottomy + 1) ):
             for row in range(topx, bottomx + 1):
-                self.onMsgValuesViewTitleChanged( self.model_title.index(row, col )  )
+                self.onMsgValuesViewTitleIndexChanged( self.model_title.index(row, col )  )
+            pass
+
+        col = col_info.index('AtValue')
+        # 변경된 데이터가 범위안에 있다면 
+        if( col  in range(topy, bottomy + 1) ):
+            for row in range(topx, bottomx + 1):
+                self.onMsgValuesViewAtValueChanged( self.model_title.index(row, col )  )
             pass
 
     def viewRowCopy(self, subject, view):
@@ -1303,11 +1395,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot()
     def onParameterViewPasted(self):
         col_info = ci.para_col_info_for_view()
-        self.viewRowPaste('parameter', self.viewParameter, self.model_parameters, [col_info.index('통신주소')])
+        prohibit_list = [col_info.index('통신주소'), col_info.index('Title')]
+        self.viewRowPaste('parameter', self.viewParameter, self.model_parameters, prohibit_list)
     @pyqtSlot()
     def onParameterViewInserted(self):
         col_info = ci.para_col_info_for_view()
-        self.viewRowInsert(self.viewParameter, self.model_parameters, [col_info.index('통신주소')])
+        prohibit_list = [col_info.index('통신주소'), col_info.index('Title')]
+        self.viewRowInsert(self.viewParameter, self.model_parameters, prohibit_list)
     @pyqtSlot()
     def onParameterViewDeleted(self):
         self.viewRowDelete( self.viewParameter)
@@ -1343,10 +1437,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowCopy('msg_value', self.viewMsgValue)
     @pyqtSlot()
     def onMsgValueViewPasted(self):
-        self.viewRowPaste('msg_value', self.viewMsgValue, self.model_msg_values)
+        col_info = ci.msg_values_col_info()
+        prohibit_list = [col_info.index('Title')]
+        self.viewRowPaste('msg_value', self.viewMsgValue, self.model_msg_values, prohibit_list)
     @pyqtSlot()
     def onMsgValueViewInserted(self):
-        self.viewRowInsert(self.viewMsgValue, self.model_msg_values)
+        col_info = ci.msg_values_col_info()
+        prohibit_list = [col_info.index('Title')]
+        self.viewRowInsert(self.viewMsgValue, self.model_msg_values, prohibit_list)
     @pyqtSlot()
     def onMsgValueViewDeleted(self):
         self.viewRowDelete( self.viewMsgValue)
