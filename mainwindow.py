@@ -108,7 +108,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
 
     def createConnection(self):
-        self.btnCheck.clicked.connect(self.btnCheckClicked)
+        self.btnCheck.clicked.connect(self.onBtnCheckClicked)
+        self.btnSortCancel.clicked.connect(self.onBtnSortCancelClicked)
 
         self.viewGroup.selectionModel().currentChanged.connect(self.onViewGroupSelectionChanged)
         # self.viewGroup.clicked.connect(self.onViewGroupClicked)  
@@ -257,6 +258,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             item.setAlternatingRowColors(True)
             item.setSelectionBehavior(QAbstractItemView.SelectRows)
             item.setSelectionMode(QAbstractItemView.SingleSelection)
+            item.setSortingEnabled(True)
             horizontalHeaderView  = item.horizontalHeader()
             horizontalHeaderView.setStretchLastSection(True)
             horizontalHeaderView.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -753,7 +755,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
 
     @pyqtSlot()
-    def btnCheckClicked(self):
+    def onBtnSortCancelClicked(self):
+        for view in self.view_list:
+            view.model().sort(-1)
+        pass
+
+    @pyqtSlot()
+    def onBtnCheckClicked(self):
+
         err_list = [] 
         grp_code_list = []
         name_list = []

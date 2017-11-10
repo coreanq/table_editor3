@@ -1,1 +1,1 @@
-pyinstaller --onefile --windowed mainwindow.py
+C:\ProgramData\Anaconda3\Scripts\pyinstaller --onefile --windowed mainwindow.py

@@ -630,7 +630,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, i
 	}}
 	else
 	{{
-		MSG_ERR("GrpSize overflow")
+		MSG_ERR("GrpSize overflow");
 	}}
 
 	return pstTable;
@@ -686,7 +686,14 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition )
     }}
 	return wCommAddr;
 }}
-
+uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode)
+{{
+	// to pass MISRAC rule: dont use define constant for calculating ( relative: implicitly conversion )
+	uint16_t wParaStartAddr = PARA_START_ADDR;
+	uint16_t wGrpOffsetMul = GRP_OFFSET_MUL;
+	uint16_t wRet = wParaStartAddr + (bGrp  << wGrpOffsetMul) + bCode;
+	return wRet;
+}}
 '''
     # 맨 마지막 콤마 삭제 
     last_str = para_vars[-1]
@@ -728,12 +735,12 @@ extern "C" {{
 
 #include "KpdPara_StructUnit.H"
 
-#define PARA_START_ADDR	                    0x1000u
-#define GRP_OFFSET_MUL			            0x100
-#define GET_PARA_TABLE_ADDR(bGrp, bCode)	(PARA_START_ADDR + (((uint16_t)(bGrp) * GRP_OFFSET_MUL) + (uint16_t)(bCode)))
-#define GET_GRP(wCommAddr)	(((wCommAddr) & 0x0f00) >> 8)  & 0xff
+#define PARA_START_ADDR	                    (uint16_t)0x1000
+#define GRP_OFFSET_MUL			           	8 
+#define GET_GRP(wCommAddr)	((((wCommAddr) & 0x0f00) >> 8)  & 0xff)
 #define GET_CODE_NUM(wCommAddr)	((wCommAddr) & 0xff) 
 \n
+uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode);
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrp);
 // wCommAddr 을 기준으로 해당 그룹 내에서 offset 위치만큼의 Table Addr 을 리턴함 0 인 경우 input 어드레스의 Table Addr 리턴  
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, int16_t iOffset);
