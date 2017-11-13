@@ -602,7 +602,7 @@ static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset)
 {{
 	const S_TABLE_X_TYPE* pstTable = NULL;
-    uint16_t wCommAddr = GET_PARA_TABLE_ADDR(bGrp, bCodeNum);
+    uint16_t wCommAddr = KpdParaTableGetTableAddr(bGrp, bCodeNum);
 	pstTable = KpdParaTableGetTableAddrFromCommAddr(wCommAddr, iOffset);
 	return pstTable;
 }}
@@ -809,22 +809,6 @@ def make_drv_para_data_storage(source_path, parameters_model):
 #include "BaseDefine.h"
 #include "DrvPara_DataStorage.h"
 #include "KpdPara_Table.h"
-
-//플래쉬에 저장되는 것은 para_data 뿐이며, 저장공간을 절약하기 위해 Scale(from table editor) 과 분리함 
-#pragma pack(push, 1)
-
-typedef struct {{
-	const uint16_t      wCommAddr;
-	int32_t		        lData;
-}}S_DRV_PARA_DATA;
-
-typedef struct {{
-	uint16_t            wCommAddr;
-	uint16_t            wFloatScale;
-	uint16_t            wWordScale;
-}}S_DRV_PARA_SCALE;
-
-#pragma pack(pop)
 
 static const int32_t t_alDrvParaDivSlongData[TOTAL_DATA_DIV] =	//int32_t Type의 Scale Data
 {{
