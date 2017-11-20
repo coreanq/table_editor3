@@ -608,7 +608,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8
 }}
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, int16_t iOffset)
 {{
-	uint8_t bGrp = GET_GRP(wCommAddr);
+	uint8_t bGrp = KpdParaUtilGetGrp(wCommAddr);
     const S_TABLE_X_TYPE* pstTable = NULL;
     
 	if( bGrp < GROUP_TOTAL )
@@ -694,6 +694,20 @@ uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode)
 	uint16_t wRet = wParaStartAddr + (bGrp  << wGrpOffsetMul) + bCode;
 	return wRet;
 }}
+uint8_t KpdParaUtilGetGrp(uint16_t wCommAddr)
+{{
+    uint8_t bGrpCode;
+    
+    bGrpCode = ((((wCommAddr) & 0x0f00) >> 8)  & 0xff);
+    return bGrpCode;
+}}
+uint8_t KpdParaUtilGetCodeId(uint16_t wCommAddr)
+{{
+    uint8_t bCodeId;
+    
+    bCodeId = (wCommAddr & 0xff);
+    return bCodeId;
+}}
 '''
     # 맨 마지막 콤마 삭제 
     last_str = para_vars[-1]
@@ -737,8 +751,6 @@ extern "C" {{
 
 #define PARA_START_ADDR	                    (uint16_t)0x1000
 #define GRP_OFFSET_MUL			           	8 
-#define GET_GRP(wCommAddr)	((((wCommAddr) & 0x0f00) >> 8)  & 0xff)
-#define GET_CODE_NUM(wCommAddr)	((wCommAddr) & 0xff) 
 \n
 uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode);
 const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrp);
@@ -747,6 +759,8 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, i
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset);
 const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition);
 uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
+uint8_t KpdParaUtilGetGrp(uint16_t wCommAddr);
+uint8_t KpdParaUtilGetCodeId(uint16_t wCommAddr);
 {1}
 {2}
 \n
