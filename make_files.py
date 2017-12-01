@@ -624,13 +624,13 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, i
 		}}
 		else
 		{{
-			MSG_ERR("wCommAddr search Error");
+            MSG_ERR("%08x search Error\\n", wCommAddr);
 			pstTable = NULL;
 		}}
 	}}
 	else
 	{{
-		MSG_ERR("GrpSize overflow");
+		MSG_ERR("GrpSize overflow\\n");
 	}}
 
 	return pstTable;
@@ -650,13 +650,13 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_
         else
         {{
 			pstTable = NULL;
-            MSG_ERR("bPosition");
+            MSG_ERR("bPosition %d\\n", bPosition);
         }}
     }}
     else
     {{
 		pstTable = NULL;
-        MSG_ERR("GrpSize overflow");
+        MSG_ERR("GrpSize overflow\\n");
     }}
     return pstTable;
 }}
@@ -676,13 +676,13 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition )
         else
         {{
 			wCommAddr = 0;
-            MSG_ERR("bPosition");
+            MSG_ERR("bPosition %d\\n", bPosition);
         }}
     }}
     else
     {{
 		wCommAddr = 0;
-        MSG_ERR("GROUP TOTAL");
+        MSG_ERR("GROUP TOTAL\\n");
     }}
 	return wCommAddr;
 }}
