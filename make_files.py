@@ -895,7 +895,7 @@ def make_drv_para_data_from_array(source_path, parameters_model):
         uint16_t wAddrList[{}_ARRAY_SIZE] = {{
             {}
         }};
-        wValue = DriveParaReadData( wAddrList[bPosition], SENDER_SYSTEM );
+        lData = DriveParaReadData( wAddrList[bPosition], SENDER_SYSTEM );
     }}
     break;
 '''
@@ -906,7 +906,7 @@ def make_drv_para_data_from_array(source_path, parameters_model):
         uint16_t wAddrList[{}_ARRAY_SIZE] = {{
             {}
         }};
-        DriveParaWriteData( wAddrList[bPosition], wData, SENDER_SYSTEM );
+        DriveParaWriteData( wAddrList[bPosition], lData, SENDER_SYSTEM );
     }}
     break;
 '''
@@ -933,21 +933,21 @@ def make_drv_para_data_from_array(source_path, parameters_model):
 {}
 
 
-uint16_t DriveParaReadFromArrayData(uint16_t wStartIndex, uint8_t bPosition)
+int32_t DriveParaReadFromArrayData(uint16_t wStartIndex, uint8_t bPosition)
 {{
-    uint16_t wValue = 0;
+    int32_t lData = 0;
     switch(wStartIndex)
     {{
     {}
     default:
-        wValue = 0;
+        lData = 0;
         MSG_ERR("wStartIndex\\n");
     break;
     }}
-    return wValue;
+    return lData;
 }}
 
-void DriveParaWriteToArrayData(uint16_t wStartIndex, uint8_t bPosition, uint16_t wData)
+void DriveParaWriteToArrayData(uint16_t wStartIndex, uint8_t bPosition, int32_t lData)
 {{
     switch(wStartIndex)
     {{

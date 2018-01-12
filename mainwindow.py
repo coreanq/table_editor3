@@ -820,7 +820,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # print(util.whoami() )
         row = current.row()
         col_info = ci.group_col_info()
-        key_name = self.model_group.item(row, col_info.index('Group')).text() 
+
+        target_index = current 
+        target_index.column = col_info.index('Group')
+        key_name = current.model().data(target_index)
+
         regx = QRegExp('^' + key_name.strip() + '$' )  
         self.model_proxy_parameters.setFilterKeyColumn(0)
         self.model_proxy_parameters.setFilterRegExp(regx)
@@ -831,7 +835,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # print(util.whoami() )
         row = current.row()
         col_info = ci.msg_info_col_info()
-        key_name = self.model_msg_info.item(row, col_info.index('MsgName')).text()
+
+        target_index = current 
+        target_index.column = col_info.index('MsgName')
+        key_name = current.model().data(target_index)
+
         regx = QRegExp( '^' + key_name.strip() + '$' )
         self.model_proxy_msg_values.setFilterKeyColumn(0)
         self.model_proxy_msg_values.setFilterRegExp(regx)
