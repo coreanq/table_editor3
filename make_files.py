@@ -607,12 +607,12 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromGrpAndCode(uint8_t bGrp, uint8_
 {{
 	const S_TABLE_X_TYPE* pstTable = NULL;
     uint16_t wCommAddr = KpdParaTableGetTableAddr(bGrp, bCodeNum);
-	pstTable = KpdParaTableGetTableAddrFromCommAddr(wCommAddr, iOffset);
+	pstTable = KpdParaTableGetCodeInfoFromCommAddr(wCommAddr, iOffset);
 	return pstTable;
 }}
 const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCommAddr(uint16_t wCommAddr, int16_t iOffset)
 {{
-	uint8_t bGrp = KpdParaUtilGetGrp(wCommAddr);
+	uint8_t bGrp = KpdParaTableGetGrp(wCommAddr);
     const S_TABLE_X_TYPE* pstTable = NULL;
     
 	if( bGrp < GROUP_TOTAL )
@@ -620,7 +620,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCommAddr(uint16_t wCommAddr, in
         uint16_t wSearchedIndex = 0;
 		uint16_t wGrpSize = t_astGrpInfo[bGrp].bGrpSize;
 		uint16_t wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
-		if( KpdParaAddrBinarySearch( wCommAddr, &wSearchedIndex)  == true )
+		if( KpdParaTableGetIndexFromAddr( wCommAddr, &wSearchedIndex)  == true )
 		{{
 			uint32_t ulOffsetIndex = ((int32_t)(wSearchedIndex - wStartIndex + iOffset)) % wGrpSize;
 			uint32_t ulFindedIndex = wStartIndex + ulOffsetIndex;
