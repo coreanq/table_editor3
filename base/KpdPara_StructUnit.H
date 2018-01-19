@@ -104,7 +104,9 @@ typedef struct {
 
 	uint8_t		bAtValue;
 
-	bool 		blIsDataFuncRun;     // 설정된 값 외에 def, max, min 이 수정되야 될때 call back 부를 지 여부 
+	uint8_t 	bFloatScale;
+
+	uint8_t 	bInt16Scale;
 
 	int32_t		lDefData;			// default value 
 

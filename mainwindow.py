@@ -259,6 +259,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             item.setSelectionBehavior(QAbstractItemView.SelectRows)
             item.setSelectionMode(QAbstractItemView.SingleSelection)
             item.setSortingEnabled(True)
+            item.setStyleSheet(
+                "QTableView::item:selected:active { background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #6ea1f1, stop: 1 #567dbc); }"
+                "QTableView::item:selected:!active { background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #6b9be8, stop: 1 #577fbf); }"
+                )
             horizontalHeaderView  = item.horizontalHeader()
             horizontalHeaderView.setStretchLastSection(True)
             horizontalHeaderView.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -563,7 +567,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ 
-            col_info.index('DataFunc실행여부'), 
             col_info.index('통신쓰기금지'), 
             col_info.index('읽기전용'),
             col_info.index('운전중변경불가'),
@@ -1114,6 +1117,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             no_comm = items[col_info.index('통신쓰기금지')]
                             comm_addr = items[col_info.index('통신주소')]
                             code_name = str(int(int(comm_addr, 0) & 0xff))
+                            kpd_word_scale = items[col_info.index('KpdWordScale')]
+                            kpd_float_scale = items[col_info.index('KpdFloatScale')]
                             comment = items[-1]
                             
 
@@ -1127,7 +1132,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 items[col_info.index('AtValue')], 
                                 kpd_word_scale,
                                 kpd_float_scale,
-                                'true',
                                 items[col_info.index('공장설정값')],
                                 max_value,
                                 min_value,

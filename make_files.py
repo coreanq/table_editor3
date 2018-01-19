@@ -488,7 +488,6 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             para_word_scale = model.item(find_row_index, col_info.index('KpdWordScale')).text()
             para_float_scale = model.item(find_row_index, col_info.index('KpdFloatScale')).text()
 
-            data_func_run = model.item(find_row_index, col_info.index('DataFunc실행여부')).text()
             default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
             max_val = model.item(find_row_index, col_info.index('최대값')).text()
             min_val = model.item(find_row_index, col_info.index('최소값')).text()
@@ -522,17 +521,17 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             if( 'DATAMSG' in unit ):
                 form_msg = 'MSG_' + form_msg
             
-            format_str = ( '/* {0:>8} */ {{{1:<30},{2:>20},{3:>5},{4:>6},{5:>8},'
-                            '{6:>8},{7:>8},{8:>6},{9:>6},{10:>6},'
-                            '{11:>6},{12:>25},{13:>25},{14:>10}}}{15} //"{16:<30}"'
-                            '//{17}' )
+            format_str = ( '/* {:>8} */ {{{:<30},{:>20},{:>5},{:>16},{:>16},{:>8},'
+                            '{:>8},{:>8},{:>6},{:>6},{:>6},'
+                            '{:>6},{:>25},{:>25},{:>10}}}{} //"{:<30}"'
+                            '//{}' )
 
             if( find_item == find_items[-1] ):
                 comment = comment + '\n\n'
 
             para_vars_lines.append(
                 format_str.format(\
-                        grp_and_code,       name,               title_enum_name,    at_value,           data_func_run,      default_val,        
+                        grp_and_code,       name,               title_enum_name,    at_value,           para_float_scale,   para_word_scale,           default_val,        
                         max_val,            min_val,            read_only,          no_change_on_run,   zero_input,
                         no_comm,            form_msg,           unit,               comm_addr,          ',',                title_name,         
                         comment
@@ -563,12 +562,17 @@ static const S_GROUP_X_TYPE t_astGrpInfo[GROUP_TOTAL] = {{
 {2}
 }};\n\n
 
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrpIdx)
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfo(int32_t lIndex)
+{{
+    return &t_astAllGrp[lIndex];
+}}
+
+const S_GROUP_X_TYPE* KpdParaTableGetGrpInfo(uint8_t bGrpIdx)
 {{
     return &t_astGrpInfo[bGrpIdx];
 }}
 
-static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
+bool KpdParaTableGetIndexFromAddr(uint16_t wInputAddr, uint16_t* pwIndex)
 {{
 	uint16_t wMidIndex = 0;
 	uint16_t wLeftIndex = 0;
@@ -599,14 +603,14 @@ static bool KpdParaAddrBinarySearch(uint16_t wInputAddr, uint16_t* pwIndex)
 	return blSearchData;
 }}
 
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset)
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset)
 {{
 	const S_TABLE_X_TYPE* pstTable = NULL;
     uint16_t wCommAddr = KpdParaTableGetTableAddr(bGrp, bCodeNum);
 	pstTable = KpdParaTableGetTableAddrFromCommAddr(wCommAddr, iOffset);
 	return pstTable;
 }}
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, int16_t iOffset)
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCommAddr(uint16_t wCommAddr, int16_t iOffset)
 {{
 	uint8_t bGrp = KpdParaUtilGetGrp(wCommAddr);
     const S_TABLE_X_TYPE* pstTable = NULL;
@@ -636,7 +640,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, i
 	return pstTable;
 }}
 
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition)
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCodeIndex(uint8_t bGrp, uint8_t bPosition)
 {{
     const S_TABLE_X_TYPE * pstTable = NULL;
     uint16_t wStartIndex = 0;
@@ -694,14 +698,14 @@ uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode)
 	uint16_t wRet = wParaStartAddr + (bGrp  << wGrpOffsetMul) + bCode;
 	return wRet;
 }}
-uint8_t KpdParaUtilGetGrp(uint16_t wCommAddr)
+uint8_t KpdParaTableGetGrp(uint16_t wCommAddr)
 {{
     uint8_t bGrpCode;
     
     bGrpCode = ((((wCommAddr) & 0x0f00) >> 8)  & 0xff);
     return bGrpCode;
 }}
-uint8_t KpdParaUtilGetCodeId(uint16_t wCommAddr)
+uint8_t KpdParaTableGetCodeNum(uint16_t wCommAddr)
 {{
     uint8_t bCodeId;
     
@@ -752,15 +756,18 @@ extern "C" {{
 #define PARA_START_ADDR	                    (uint16_t)0x1000
 #define GRP_OFFSET_MUL			           	8 
 \n
+bool KpdParaTableGetIndexFromAddr(uint16_t wInputAddr, uint16_t* pwIndex);
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfo(int32_t lIndex);
+const S_GROUP_X_TYPE* KpdParaTableGetGrpInfo(uint8_t bGrp);
+
 uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode);
-const S_GROUP_X_TYPE* KpdParaTableGetGrpAddr(uint8_t bGrp);
 // wCommAddr 을 기준으로 해당 그룹 내에서 offset 위치만큼의 Table Addr 을 리턴함 0 인 경우 input 어드레스의 Table Addr 리턴  
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCommAddr(uint16_t wCommAddr, int16_t iOffset);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset);
-const S_TABLE_X_TYPE* KpdParaTableGetTableAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition);
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCommAddr(uint16_t wCommAddr, int16_t iOffset);
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset);
+const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCodeIndex(uint8_t bGrp, uint8_t bPosition);
 uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
-uint8_t KpdParaUtilGetGrp(uint16_t wCommAddr);
-uint8_t KpdParaUtilGetCodeId(uint16_t wCommAddr);
+uint8_t KpdParaTableGetGrp(uint16_t wCommAddr);
+uint8_t KpdParaTableGetCodeNum(uint16_t wCommAddr);
 {1}
 {2}
 \n
@@ -790,25 +797,9 @@ uint8_t KpdParaUtilGetCodeId(uint16_t wCommAddr);
 def make_drv_para_data_storage(source_path, parameters_model):
     col_info = ci.para_col_info_for_view()
     model = parameters_model
-    para_word_scale_index = col_info.index('KpdWordScale')
-    para_float_scale_index = col_info.index('KpdFloatScale')
     para_name_index = col_info.index('Name')
 
-    scale_line_template = '{{ {0:<30}, {1:>20}, {2:>20} }}'
-    scale_lines = []
     data_lines = []
-
-    for index in range(model.rowCount() ):
-        float_scale = model.item(index, para_float_scale_index).text()
-        word_scale  = model.item(index, para_word_scale_index).text()
-        grp_code = model.item(index, para_name_index).text()
-        scale_lines.append(
-            scale_line_template.format( 
-                grp_code, 
-                float_scale, 
-                word_scale
-            )
-        )
 
     for index in range(model.rowCount() ):
         grp_code = model.item(index, para_name_index).text()
@@ -850,16 +841,10 @@ static S_DRV_PARA_DATA t_astDrvParaData[ALL_GRP_CODE_TOTAL] =
 \t{1}
 }};
 
-//Drive Parameter Scale 값이 저장되어 있는 변수 
-static const S_DRV_PARA_SCALE t_astDrvParaScale[ALL_GRP_CODE_TOTAL] = 
-{{
-\t{2}
-}};
 '''
     file_contents = src_template.format(
         banner,
-        ',\n\t'.join(data_lines),
-        ',\n\t'.join(scale_lines)
+        ',\n\t'.join(data_lines)
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
         f.write(file_contents)
