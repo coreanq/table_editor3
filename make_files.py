@@ -26,7 +26,7 @@ banner = '''\
     datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     )
 
-PARA_START_ADDR	        =    0x1000
+PARA_START_ADDR	        =    0x4000
 GRP_OFFSET_MUL		    =    0x100
 
 
@@ -485,8 +485,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             # kpd_vari = model.item(find_row_index, col_info.index('ParaVar')).text()
             # kpd_func_name  = model.item(find_row_index, col_info.index('KpdFunc')).text()
 
-            para_word_scale = model.item(find_row_index, col_info.index('KpdWordScale')).text()
-            para_float_scale = model.item(find_row_index, col_info.index('KpdFloatScale')).text()
+            para_word_scale = model.item(find_row_index, col_info.index('Uint16Scale')).text()
+            para_float_scale = model.item(find_row_index, col_info.index('FloatScale')).text()
 
             default_val =  model.item(find_row_index, col_info.index('공장설정값')).text()
             max_val = model.item(find_row_index, col_info.index('최대값')).text()
@@ -700,8 +700,7 @@ uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode)
 }}
 uint8_t KpdParaTableGetGrp(uint16_t wCommAddr)
 {{
-    uint8_t bGrpCode;
-    
+    uint8_t bGrpCode = 0;
     bGrpCode = ((((wCommAddr) & 0x0f00) >> 8)  & 0xff);
     return bGrpCode;
 }}
@@ -711,6 +710,33 @@ uint8_t KpdParaTableGetCodeNum(uint16_t wCommAddr)
     
     bCodeId = (wCommAddr & 0xff);
     return bCodeId;
+}}
+
+bool KpdParaTableIsUint32DataAddrRange(uint16_t wCommAddr)
+{{
+	bool blRet = false;
+	if( wCommAddr & 0x8000) {{
+		blRet = true;
+	}} else {{
+		blRet = false;
+	}}
+	return blRet;
+}}
+// retrun 16bit data addr range
+uint16_t KpdParaTableTransToUint16DataAddrRange(uint16_t wCommAddr)
+{{
+	bool blIsUint32DataAddrRange = KpdParaTableIsUint32DataAddrRange(wCommAddr);
+	uint8_t bGrp = 0;
+	uint8_t bCode = 0;
+
+	bGrp = (wCommAddr & 0x3F00) >> 8 ;
+
+	if( blIsUint32DataAddrRange ){{
+		bCode = (wCommAddr & 0x00FF) >> 1;
+	}} else {{
+		bCode = (wCommAddr & 0x00FF) ;
+	}}
+	return KpdParaTableGetTableAddr(bGrp, bCode);
 }}
 '''
     # 맨 마지막 콤마 삭제 
@@ -753,7 +779,7 @@ extern "C" {{
 
 #include "KpdPara_StructUnit.H"
 
-#define PARA_START_ADDR	                    (uint16_t)0x1000
+#define PARA_START_ADDR	                    (uint16_t)0x4000
 #define GRP_OFFSET_MUL			           	8 
 \n
 bool KpdParaTableGetIndexFromAddr(uint16_t wInputAddr, uint16_t* pwIndex);
@@ -768,6 +794,8 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCodeIndex(uint8_t bGrp, uint8_t
 uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
 uint8_t KpdParaTableGetGrp(uint16_t wCommAddr);
 uint8_t KpdParaTableGetCodeNum(uint16_t wCommAddr);
+bool KpdParaTableIsUint32DataAddrRange(uint16_t wCommAddr);
+uint16_t KpdParaTableTransToUint16DataAddrRange(uint16_t wCommAddr);
 {1}
 {2}
 \n
@@ -815,24 +843,20 @@ def make_drv_para_data_storage(source_path, parameters_model):
 #include "DrvPara_DataStorage.h"
 #include "KpdPara_Table.h"
 
-static const int32_t t_alDrvParaDivSlongData[TOTAL_DATA_DIV] =	//int32_t Type의 Scale Data
+static const int32_t t_alDrvParaScale[TOTAL_SCALE_COUNT] =	
 {{
-	1,			//E_DATA_DIV_1
-	10,			//E_DATA_DIV_10
-	100,		//E_DATA_DIV_100
-	1000,		//E_DATA_DIV_1K
-	10000,		//E_DATA_DIV_10K
-	100000		//E_DATA_DIV_100K
-}};
-
-static const float t_afDrvParaDivFloatData[TOTAL_DATA_DIV] =	//float Type의 Scale Data
-{{
-	1.0,			//E_DATA_DIV_1
-	10.0,			//E_DATA_DIV_10
-	100.0,			//E_DATA_DIV_100
-	1000.0,			//E_DATA_DIV_1K
-	10000.0,		//E_DATA_DIV_10K
-	100000.0		//E_DATA_DIV_100K
+	1,			//E_PLUS_1
+	-1,         //E_MINUS_1
+	10,			//E_PLUS_10
+	-10,		//E_MINUS_10
+	100,		//E_PLUS_100
+	-100,		//E_MINUS_100
+	1000,		//E_PLUS_1K
+	-1000,		//E_MINUS_1K
+	10000,		//E_PLUS_10K
+	-10000,     //E_MINUS_10K
+	100000,		//E_PLUS_100K
+	100000		//E_MINUS_100K
 }};
 
 //Drive Parameter Data값이 저장되어 있는 변수

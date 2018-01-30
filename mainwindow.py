@@ -550,18 +550,33 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         model = self.model_kpd_para_unit
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
-        col_index = col_info.index('단위')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], editable = False,  width = 150)
+        col_indexes = [
+            col_info.index('단위'), 
+            col_info.index('폼메시지')
+        ]
+        self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  width = 110)
 
-        model = QStringListModel(['E_DATA_DIV_1','E_DATA_DIV_10', 'E_DATA_DIV_100','E_DATA_DIV_1K' , 'E_DATA_DIV_10K', 'E_DATA_DIV_100K'] ) 
+        model = QStringListModel([
+            'E_PLUS_1',
+            'E_MINUS_1',
+            'E_PLUS_10',
+            'E_MINUS_10',
+            'E_PLUS_100',
+            'E_MINUS_100',
+            'E_PLUS_1K',
+            'E_MINUS_1K',
+            'E_PLUS_10K',
+            'E_MINUS_10K',
+            'E_PLUS_100K',
+            'E_MINUS_100K'] ) 
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ 
-            col_info.index('KpdWordScale'),
-            col_info.index('KpdFloatScale')
+            col_info.index('Uint16Scale'),
+            col_info.index('FloatScale')
         ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  
-                width = 120 )
+                width = 110 )
 
         model = QStringListModel( ['true', 'false']) 
         view  = self.viewParameter
@@ -886,7 +901,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         return ('')
 
     def makeAddrValue(self, group_num, code_num ):
-        comm_addr = hex(0x1000 + (0x0100 * group_num) + code_num)
+        comm_addr = hex(0x4000 + (0x0100 * group_num) + code_num)
         comm_addr = '0x{0}'.format( comm_addr[2:].upper() )
         return comm_addr
 
@@ -1053,7 +1068,14 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         at_value = items[col_info.index('AtValue')]
                         title = mk.make_title_with_at_value(title, at_value)
 
+                        # group name 을 통해 현재 group 의 index 를 얻어냄 
                         group_name = items[col_info.index('Group')]
+                        find_items = self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
+
+                        # 한개만 찾아짐 
+                        group_row = 0
+                        for item in find_items:
+                            group_row = item.row()
 
                         # 파라미터 테이블 에디터 파일의 버전에 따라 읽는 방법을 변경한다. 
                         if( int(self.table_editor_number) < 4 ):
@@ -1063,8 +1085,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                             name = rd.changeParaName2Enum(para_vari)
 
-                            kpd_word_scale = 'E_DATA_DIV_1'
-                            kpd_float_scale = 'E_DATA_DIV_1'
+                            kpd_word_scale = 'E_PLUS_1'
+                            kpd_float_scale = 'E_PLUS_1'
                             max_eds = items[col_info.index('MaxEDS')]
                             min_eds = items[col_info.index('MinEDS')]
 
@@ -1100,14 +1122,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                             if( attribute & mk.ATTR_ZERO_INPUT ): zero_input = 'true' 
                             else: zero_input = 'false'
-                            find_items = self.model_group.findItems(group_name, column = ci.group_col_info().index('Group'))
-
-                            # 한개만 찾아짐 
-                            row = 0
-                            for item in find_items:
-                                row = item.row()
+                  
                                 
-                            comm_addr = self.makeAddrValue(row, int(code_name))
+                            comm_addr = self.makeAddrValue(group_row, int(code_name))
 
                         else:
                             name = items[col_info.index('Name')]
@@ -1117,8 +1134,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             no_comm = items[col_info.index('통신쓰기금지')]
                             comm_addr = items[col_info.index('통신주소')]
                             code_name = str(int(int(comm_addr, 0) & 0xff))
-                            kpd_word_scale = items[col_info.index('KpdWordScale')]
-                            kpd_float_scale = items[col_info.index('KpdFloatScale')]
+                            comm_addr = self.makeAddrValue(group_row, int(code_name))
+                            kpd_word_scale = items[col_info.index('Uint16Scale')]
+                            kpd_float_scale = items[col_info.index('FloatScale')]
+                            kpd_word_scale = 'E_PLUS_1'
+                            kpd_float_scale = 'E_PLUS_1'
                             comment = items[-1]
                             
 
@@ -1157,8 +1177,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 elif( filename.lower() == rd.DRVPARA_DATASTORAGE_SRC_AUTO.lower() ):
                     for items in rd.read_data_storage_info(contents):   
                         key_column = ci.para_col_info_for_view().index('Name')
-                        float_scale_column = ci.para_col_info_for_view().index('KpdFloatScale')
-                        word_scale_column = ci.para_col_info_for_view().index('KpdWordScale')
+                        float_scale_column = ci.para_col_info_for_view().index('FloatScale')
+                        word_scale_column = ci.para_col_info_for_view().index('Uint16Scale')
 
                         name = items[ ci.data_storage_columns_info().index('Name') ]
                         float_scale = items[ ci.data_storage_columns_info().index('FloatScale') ]
