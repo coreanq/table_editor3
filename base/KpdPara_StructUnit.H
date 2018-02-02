@@ -123,7 +123,9 @@ typedef struct {
 
 	uint8_t		bUnitType;
 
-	uint16_t    wHexCommAddr;       // hex 로 표현되는 comm address
+	uint16_t    wHex16bitCommAddr;       // hex 로 표현되는 16bit comm address
+
+	uint16_t    wHex32bitCommAddr;       // hex 로 표현되는 32bit comm address
 
 } S_TABLE_X_TYPE;				
 

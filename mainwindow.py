@@ -22,6 +22,17 @@ import make_files as mk
 CONFIG_FILE_NAME = "TableEditor4_config.json"
 CONFIG = {}
 
+# 공통 함수 분리 
+def make16bitAddrValue(group_num, code_num ):
+    comm_addr = hex(0x1000 + (group_num << 8 ) + code_num)
+    comm_addr = '0x{0}'.format( comm_addr[2:].upper() )
+    return comm_addr
+
+def make32bitAddrValue(group_num, code_num ):
+    comm_addr = hex(0x1000 + 0x8000 + (group_num << 8 ) + code_num * 2)
+    comm_addr = '0x{0}'.format( comm_addr[2:].upper() )
+    return comm_addr
+
 class CloseEventEater(QObject):
     def eventFilter(self, obj, event):
         if( event.type() == QEvent.Close):
@@ -900,10 +911,6 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             return self.model_title.item(row, col_info.index('Title')).text() 
         return ('')
 
-    def makeAddrValue(self, group_num, code_num ):
-        comm_addr = hex(0x4000 + (0x0100 * group_num) + code_num)
-        comm_addr = '0x{0}'.format( comm_addr[2:].upper() )
-        return comm_addr
 
     def make_backup_file(self, source_path):
         if( not os.path.exists(source_path) ) :
@@ -1047,7 +1054,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                         para_vari, kpd_func_name = '','' 
                         max_eds , min_eds = '', ''
 
-                        comm_addr = ''
+                        comm_16bit_addr = ''
 
                         comment = ''
 
@@ -1124,7 +1131,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             else: zero_input = 'false'
                   
                                 
-                            comm_addr = self.makeAddrValue(group_row, int(code_name))
+                            comm_16bit_addr = make16bitAddrValue(group_row, int(code_name))
 
                         else:
                             name = items[col_info.index('Name')]
@@ -1132,16 +1139,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             no_change_on_run = items[col_info.index('운전중변경불가')]
                             zero_input = items[col_info.index('0입력가능')]
                             no_comm = items[col_info.index('통신쓰기금지')]
-                            comm_addr = items[col_info.index('통신주소')]
-                            code_name = str(int(int(comm_addr, 0) & 0xff))
-                            comm_addr = self.makeAddrValue(group_row, int(code_name))
+                            comm_16bit_addr = items[col_info.index('16bit주소')] # code 만 뽑기 위함 
+                            code_name = str(int(int(comm_16bit_addr, 0) & 0xff))
+                            comm_16bit_addr = make16bitAddrValue(group_row, int(code_name)) # 그룹값을 토대로 comm_addr 뽑아냄 
                             kpd_word_scale = items[col_info.index('Uint16Scale')]
                             kpd_float_scale = items[col_info.index('FloatScale')]
                             kpd_word_scale = 'E_PLUS_1'
                             kpd_float_scale = 'E_PLUS_1'
                             comment = items[-1]
-                            
 
+                        comm_32bit_addr = make32bitAddrValue(group_row, int(code_name) )
+                            
                         try : 
                             view_col_list = [ 
                                 group_name,
@@ -1161,11 +1169,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 no_comm, 
                                 items[col_info.index('폼메시지')].replace('MSG_', ''),
                                 items[col_info.index('단위')],
-                                comm_addr,
+                                comm_16bit_addr,
+                                comm_32bit_addr,
                                 comment
                             ]
                             # 에디팅 불가능하게 만드는 컬럼 리스트 
-                            columns  = [ ci.para_col_info_for_view().index('통신주소'), 
+                            columns  = [ ci.para_col_info_for_view().index('16bit주소'), 
+                                         ci.para_col_info_for_view().index('32bit주소'), 
                                          ci.para_col_info_for_view().index('Title')
                             ]
                             self.addRowToModel(self.model_parameters, view_col_list, editing_prohibit_columns = columns)
@@ -1436,12 +1446,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot()
     def onParameterViewPasted(self):
         col_info = ci.para_col_info_for_view()
-        prohibit_list = [col_info.index('통신주소'), col_info.index('Title')]
+        prohibit_list = [
+            col_info.index('16bit주소'), col_info.index('Title'),
+            col_info.index('32bit주소'), col_info.index('Title')
+            ]
         self.viewRowPaste('parameter', self.viewParameter, self.model_parameters, prohibit_list)
     @pyqtSlot()
     def onParameterViewInserted(self):
         col_info = ci.para_col_info_for_view()
-        prohibit_list = [col_info.index('통신주소'), col_info.index('Title')]
+        prohibit_list = [
+            col_info.index('16bit주소'), col_info.index('Title'),
+            col_info.index('32bit주소'), col_info.index('Title')
+            ]
         self.viewRowInsert(self.viewParameter, self.model_parameters, prohibit_list)
     @pyqtSlot()
     def onParameterViewDeleted(self):

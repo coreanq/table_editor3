@@ -3,6 +3,7 @@ import column_info as ci
 
 import read_data as rd
 import version
+import mainwindow as main
 
 ATTR_BYTE = 0x0001  # byte 단위 현재 사용 안함 
 ATTR_UP = 0x0002
@@ -25,14 +26,6 @@ banner = '''\
     version.VERSION_INFO,
     datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     )
-
-PARA_START_ADDR	        =    0x4000
-GRP_OFFSET_MUL		    =    0x100
-
-
-def makeCodeAddr(grp, code):
-    return PARA_START_ADDR + ((grp * GRP_OFFSET_MUL) + code)
-
 
 def makeHiddenCondition(attribute):
     hidden_condition = '' 
@@ -413,7 +406,9 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 '''
 
     group_index_lines = []   # group index 정의용 #define GROUP_MAK ...
-    header_name_enum_lines = []   # unique name enum 을 만들기 위함 
+    header_name_16bitAddr_lines = []   # 16bit addr define
+    header_name_32bitAddr_lines = []   # 32bit addr define 
+
     header_grp_size_define_lines = [] # grp total count 정보 용  #define GRP_MAK_CODE_TOTAL 24
     header_grp_size_define_template = '#define GRP_{0}_CODE_TOTAL\t{1}'
     header_grp_start_index_define_lines = []
@@ -500,13 +495,28 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             form_msg = model.item(find_row_index, col_info.index('폼메시지')).text()
             unit = model.item(find_row_index, col_info.index('단위')).text()
 
-            comm_addr = hex(makeCodeAddr(grp_row_index, int(code_num)))
+            comm_16bit_addr = main.make16bitAddrValue(grp_row_index, int(code_num))
+            comm_32bit_addr = main.make32bitAddrValue(grp_row_index, int(code_num))
 
-            # table 헤더의 enum MAK_000 define 생성 title_name 도 추가해서 알아 보기 쉽게 함  
-            header_name_enum_lines.append(
-                    "#define {0:<30} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
+            # table 헤더의 enum MAK_000 을 가지고 Address define
+            header_name_16bitAddr_lines.append(
+                    "#define _16_{0:<30} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
                             name, 
-                            comm_addr, 
+                            comm_16bit_addr, 
+                            grp_and_code,
+                            title_name, 
+                            '' 
+                            # kpd_vari,
+                            # kpd_func_name
+
+                    ) 
+                )
+
+            # table 헤더의 enum MAK_000 을 가지고 Address define
+            header_name_32bitAddr_lines.append(
+                    "#define {0:<34} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
+                            name, 
+                            comm_32bit_addr, 
                             grp_and_code,
                             title_name, 
                             '' 
@@ -523,7 +533,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             
             format_str = ( '/* {:>8} */ {{{:<30},{:>20},{:>5},{:>16},{:>16},{:>8},'
                             '{:>8},{:>8},{:>6},{:>6},{:>6},'
-                            '{:>6},{:>25},{:>25},{:>10}}}{} //"{:<30}"'
+                            '{:>6},{:>25},{:>25},{:>10},{:>10}}}{} //"{:<30}"'
                             '//{}' )
 
             if( find_item == find_items[-1] ):
@@ -531,9 +541,9 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             para_vars_lines.append(
                 format_str.format(\
-                        grp_and_code,       name,               title_enum_name,    at_value,           para_float_scale,   para_word_scale,           default_val,        
+                        grp_and_code,       name,               title_enum_name,    at_value,           para_float_scale,   para_word_scale,       default_val,        
                         max_val,            min_val,            read_only,          no_change_on_run,   zero_input,
-                        no_comm,            form_msg,           unit,               comm_addr,          ',',                title_name,         
+                        no_comm,            form_msg,           unit,               comm_16bit_addr,    comm_32bit_addr,    ',',                   title_name,         
                         comment
                 )
             )
@@ -574,29 +584,27 @@ const S_GROUP_X_TYPE* KpdParaTableGetGrpInfo(uint8_t bGrpIdx)
 
 bool KpdParaTableGetIndexFromAddr(uint16_t wInputAddr, uint16_t* pwIndex)
 {{
-	uint16_t wMidIndex = 0;
-	uint16_t wLeftIndex = 0;
-	uint16_t wRightIndex = 0;
+	int32_t lMidIndex = 0;
+	int32_t lLeftIndex = 0;
+	int32_t lRightIndex = 0;
     uint16_t wSrcAddr = 0;
 	bool blSearchData = false;
 	
-	wRightIndex = ( sizeof(t_astAllGrp) / sizeof(t_astAllGrp[0]) ) - 1;
+	lRightIndex = ( sizeof(t_astAllGrp) / sizeof(t_astAllGrp[0]) ) - 1;
 	
-	while( wLeftIndex <= wRightIndex )
-	{{
-		wMidIndex = wLeftIndex + (wRightIndex - wLeftIndex)/2 ;
-		wSrcAddr = t_astAllGrp[wMidIndex].wCommAddr;
+	while( lLeftIndex <= lRightIndex ) {{
+		lMidIndex = lLeftIndex + (lRightIndex - lLeftIndex) /2 ;
+		wSrcAddr = t_astAllGrp[lMidIndex].wCommAddr;
 		// 찾으려는 값이 중앙값보다 작으면  right index 를 mid - 1로 둔다. 
-		if( wSrcAddr > wInputAddr )
-			wRightIndex = wMidIndex - 1;
+		if( wSrcAddr >  wInputAddr )
+			lRightIndex = lMidIndex - 1;
 		// 찾으려는 값이 중앙값보다 크면  left index 를 mid + 1 로 둔다. 
 		else if( wSrcAddr < wInputAddr ) 
-			wLeftIndex = wMidIndex + 1;
+			lLeftIndex = lMidIndex + 1;
 		// 찾은 경우 값 대입 후  return
-		else
-		{{
+		else {{
 			blSearchData = true;
-			*pwIndex = wMidIndex;
+			*pwIndex = lMidIndex;
 			break;
 		}}
 	}}
@@ -615,25 +623,19 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCommAddr(uint16_t wCommAddr, in
 	uint8_t bGrp = KpdParaTableGetGrp(wCommAddr);
     const S_TABLE_X_TYPE* pstTable = NULL;
     
-	if( bGrp < GROUP_TOTAL )
-	{{
+	if( bGrp < GROUP_TOTAL ) {{
         uint16_t wSearchedIndex = 0;
 		uint16_t wGrpSize = t_astGrpInfo[bGrp].bGrpSize;
 		uint16_t wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
-		if( KpdParaTableGetIndexFromAddr( wCommAddr, &wSearchedIndex)  == true )
-		{{
+		if( KpdParaTableGetIndexFromAddr( wCommAddr, &wSearchedIndex)  == true ) {{
 			uint32_t ulOffsetIndex = ((int32_t)(wSearchedIndex - wStartIndex + iOffset)) % wGrpSize;
 			uint32_t ulFindedIndex = wStartIndex + ulOffsetIndex;
 			pstTable = &t_astAllGrp[ulFindedIndex];
-		}}
-		else
-		{{
+		}} else {{
             MSG_ERR("%08x search Error\\n", wCommAddr);
 			pstTable = NULL;
 		}}
-	}}
-	else
-	{{
+	}} else {{
 		MSG_ERR("GrpSize overflow\\n");
 	}}
 
@@ -644,21 +646,15 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCodeIndex(uint8_t bGrp, uint8_t
 {{
     const S_TABLE_X_TYPE * pstTable = NULL;
     uint16_t wStartIndex = 0;
-    if( bGrp < GROUP_TOTAL ) 
-    {{
-        if( bPosition < t_astGrpInfo[bGrp].bGrpSize )
-        {{
+    if( bGrp < GROUP_TOTAL ) {{
+        if( bPosition < t_astGrpInfo[bGrp].bGrpSize ) {{
             wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
             pstTable = &t_astAllGrp[wStartIndex + bPosition];
-        }}
-        else
-        {{
+        }}else {{
 			pstTable = NULL;
             MSG_ERR("bPosition %d\\n", bPosition);
         }}
-    }}
-    else
-    {{
+    }} else{{
 		pstTable = NULL;
         MSG_ERR("GrpSize overflow\\n");
     }}
@@ -670,21 +666,15 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition )
 {{
 	uint16_t wCommAddr = 0;
 	uint16_t wStartIndex = 0;
-    if( bGrp < GROUP_TOTAL ) 
-    {{
-        if( bPosition < t_astGrpInfo[bGrp].bGrpSize )
-        {{
+    if( bGrp < GROUP_TOTAL ) {{
+        if( bPosition < t_astGrpInfo[bGrp].bGrpSize ) {{
             wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
             wCommAddr = t_astAllGrp[wStartIndex + bPosition].wCommAddr;
-        }}
-        else
-        {{
+        }} else {{
 			wCommAddr = 0;
             MSG_ERR("bPosition %d\\n", bPosition);
         }}
-    }}
-    else
-    {{
+    }} else {{
 		wCommAddr = 0;
         MSG_ERR("GROUP TOTAL\\n");
     }}
@@ -692,52 +682,45 @@ uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition )
 }}
 uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode)
 {{
-	// to pass MISRAC rule: dont use define constant for calculating ( relative: implicitly conversion )
-	uint16_t wParaStartAddr = PARA_START_ADDR;
+	// 32bit 주소 체계를 기본으로 사용 
 	uint16_t wGrpOffsetMul = GRP_OFFSET_MUL;
-	uint16_t wRet = wParaStartAddr + (bGrp  << wGrpOffsetMul) + bCode;
+    uint16_t wParaAddr32bitFlag = PARA_ADDR_32BIT_FLAG;
+	uint16_t wRet = PARA_ADDR_OFFSET + (wParaAddr32bitFlag | (bGrp  << wGrpOffsetMul) + bCode * 2 );
 	return wRet;
 }}
 uint8_t KpdParaTableGetGrp(uint16_t wCommAddr)
 {{
     uint8_t bGrpCode = 0;
-    bGrpCode = ((((wCommAddr) & 0x0f00) >> 8)  & 0xff);
+    bGrpCode = ((((wCommAddr - PARA_ADDR_OFFSET) & 0x3f00) >> 8)  & 0xff);
     return bGrpCode;
 }}
 uint8_t KpdParaTableGetCodeNum(uint16_t wCommAddr)
 {{
-    uint8_t bCodeId;
-    
-    bCodeId = (wCommAddr & 0xff);
-    return bCodeId;
+    uint8_t bCodeNum;
+    bCodeNum = ((wCommAddr - PARA_ADDR_OFFSET) & 0xff);
+	if( KpdParaTableIs32bitAddrRange(wCommAddr) == true ){{
+		// 32bit data address range 의 경우 code number * 2 임 
+		bCodeNum /= 2;
+	}}
+    return bCodeNum;
 }}
-
-bool KpdParaTableIsUint32DataAddrRange(uint16_t wCommAddr)
+bool KpdParaTableIs32bitAddrRange(uint16_t wCommAddr)
 {{
-	bool blRet = false;
-	if( wCommAddr & 0x8000) {{
+	bool blRet = false;	
+	if( wCommAddr >= START_32BIT_ADDR && wCommAddr <= END_32BIT_ADDR ){{
 		blRet = true;
-	}} else {{
-		blRet = false;
 	}}
 	return blRet;
 }}
-// retrun 16bit data addr range
-uint16_t KpdParaTableTransToUint16DataAddrRange(uint16_t wCommAddr)
+uint16_t KpdParaTableGetFloatScale(uint16_t wIndex)
 {{
-	bool blIsUint32DataAddrRange = KpdParaTableIsUint32DataAddrRange(wCommAddr);
-	uint8_t bGrp = 0;
-	uint8_t bCode = 0;
-
-	bGrp = (wCommAddr & 0x3F00) >> 8 ;
-
-	if( blIsUint32DataAddrRange ){{
-		bCode = (wCommAddr & 0x00FF) >> 1;
-	}} else {{
-		bCode = (wCommAddr & 0x00FF) ;
-	}}
-	return KpdParaTableGetTableAddr(bGrp, bCode);
+	return t_astAllGrp[wIndex].bFloatScale;
 }}
+uint16_t KpdParaTableGet16bitScale(uint16_t wIndex)
+{{
+	return t_astAllGrp[wIndex].bUint16Scale;
+}}
+
 '''
     # 맨 마지막 콤마 삭제 
     last_str = para_vars[-1]
@@ -779,7 +762,8 @@ extern "C" {{
 
 #include "KpdPara_StructUnit.H"
 
-#define PARA_START_ADDR	                    (uint16_t)0x4000
+#define PARA_ADDR_32BIT_FLAG                (uint16_t)0x8000
+#define PARA_ADDR_OFFSET	                (uint16_t)0x1000
 #define GRP_OFFSET_MUL			           	8 
 \n
 bool KpdParaTableGetIndexFromAddr(uint16_t wInputAddr, uint16_t* pwIndex);
@@ -794,8 +778,10 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCodeIndex(uint8_t bGrp, uint8_t
 uint16_t KpdParaTableGetCommAddrFromCodeIndex(uint8_t bGrp, uint8_t bPosition );
 uint8_t KpdParaTableGetGrp(uint16_t wCommAddr);
 uint8_t KpdParaTableGetCodeNum(uint16_t wCommAddr);
-bool KpdParaTableIsUint32DataAddrRange(uint16_t wCommAddr);
-uint16_t KpdParaTableTransToUint16DataAddrRange(uint16_t wCommAddr);
+bool KpdParaTableIs32bitAddrRange(uint16_t wCommAddr);
+uint16_t KpdParaTableGetFloatScale(uint16_t wIndex);
+uint16_t KpdParaTableGet16bitScale(uint16_t wIndex);
+
 {1}
 {2}
 \n
@@ -803,12 +789,52 @@ uint16_t KpdParaTableTransToUint16DataAddrRange(uint16_t wCommAddr);
 \n
 {4}
 \n
+{5}
+\n
 \n
 #if defined(__cplusplus)
 }}
 #endif
 #endif   //KPD_TABLE_H_
 '''
+    # address 시작과 끝주소 별도 추가 
+    start_addr_str = header_name_16bitAddr_lines[0]
+    end_addr_str = header_name_16bitAddr_lines[-1]
+    start_addr = re.findall('0[x,X][0-9A-Za-z]{4,4}', start_addr_str)
+    end_addr = re.findall('0[x,X][0-9A-Za-z]{4,4}', end_addr_str)
+
+    header_name_16bitAddr_lines.insert(0,
+        "#define {0:<34} {1:<10}".format(
+                            'END_16BIT_ADDR', 
+                            end_addr[0]
+                    ) 
+    )
+    header_name_16bitAddr_lines.insert(0,
+        "#define {0:<34} {1:<10}".format(
+                            'START_16BIT_ADDR', 
+                            start_addr[0]
+                    ) 
+    )
+
+    start_addr_str = header_name_32bitAddr_lines[0]
+    end_addr_str = header_name_32bitAddr_lines[-1]
+    start_addr = re.findall('0[x,X][0-9A-Za-z]{4,4}', start_addr_str)
+    end_addr = re.findall('0[x,X][0-9A-Za-z]{4,4}', end_addr_str)
+
+    header_name_32bitAddr_lines.insert(0,
+        "#define {0:<34} {1:<10}".format(
+                            'END_32BIT_ADDR', 
+                            end_addr[0] 
+                    ) 
+    )
+
+    header_name_32bitAddr_lines.insert(0,
+        "#define {0:<34} {1:<10}".format(
+                            'START_32BIT_ADDR', 
+                            start_addr[0]
+                    ) 
+    )
+
     # 하나의 테이블이므로 전체 크기를 define 으로 추가함 
     header_grp_size_define_lines.append('#define ALL_GRP_CODE_TOTAL\t{0}'.format(total_code_count))
     file_contents = header_template.format(
@@ -816,7 +842,8 @@ uint16_t KpdParaTableTransToUint16DataAddrRange(uint16_t wCommAddr);
         group_indexes, 
         '\n'.join(header_grp_size_define_lines),
         '\n'.join(header_grp_start_index_define_lines),
-        '\n'.join(header_name_enum_lines)
+        '\n'.join(header_name_32bitAddr_lines),
+        '\n'.join(header_name_16bitAddr_lines),
     )
     with open(source_path + os.path.sep + rd.KPD_PARA_TABLE_HEADER_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
@@ -828,11 +855,17 @@ def make_drv_para_data_storage(source_path, parameters_model):
     para_name_index = col_info.index('Name')
 
     data_lines = []
+    address_pair_lines = []
 
     for index in range(model.rowCount() ):
         grp_code = model.item(index, para_name_index).text()
         data_lines.append(
-               '{{ {0:<30}, 0 }}'.format(
+               '{{ {0:<40}, 0 }}'.format(
+                grp_code 
+            )
+        )
+        address_pair_lines.append(
+               '{{ {0:<40}, _16_{0:<40} }}'.format(
                 grp_code 
             )
         )
@@ -865,10 +898,17 @@ static S_DRV_PARA_DATA t_astDrvParaData[ALL_GRP_CODE_TOTAL] =
 \t{1}
 }};
 
+//Drive Parameter 16bit / 32bit / 전사 공통영역 Address Pair
+#define PARA_ADDRESS_PAIR_COUNT         2
+const static uint16_t t_astDrvParaAddressPair[ALL_GRP_CODE_TOTAL][PARA_ADDRESS_PAIR_COUNT]  = 
+{{
+\t{2}
+}};
 '''
     file_contents = src_template.format(
         banner,
-        ',\n\t'.join(data_lines)
+        ',\n\t'.join(data_lines),
+        ',\n\t'.join(address_pair_lines)
     )
     with open(source_path + os.path.sep + rd.DRVPARA_DATASTORAGE_SRC_AUTO, 'w', encoding='utf8') as f:
         f.write(file_contents)

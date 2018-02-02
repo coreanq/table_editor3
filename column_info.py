@@ -38,7 +38,8 @@ _parameters_file_columns_info = [
     '통신쓰기금지', 
     '폼메시지', 
     '단위', 
-    '통신주소',
+    '16bit주소',
+    '32bit주소',
     '설명'
 ]
 # table view 에서 보여지는 column 의 정보 
@@ -60,7 +61,8 @@ _parameters_view_columns_info = [
     '통신쓰기금지', 
     '폼메시지', 
     '단위', 
-    '통신주소', 
+    '16bit주소', 
+    '32bit주소', 
     '설명'
 ]
 # table editor version 4
