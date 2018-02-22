@@ -620,25 +620,27 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromGrpAndCode(uint8_t bGrp, uint8_
 }}
 const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCommAddr(uint16_t wCommAddr, int16_t iOffset)
 {{
+    // 16bit 주소가 오는 것을 대비 하여 직접 CommAddr 다시 계산 
 	uint8_t bGrp = KpdParaTableGetGrp(wCommAddr);
+    uint8_t bCodeNum = KpdParaTableGetCodeNum(wCommAddr);
+    uint16_t w32bitAddr = KpdParaTableGetTableAddr(bGrp, bCodeNum);
     const S_TABLE_X_TYPE* pstTable = NULL;
     
 	if( bGrp < GROUP_TOTAL ) {{
         uint16_t wSearchedIndex = 0;
 		uint16_t wGrpSize = t_astGrpInfo[bGrp].bGrpSize;
 		uint16_t wStartIndex = t_astGrpInfo[bGrp].wStartIndex;
-		if( KpdParaTableGetIndexFromAddr( wCommAddr, &wSearchedIndex)  == true ) {{
+		if( KpdParaTableGetIndexFromAddr( w32bitAddr, &wSearchedIndex)  == true ) {{
 			uint32_t ulOffsetIndex = ((int32_t)(wSearchedIndex - wStartIndex + iOffset)) % wGrpSize;
 			uint32_t ulFindedIndex = wStartIndex + ulOffsetIndex;
 			pstTable = &t_astAllGrp[ulFindedIndex];
 		}} else {{
-            MSG_ERR("%08x search Error\\n", wCommAddr);
+            MSG_ERR("%08x search Error\\n", w32bitAddr);
 			pstTable = NULL;
 		}}
 	}} else {{
 		MSG_ERR("GrpSize overflow\\n");
 	}}
-
 	return pstTable;
 }}
 
