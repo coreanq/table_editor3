@@ -560,9 +560,8 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 {0}
 #include "BaseDefine.H"
 #include "KpdPara_Table.H"
-#include "KPD_Title_Enum.H"
+#include "Kpd_Title_Enum.H"
 #include "KpdPara_Msg.H"
-#include "DrvPara_DataStorage.H"
 
 static const S_TABLE_X_TYPE t_astAllGrp[ALL_GRP_CODE_TOTAL] = {{
 {1}
@@ -764,6 +763,24 @@ extern "C" {{
 
 #include "KpdPara_StructUnit.H"
 
+typedef enum eKpdParaScale
+{{
+	E_PLUS_1, 
+	E_MINUS_1,
+	E_PLUS_10,
+	E_MINUS_10,
+	E_PLUS_100,
+	E_MINUS_100,
+	E_PLUS_1K,
+	E_MINUS_1K,
+	E_PLUS_10K,
+	E_MINUS_10K,
+	E_PLUS_100K,
+	E_MINUS_100K,
+	TOTAL_SCALE_COUNT
+
+}}E_KPD_PARA_SCALE;
+
 #define PARA_ADDR_32BIT_FLAG                (uint16_t)0x8000
 #define PARA_ADDR_OFFSET	                (uint16_t)0x1000
 #define GRP_OFFSET_MUL			           	8 
@@ -773,7 +790,7 @@ const S_TABLE_X_TYPE* KpdParaTableGetCodeInfo(int32_t lIndex);
 const S_GROUP_X_TYPE* KpdParaTableGetGrpInfo(uint8_t bGrp);
 
 uint16_t KpdParaTableGetTableAddr(uint8_t bGrp, uint8_t bCode);
-// wCommAddr 을 기준으로 해당 그룹 내에서 offset 위치만큼의 Table Addr 을 리턴함 0 인 경우 input 어드레스의 Table Addr 리턴  
+// @kcpark wCommAddr 을 기준으로 해당 그룹 내에서 offset 위치만큼의 Table Addr 을 리턴함 0 인 경우 input 어드레스의 Table Addr 리턴  
 const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCommAddr(uint16_t wCommAddr, int16_t iOffset);
 const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromGrpAndCode(uint8_t bGrp, uint8_t bCodeNum, int16_t iOffset);
 const S_TABLE_X_TYPE* KpdParaTableGetCodeInfoFromCodeIndex(uint8_t bGrp, uint8_t bPosition);
@@ -862,7 +879,7 @@ def make_drv_para_data_storage(source_path, parameters_model):
     for index in range(model.rowCount() ):
         grp_code = model.item(index, para_name_index).text()
         data_lines.append(
-               '{{ {0:<40}, 0 }}'.format(
+               '{{ 0, 0, 0, 0, {0:<40} }}'.format(
                 grp_code 
             )
         )
@@ -875,10 +892,10 @@ def make_drv_para_data_storage(source_path, parameters_model):
     src_template = \
 '''{0}
 #include "BaseDefine.h"
-#include "DrvPara_DataStorage.h"
+#include "KpdPara_Variable.h"
 #include "KpdPara_Table.h"
 
-static const int32_t t_alDrvParaScale[TOTAL_SCALE_COUNT] =	
+static const int32_t t_alKpdParaScale[TOTAL_SCALE_COUNT] =	
 {{
 	1,			//E_PLUS_1
 	-1,         //E_MINUS_1
@@ -895,14 +912,14 @@ static const int32_t t_alDrvParaScale[TOTAL_SCALE_COUNT] =
 }};
 
 //Drive Parameter Data값이 저장되어 있는 변수
-static S_DRV_PARA_DATA t_astDrvParaData[ALL_GRP_CODE_TOTAL] = 
+static S_KPD_PARA_DATA t_astKpdParaData[ALL_GRP_CODE_TOTAL] = 
 {{
 \t{1}
 }};
 
 //Drive Parameter 16bit / 32bit / 전사 공통영역 Address Pair
 #define PARA_ADDRESS_PAIR_COUNT         2
-const static uint16_t t_astDrvParaAddressPair[ALL_GRP_CODE_TOTAL][PARA_ADDRESS_PAIR_COUNT]  = 
+const static uint16_t t_astKpdParaAddressPair[ALL_GRP_CODE_TOTAL][PARA_ADDRESS_PAIR_COUNT]  = 
 {{
 \t{2}
 }};
@@ -1015,6 +1032,6 @@ void DriveParaWriteToArrayData(uint16_t wStartIndex, uint8_t bPosition, int32_t 
         '\t\t'.join(write_case_list)
     )
 
-    with open(source_path + os.path.sep + "DrivePara_IO_expand.c", 'w', encoding='utf8') as f:
+    with open(source_path + os.path.sep + rd.KPDPARA_IO_EXPAND_FILE, 'w', encoding='utf8') as f:
         f.write(file_contents)
     pass

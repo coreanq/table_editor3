@@ -9,21 +9,21 @@ import io
 KPD_ADD_TITLE_SRC_FILE = 'AddTitle_Eng.c'
 KPD_ADD_TITLE_HEADER_FILE = 'AddTitle_Eng.H'
 KPD_BASIC_TITLE_SRC_FILE= 'KPD_TBL_MSG_ENG.c'
-KPD_ENUM_TITLE_HEADER_FILE = 'KPD_Title_Enum.H'
+KPD_ENUM_TITLE_HEADER_FILE = 'Kpd_Title_Enum.H'
 
 KPD_PARA_MSG_SRC_FILE =  'KpdPara_Msg.c'
 KPD_PARA_MSG_HEADER_FILE = 'KpdPara_Msg.h'
 KPD_PARA_STRUCT_UNIT_HEADER_FILE = 'KpdPara_StructUnit.H'  # 자동생성 할필요는 없으나 읽을때 필요한 자료 이므로 생성 
+
 KPD_PARA_TABLE_SRC_FILE = 'KpdPara_Table.c'
 KPD_PARA_TABLE_HEADER_FILE = 'KpdPara_Table.h'
-DRIVEPARA_IO_EXPANSION_FILE = 'DrivePara_IO_expand.c'
+DRVPARA_DATASTORAGE_SRC_AUTO = 'KpdPara_Variable_AutoGen.c'
+
+KPDPARA_IO_EXPAND_FILE = 'KpdPara_IO_expand.c'
 
 # for old version 
 KPD_PARA_VAR_SRC_FILE = 'KpdPara_Vari.c'
 KPD_PARA_VAR_HEADER_FILE = 'KpdPara_Vari.H'
-
-# neweraplatform kpd_index 파일
-DRVPARA_DATASTORAGE_SRC_AUTO = 'DrvPara_DataStorage_AutoGen.c'
 
 # write 에 사용하는 파일 리스트 정의
 make_files = (
@@ -37,7 +37,7 @@ make_files = (
     KPD_PARA_TABLE_SRC_FILE,
     KPD_PARA_TABLE_HEADER_FILE,
     DRVPARA_DATASTORAGE_SRC_AUTO, 
-    DRIVEPARA_IO_EXPANSION_FILE
+    KPDPARA_IO_EXPAND_FILE
 )
 
 # read 에 사용하는 파싱 파일 리스트 정의 
