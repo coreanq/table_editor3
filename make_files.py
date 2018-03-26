@@ -868,7 +868,7 @@ uint16_t KpdParaTableGet16bitScale(uint16_t wIndex);
         f.write(file_contents)
     pass
 
-def make_drv_para_data_storage(source_path, parameters_model):
+def make_drv_para_data_storage(source_path, parameters_model, group_model):
     col_info = ci.para_col_info_for_view()
     model = parameters_model
     para_name_index = col_info.index('Name')
@@ -889,8 +889,26 @@ def make_drv_para_data_storage(source_path, parameters_model):
             )
         )
 
+
+    group_lines = []
+    group_line_template = "";
+
+    for grp_row_index in range(group_model.rowCount()):
+        # 그룹 정보 추출 
+        group_name = group_model.item(grp_row_index, ci.group_col_info().index('Group')).text() 
+
+        if( grp_row_index == group_model.rowCount()  - 1):
+            group_line_template = "true \t\t//\t{}"
+        else:
+            group_line_template = "true,\t\t//\t{}"
+
+        group_lines.append( 
+            group_line_template.format( group_name ) 
+        )
+
+
     src_template = \
-'''{0}
+'''{}
 #include "BaseDefine.h"
 #include "KpdPara_Variable.h"
 #include "KpdPara_Table.h"
@@ -911,21 +929,28 @@ static const int32_t t_alKpdParaScale[TOTAL_SCALE_COUNT] =
 	100000		//E_MINUS_100K
 }};
 
+//Group Visible 상태가 저장되어 있는 변수  
+static bool t_ablGrpVisibie[GROUP_TOTAL] = 
+{{ 
+\t{}	
+}};
+
 //Drive Parameter Data값이 저장되어 있는 변수
 static S_KPD_PARA_DATA t_astKpdParaData[ALL_GRP_CODE_TOTAL] = 
 {{
-\t{1}
+\t{}
 }};
 
 //Drive Parameter 16bit / 32bit / 전사 공통영역 Address Pair
 #define PARA_ADDRESS_PAIR_COUNT         2
 const static uint16_t t_astKpdParaAddressPair[ALL_GRP_CODE_TOTAL][PARA_ADDRESS_PAIR_COUNT]  = 
 {{
-\t{2}
+\t{}
 }};
 '''
     file_contents = src_template.format(
         banner,
+        ',\n\t'.join(group_lines),
         ',\n\t'.join(data_lines),
         ',\n\t'.join(address_pair_lines)
     )
