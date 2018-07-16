@@ -50,14 +50,19 @@ enum {
 #define KPD_ATTR_NOCOM 		0x0040u    		// Not Communication Parameter 
 
 #define KEYPAD_ID			0x01u
-#define CONFIG_GRP			0x50u
+#define SET_INFO_GRP		0x50u
+
 #define CONFIG_ADDR			0xF00u
 #define MSG_DISABLE			100u
 #define KPD_TITLE_SIZE		14u
 #define MSG_END_LINE		0xFFu
 #define KPD_TITLE_AT_NONE	0xFFu
 #define KPD_GRP_MAX_CODE	99u
-#define KPD_TREE_CHAR_STS	3u
+
+#define KPD_CHAR_INV_STS	4u
+#define KPD_CMD_SRC_CHAR	2u
+#define KPD_REF_SRC_CHAR	2u
+
 
 
 
@@ -123,7 +128,7 @@ typedef struct {
 
 	uint8_t		bUnitType;
 
-	uint16_t    wHex16bitCommAddr;       // hex 로 표현되는 16bit comm address
+	uint16_t    wHex16btiCommAddr;       // hex 로 표현되는 16bit comm address
 
 	uint16_t    wHex32bitCommAddr;       // hex 로 표현되는 32bit comm address
 

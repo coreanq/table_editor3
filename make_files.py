@@ -879,7 +879,7 @@ def make_drv_para_data_storage(source_path, parameters_model, group_model):
     for index in range(model.rowCount() ):
         grp_code = model.item(index, para_name_index).text()
         data_lines.append(
-               '{{ 0, 0, 0, 0, {0:<40} }}'.format(
+               '{{ 0, 0, 0, {0:<40}, 0, 0 }}'.format(
                 grp_code 
             )
         )
@@ -941,7 +941,7 @@ static S_KPD_PARA_DATA t_astKpdParaData[ALL_GRP_CODE_TOTAL] =
 \t{}
 }};
 
-//Drive Parameter 16bit / 32bit / 전사 공통영역 Address Pair
+//Drive Parameter 16bit / 32bit 
 #define PARA_ADDRESS_PAIR_COUNT         2
 const static uint16_t t_astKpdParaAddressPair[ALL_GRP_CODE_TOTAL][PARA_ADDRESS_PAIR_COUNT]  = 
 {{
