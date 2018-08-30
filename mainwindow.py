@@ -813,6 +813,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         code_err_result_list = []
         name_err_result_list = []
+        cell_null_err_result_list = []
+
         # code 중복 check 
         for row_index, value in enumerate(grp_code_list):
             if( grp_code_list.count(value) > 1 ):
@@ -833,7 +835,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         pass
 
         if( len(code_err_result_list) or len (name_err_result_list)):
-            QMessageBox.critical(self, '오류', '* code 오류: \n\t{}\n* name 오류:\n\t{}'.format( 
+            QMessageBox.critical(self, '오류', '* code  중복오류: \n\t{}\n* name 중복오류:\n\t{}'.format( 
                 '\n\t'.join([ x[1] for x in code_err_result_list] ),
                 '\n\t'.join([ x[1] for x in name_err_result_list] )
                 ))
@@ -1378,7 +1380,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # multiline copy 가능 
         # ' "subject" : [ 'item1, item2...', 'item1, item2...' ] '
         for row_index in row_indexes:
-            row_data = ','.join(view_model.data(row_index.sibling(row_index.row(), column)) for column in range(view_model.columnCount() )) 
+            row_data = '|'.join(view_model.data(row_index.sibling(row_index.row(), column)) for column in range(view_model.columnCount() )) 
             previous_data = data_dict.get(subject,[])
             previous_data.append(row_data)
             data_dict[subject] = previous_data
@@ -1404,7 +1406,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             # 동일한 항목의 데이터 복사 인지 확인 
             if( key == subject ):
                 for row in lists:
-                    row_items = row.split(',')
+                    row_items = row.split('|')
                     row_items[0] = key_value
                     self.insertRowToModel(source_model, row_items, insert_row, editing_prohibit_columns)
                     insert_row = insert_row + 1

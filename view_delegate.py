@@ -79,7 +79,10 @@ class ViewDelegate(QStyledItemDelegate):
         if( editor_type == 'lineedit' ):
             if( input_type == "number" ):
                 # 우선 hex string, 나 단순 decimal string 오므로 integer 로 변환
-                editor.setText( '{}'.format(int(text.replace(',', ''), 0 )) )
+                if( text != "" ) :
+                    editor.setText( '{}'.format(int(text.replace(',', ''), 0 )) )
+                else:
+                    editor.setText("0")
                 pass
             else:
                 editor.setText(text)
@@ -101,7 +104,11 @@ class ViewDelegate(QStyledItemDelegate):
         if( editor_type == 'lineedit' ):
             if( input_type == "number" ):
                 # 우선 hex string, 나 단순 decimal string 오므로 integer 로 변환
-                text = format(int(editor.text(), 0), ",")
+                text = editor.text()
+                if( text != ""):
+                    text = format(int(text, 0), ",")
+                else:
+                    text = "0"
             else:
                 text = editor.text()
             pass
