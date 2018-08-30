@@ -523,10 +523,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         print(action.text())
 
     
-    def setLineDelegateAttribute(self, model, view, delegate, columns = [], validator = None):
+    def setLineDelegateAttribute(self, model, view, delegate, columns = [], isNumber = False, validator = None):
         for col_index in columns:
             delegate.setEditable(col_index,  True ) 
             delegate.setEditorType(col_index, 'lineedit')
+            if( isNumber == True ) :
+                delegate.setEditorInputType(col_index, "number")
             if( validator ):
                 delegate.setValidator(col_index, validator )
             view.setItemDelegateForColumn(col_index, delegate)
@@ -568,18 +570,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  width = 110)
 
         model = QStringListModel([
-            'E_PLUS_1',
-            'E_MINUS_1',
-            'E_PLUS_10',
-            'E_MINUS_10',
-            'E_PLUS_100',
-            'E_MINUS_100',
-            'E_PLUS_1K',
-            'E_MINUS_1K',
-            'E_PLUS_10K',
-            'E_MINUS_10K',
-            'E_PLUS_100K',
-            'E_MINUS_100K'] ) 
+            'X1',
+            'X10',
+            'X100',
+            'X1K',
+            'X10K',
+            'X100K',
+            ] ) 
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ 
@@ -587,7 +584,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             col_info.index('FloatScale')
         ]
         self.setCmbDelegateAttribute(model, view, delegate, col_indexes, editable = False,  
-                width = 110 )
+                width = 80 )
 
         model = QStringListModel( ['true', 'false']) 
         view  = self.viewParameter
@@ -617,11 +614,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             col_info.index('최소값'), 
             col_info.index('공장설정값')
         ]
-        reg_ex = QRegularExpression('[-]?[0-9]{1,8}')
-        self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex)
+        reg_ex = QRegularExpression('[-]?[0-9]{1,10}')
+        self.setLineDelegateAttribute(model, view, delegate, col_indexes,  isNumber = True, validator = reg_ex )
 
 
-        # 공장 설정값 , 최대, 최소 validator 설정
+        # Name validator 설정
         view  = self.viewParameter
         delegate = self.delegate_parameters_view
         col_indexes = [ 
@@ -1092,8 +1089,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                             name = rd.changeParaName2Enum(para_vari)
 
-                            kpd_word_scale = 'E_PLUS_1'
-                            kpd_float_scale = 'E_PLUS_1'
+                            kpd_word_scale = 'X1'
+                            kpd_float_scale = 'X1'
                             max_eds = items[col_info.index('MaxEDS')]
                             min_eds = items[col_info.index('MinEDS')]
 
@@ -1144,8 +1141,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                             comm_16bit_addr = make16bitAddrValue(group_row, int(code_name)) # 그룹값을 토대로 comm_addr 뽑아냄 
                             kpd_word_scale = items[col_info.index('Uint16Scale')]
                             kpd_float_scale = items[col_info.index('FloatScale')]
-                            kpd_word_scale = 'E_PLUS_1'
-                            kpd_float_scale = 'E_PLUS_1'
+                            kpd_word_scale = 'X1'
+                            kpd_float_scale = 'X1'
                             comment = items[-1]
 
                         comm_32bit_addr = make32bitAddrValue(group_row, int(code_name) )
@@ -1161,8 +1158,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 kpd_word_scale,
                                 kpd_float_scale,
                                 items[col_info.index('공장설정값')],
-                                max_value,
-                                min_value,
+                                format(int(max_value, 0), ","),  # comma 추가에 16진수 들어와있을경우 자동으로 decimal 로 변경 
+                                format(int(min_value, 0), ","), 
                                 read_only, 
                                 no_change_on_run , 
                                 zero_input, 

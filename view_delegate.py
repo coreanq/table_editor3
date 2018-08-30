@@ -17,6 +17,11 @@ class ViewDelegate(QStyledItemDelegate):
     def setEditorType(self, col, editor):
         self.cols_info.setdefault(col, {})['editor_type'] =  editor
         pass 
+    
+    # 입력으로 들어 오는 값이 숫자이면 formatting 하기 위함 
+    def setEditorInputType(self, col, inputType):
+        self.cols_info.setdefault(col, {})['input_type'] = inputType
+        pass 
     # combobox 에서 모델로 삼을 column index 를 정해줌 
     def setModelColumn(self, col, cmb_model_column):
         self.cols_info.setdefault(col, {})['cmb_model_column'] = cmb_model_column
@@ -69,10 +74,15 @@ class ViewDelegate(QStyledItemDelegate):
         row = index.row()
         col_info_dict = self.cols_info.get(col, {})
         editor_type = col_info_dict.get('editor_type', 'lineedit')
+        input_type = col_info_dict.get('input_type', 'none')
 
         if( editor_type == 'lineedit' ):
-            editor.setText(text)
-            pass
+            if( input_type == "number" ):
+                # 우선 hex string, 나 단순 decimal string 오므로 integer 로 변환
+                editor.setText( '{}'.format(int(text.replace(',', ''), 0 )) )
+                pass
+            else:
+                editor.setText(text)
         elif( editor_type == 'combobox' ):
             index = editor.findText(text)
             editor.setCurrentText(text)
@@ -85,9 +95,15 @@ class ViewDelegate(QStyledItemDelegate):
         row = index.row()
         col_info_dict = self.cols_info.get(col, {})
         editor_type = col_info_dict.get('editor_type', 'lineedit')
+        input_type = col_info_dict.get('input_type', 'none')
+        text = ""
 
         if( editor_type == 'lineedit' ):
-            text = editor.text()
+            if( input_type == "number" ):
+                # 우선 hex string, 나 단순 decimal string 오므로 integer 로 변환
+                text = format(int(editor.text(), 0), ",")
+            else:
+                text = editor.text()
             pass
         elif( editor_type == 'combobox' ):
             text = editor.currentText()

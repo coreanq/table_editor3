@@ -765,18 +765,12 @@ extern "C" {{
 
 typedef enum eKpdParaScale
 {{
-	E_PLUS_1, 
-	E_MINUS_1,
-	E_PLUS_10,
-	E_MINUS_10,
-	E_PLUS_100,
-	E_MINUS_100,
-	E_PLUS_1K,
-	E_MINUS_1K,
-	E_PLUS_10K,
-	E_MINUS_10K,
-	E_PLUS_100K,
-	E_MINUS_100K,
+	X1, 
+	X10,
+	X100,
+	X1K,
+	X10K,
+	X100K,
 	TOTAL_SCALE_COUNT
 
 }}E_KPD_PARA_SCALE;
@@ -915,18 +909,12 @@ def make_drv_para_data_storage(source_path, parameters_model, group_model):
 
 static const int32_t t_alKpdParaScale[TOTAL_SCALE_COUNT] =	
 {{
-	1,			//E_PLUS_1
-	-1,         //E_MINUS_1
-	10,			//E_PLUS_10
-	-10,		//E_MINUS_10
-	100,		//E_PLUS_100
-	-100,		//E_MINUS_100
-	1000,		//E_PLUS_1K
-	-1000,		//E_MINUS_1K
-	10000,		//E_PLUS_10K
-	-10000,     //E_MINUS_10K
-	100000,		//E_PLUS_100K
-	100000		//E_MINUS_100K
+	1,			//X1
+	10,			//X10
+	100,		//X100
+	1000,		//X1K
+	10000,		//X10K
+	100000		//X100K
 }};
 
 //Group Visible 상태가 저장되어 있는 변수  
