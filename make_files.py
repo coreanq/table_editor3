@@ -531,19 +531,20 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
             if( 'DATAMSG' in unit ):
                 form_msg = 'MSG_' + form_msg
             
-            format_str = ( '/* {:>8} */ {{{:<30},{:>20},{:>5},{:>16},{:>16},{:>8},'
-                            '{:>8},{:>8},{:>6},{:>6},{:>6},'
+            format_str = ( '/* {:>8} */ {{{:<30},{:>20},{:>5},{:>16},{:>16},{:>10},'
+                            '{:>10},{:>10},{:>6},{:>6},{:>6},'
                             '{:>6},{:>25},{:>25},{:>10},{:>10}}}{} //"{:<30}"'
                             '//{}' )
 
             if( find_item == find_items[-1] ):
                 comment = comment + '\n\n'
 
+            # model 에서 콤마 들어 가있는 경우 있으므로 제거 해야함 
             para_vars_lines.append(
                 format_str.format(\
-                        grp_and_code,       name,               title_enum_name,    at_value,           para_float_scale,   para_word_scale,       default_val,        
-                        max_val,            min_val,            read_only,          no_change_on_run,   zero_input,
-                        no_comm,            form_msg,           unit,               comm_16bit_addr,    comm_32bit_addr,    ',',                   title_name,         
+                        grp_and_code,               name,                       title_enum_name,    at_value,           para_float_scale,   para_word_scale,       default_val.replace(",", ""),        
+                        max_val.replace(",", ""),   min_val.replace(",", ""),   read_only,          no_change_on_run,   zero_input,
+                        no_comm,                    form_msg,                   unit,               comm_16bit_addr,    comm_32bit_addr,    ',',                   title_name,         
                         comment
                 )
             )

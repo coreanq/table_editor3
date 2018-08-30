@@ -122,9 +122,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.btnCheck.clicked.connect(self.onBtnCheckClicked)
         self.btnSortCancel.clicked.connect(self.onBtnSortCancelClicked)
 
-        self.viewGroup.selectionModel().currentChanged.connect(self.onViewGroupSelectionChanged)
-        # self.viewGroup.clicked.connect(self.onViewGroupClicked)  
-        self.viewMsgInfo.selectionModel().currentChanged.connect(self.onViewMsgInfoSelectionChanged)
+        self.model_group.itemChanged.connect(self.onViewGroupItemChanged)
+        self.viewGroup.clicked.connect(self.onViewGroupClicked)  
+
+        self.viewMsgInfo.clicked.connect(self.onViewMsgInfoClicked)
+        self.model_msg_info.itemChanged.connect(self.onViewMsgInfoItemChanged)
+
         self.viewParameter.selectionModel().currentChanged.connect(self.onViewParameterSelectionChanged)
         
         # ctrl + c, ctrl + v, insert, delete 누를 시 
@@ -843,30 +846,55 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         else:
             return [] 
 
-    @pyqtSlot(QModelIndex, QModelIndex)
-    def onViewGroupSelectionChanged(self, current, previous):
+    @pyqtSlot(QModelIndex)
+    def onViewGroupClicked(self, current):
         # print(util.whoami() )
-        row = current.row()
         col_info = ci.group_col_info()
+        row = current.row()
+        col = col_info.index('Group')
 
-        target_index = current 
-        target_index.column = col_info.index('Group')
-        key_name = current.model().data(target_index)
+        key_name = self.model_group.item(row, col).text()
 
         regx = QRegExp('^' + key_name.strip() + '$' )  
         self.model_proxy_parameters.setFilterKeyColumn(0)
         self.model_proxy_parameters.setFilterRegExp(regx)
         pass
      
-    @pyqtSlot(QModelIndex, QModelIndex)
-    def onViewMsgInfoSelectionChanged(self, current, previous):
+    @pyqtSlot(QStandardItem)
+    def onViewGroupItemChanged(self, item):
         # print(util.whoami() )
-        row = current.row()
-        col_info = ci.msg_info_col_info()
+        col_info = ci.group_col_info()
+        row = item.row()
+        col = col_info.index('Group')
 
-        target_index = current 
-        target_index.column = col_info.index('MsgName')
-        key_name = current.model().data(target_index)
+        key_name = self.model_group.item(row, col).text()
+
+        regx = QRegExp('^' + key_name.strip() + '$' )  
+        self.model_proxy_parameters.setFilterKeyColumn(0)
+        self.model_proxy_parameters.setFilterRegExp(regx)
+        pass
+
+    @pyqtSlot(QModelIndex)
+    def onViewMsgInfoClicked(self, current):
+        # print(util.whoami() )
+        col_info = ci.msg_info_col_info()
+        row = current.row()
+        col = col_info.index('MsgName')
+
+        key_name = self.model_msg_info.item(row, col).text()
+
+        regx = QRegExp( '^' + key_name.strip() + '$' )
+        self.model_proxy_msg_values.setFilterKeyColumn(0)
+        self.model_proxy_msg_values.setFilterRegExp(regx)
+
+    @pyqtSlot(QStandardItem)
+    def onViewMsgInfoItemChanged(self, item):
+        # print(util.whoami() )
+        col_info = ci.msg_info_col_info()
+        row = item.row()
+        col = col_info.index('MsgName')
+
+        key_name = self.model_msg_info.item(row, col).text()
 
         regx = QRegExp( '^' + key_name.strip() + '$' )
         self.model_proxy_msg_values.setFilterKeyColumn(0)
@@ -1069,6 +1097,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
                         max_value = items[col_info.index('최대값')].upper()
                         min_value = items[col_info.index('최소값')].upper()
+                        default_vaule = items[col_info.index('공장설정값')].upper()
 
                         title = self.searchTitlefromEnumName(items[col_info.index('TitleIndex')])
                         at_value = items[col_info.index('AtValue')]
@@ -1159,8 +1188,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                 items[col_info.index('AtValue')], 
                                 kpd_word_scale,
                                 kpd_float_scale,
-                                items[col_info.index('공장설정값')],
-                                format(int(max_value, 0), ","),  # comma 추가에 16진수 들어와있을경우 자동으로 decimal 로 변경 
+                                format(int(default_vaule, 0), ","),  # comma 추가에 16진수 들어와있을경우 자동으로 decimal 로 변경 및 comma 추가  
+                                format(int(max_value, 0), ","),  
                                 format(int(min_value, 0), ","), 
                                 read_only, 
                                 no_change_on_run , 
@@ -1211,7 +1240,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                     for items in rd.read_para_msg(contents):
                         msg_name = items[col_info.index('MsgName')]
                         msg_comment = items[col_info.index('MsgComment')]
-                        msg_info = ['', msg_name, msg_comment ]
+                        msg_info = ['Dummy', msg_name, msg_comment ]
 
                         if( msg_info not in msg_list ):
                             msg_list.append(msg_info) 
