@@ -77,12 +77,12 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_kpd_para_unit = QStandardItemModel()
 
-        self.actionAddGroup = QAction('Add Group', self)
+        self.actionAddGroup = QAction('Append Group', self)
         self.actionAddPara = QAction('Add Parameter', self)
-        self.actionAddMsgInfo = QAction('Add MsgInfo', self)
+        self.actionAddMsgInfo = QAction('Append MsgInfo', self)
         self.actionAddMsg = QAction('Add Msg', self)
         self.actionAddVar = QAction('Add Var', self )
-        self.actionAddTitle = QAction('Add Title', self)
+        self.actionAddTitle = QAction('Append Title', self)
 
         self.view_list = [  self.viewGroup,  
                             self.viewParameter, self.viewMsgInfo, 
@@ -140,15 +140,17 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         group_view_eater = ve.ViewKeyEater(self)
         self.viewGroup.installEventFilter(group_view_eater)
-        group_view_eater.sig_copy_clicked.connect(self.onGroupViewCopyed)
-        group_view_eater.sig_paste_clicked.connect(self.onGroupViewPasted)
+        # add delete 만 유지 
+        # group_view_eater.sig_copy_clicked.connect(self.onGroupViewCopyed)
+        # group_view_eater.sig_paste_clicked.connect(self.onGroupViewPasted)
         group_view_eater.sig_insert_clicked.connect(self.onGroupViewInserted)
         group_view_eater.sig_delete_clicked.connect(self.onGroupViewDeleted)
 
         msg_info_view_eater = ve.ViewKeyEater(self)
         self.viewMsgInfo.installEventFilter(msg_info_view_eater)
-        msg_info_view_eater.sig_copy_clicked.connect(self.onMsgInfoViewCopyed)
-        msg_info_view_eater.sig_paste_clicked.connect(self.onMsgInfoViewPasted)
+        # add delete 만 유지 
+        # msg_info_view_eater.sig_copy_clicked.connect(self.onMsgInfoViewCopyed)
+        # msg_info_view_eater.sig_paste_clicked.connect(self.onMsgInfoViewPasted)
         msg_info_view_eater.sig_insert_clicked.connect(self.onMsgInfoViewInserted)
         msg_info_view_eater.sig_delete_clicked.connect(self.onMsgInfoViewDeleted)
 
@@ -159,12 +161,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         msg_value_view_eater.sig_insert_clicked.connect(self.onMsgValueViewInserted)
         msg_value_view_eater.sig_delete_clicked.connect(self.onMsgValueViewDeleted)
 
-        msg_value_view_eater = ve.ViewKeyEater(self)
+        table_view_eater = ve.ViewKeyEater(self)
         self.viewTitle.installEventFilter(msg_value_view_eater)
-        msg_value_view_eater.sig_copy_clicked.connect(self.onTitleViewCopyed)
-        msg_value_view_eater.sig_paste_clicked.connect(self.onTitleViewPasted)
-        msg_value_view_eater.sig_insert_clicked.connect(self.onTitleViewInserted)
-        msg_value_view_eater.sig_delete_clicked.connect(self.onTitleViewDeleted)
+        # add delete 만 유지 
+        # table_view_eater.sig_copy_clicked.connect(self.onTitleViewCopyed)
+        # table_view_eater.sig_paste_clicked.connect(self.onTitleViewPasted)
+        table_view_eater.sig_insert_clicked.connect(self.onTitleViewInserted)
+        table_view_eater.sig_delete_clicked.connect(self.onTitleViewDeleted)
 
         # parametere view  더블 클릭시 unit의 msg combobox 내용을 변경하기 위함  
         self.viewParameter.doubleClicked.connect(self.onViewParameterDoubleClicked)
@@ -1399,7 +1402,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 self.onMsgValuesViewAtValueChanged( self.model_title.index(row, col )  )
             pass
 
-    def viewRowCopy(self, subject, view):
+    def viewRowCopy(self, subject, view, isAppend = False):
         clipboard = QApplication.clipboard()
         view_model = view.model()
         selection_model = view.selectionModel()
@@ -1418,7 +1421,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # print('\n'.join(rows))
         pass
 
-    def viewRowPaste(self, subject, view, source_model,  editing_prohibit_columns = []):
+    def viewRowPaste(self, subject, view, source_model,  editing_prohibit_columns = [], isAppend = False):
         # view 의 model 은 proxy 모델이고 데이터를 추가 하기 위해서는 source model 이 필요함 
         clipboard = QApplication.clipboard()
         view_model = view.model() 
@@ -1442,7 +1445,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             break
         pass
 
-    def viewRowInsert(self, view, source_model, editing_prohibit_columns = []):
+    def viewRowInsert(self, view, source_model, editing_prohibit_columns = [], isAppend = False):
         # view 의 model 은 proxy 모델이고 데이터를 추가 하기 위해서는 source model 이 필요함 
         view_model = view.model() 
         key_value = view_model.filterRegExp().pattern() 
@@ -1455,14 +1458,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         row_items = [''] * view_model.columnCount()
         row_items[0] = key_value
-        self.insertRowToModel(source_model, row_items, insert_row, editing_prohibit_columns )
-        pass
+
+        if( isAppend == False ):
+            self.insertRowToModel(source_model, row_items, insert_row, editing_prohibit_columns )
+        else:
+            self.insertRowToModel(source_model, row_items, source_model.rowCount()-1, editing_prohibit_columns )
 
     def viewRowDelete(self, view):
         view_model = view.model()
         selection_model = view.selectionModel()
         row_indexes = selection_model.selectedRows()
 
+        # 선택된 row 를 모두 지움
         # 역순으로 row 제거해야함  
         for row_index in sorted(row_indexes, reverse =True ):
             view_model.removeRow(row_index.row())
@@ -1481,42 +1488,49 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowPaste('parameter', self.viewParameter, self.model_parameters, prohibit_list)
     @pyqtSlot()
     def onParameterViewInserted(self):
+        view_model = self.viewParameter.model()
+
         col_info = ci.para_col_info_for_view()
         prohibit_list = [
             col_info.index('16bit주소'), col_info.index('Title'),
             col_info.index('32bit주소'), col_info.index('Title')
             ]
-        self.viewRowInsert(self.viewParameter, self.model_parameters, prohibit_list)
+        # 그룹 생성후 첫 row 추가 이면 append 모드 
+        isAppend = False
+        if( view_model.rowCount() == 0 ):
+            isAppend = True
+        else:
+            isAppend = False
+
+        self.viewRowInsert(self.viewParameter, self.model_parameters, 
+            editing_prohibit_columns = prohibit_list, isAppend = isAppend)
+
     @pyqtSlot()
     def onParameterViewDeleted(self):
-        self.viewRowDelete( self.viewParameter)
+        view_model = self.viewParameter.model()
+        # 1줄은 남기도록 함 
+        if( view_model.rowCount() > 1 ):
+            self.viewRowDelete(self.viewParameter)
 
-    @pyqtSlot()
-    def onGroupViewCopyed(self):
-        self.viewRowCopy('group', self.viewGroup)
-    @pyqtSlot()
-    def onGroupViewPasted(self):
-        self.viewRowPaste('group', self.viewGroup, self.model_group)
+    #group 
     @pyqtSlot()
     def onGroupViewInserted(self):
-        self.viewRowInsert(self.viewGroup, self.model_group)
+        self.viewRowInsert(self.viewGroup, self.model_group, 
+            editing_prohibit_columns = [], isAppend = True)
     @pyqtSlot()
     def onGroupViewDeleted(self):
-        self.viewRowDelete( self.viewGroup)
+        self.viewRowDelete(self.viewGroup)
             
-    @pyqtSlot()
-    def onMsgInfoViewCopyed(self):
-        self.viewRowCopy('msg_info', self.viewMsgInfo)
-    @pyqtSlot()
-    def onMsgInfoViewPasted(self):
-        self.viewRowPaste('msg_info', self.viewMsgInfo, self.model_msg_info)
+    #msgInfo
     @pyqtSlot()
     def onMsgInfoViewInserted(self):
-        self.viewRowInsert(self.viewMsgInfo, self.model_msg_info)
+        self.viewRowInsert(self.viewMsgInfo, self.model_msg_info, 
+            editing_prohibit_columns = [], isAppend = True)
     @pyqtSlot()
     def onMsgInfoViewDeleted(self):
-        self.viewRowDelete( self.viewMsgInfo)
+        self.viewRowDelete(self.viewMsgInfo)
 
+    #msgValue
     @pyqtSlot()
     def onMsgValueViewCopyed(self):
         self.viewRowCopy('msg_value', self.viewMsgValue)
@@ -1524,16 +1538,30 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def onMsgValueViewPasted(self):
         col_info = ci.msg_values_col_info()
         prohibit_list = [col_info.index('Title')]
-        self.viewRowPaste('msg_value', self.viewMsgValue, self.model_msg_values, prohibit_list)
+        self.viewRowPaste('msg_value', self.viewMsgValue, self.model_msg_values, 
+            editing_prohibit_columns = prohibit_list)
     @pyqtSlot()
     def onMsgValueViewInserted(self):
         col_info = ci.msg_values_col_info()
         prohibit_list = [col_info.index('Title')]
-        self.viewRowInsert(self.viewMsgValue, self.model_msg_values, prohibit_list)
+        view_model = self.viewMsgValue.model()
+
+        # 그룹 생성후 첫 row 추가 이면 append 모드 
+        isAppend = False
+        if( view_model.rowCount() == 0 ):
+            isAppend = True
+        else:
+            isAppend = False
+        self.viewRowInsert(self.viewMsgValue, self.model_msg_values, 
+            editing_prohibit_columns = prohibit_list, isAppend = isAppend)
     @pyqtSlot()
     def onMsgValueViewDeleted(self):
-        self.viewRowDelete( self.viewMsgValue)
+        view_model = self.viewMsgValue.model()
+        # 1줄은 남기도록 함 
+        if( view_model.rowCount() > 1 ):
+            self.viewRowDelete( self.viewMsgValue)
 
+    # title
     @pyqtSlot()
     def onTitleViewCopyed(self):
         self.viewRowCopy('title', self.viewTitle)
@@ -1546,7 +1574,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot()
     def onTitleViewInserted(self):
         col_info = ci.title_col_info()
-        self.viewRowInsert(self.viewTitle, self.model_title, [col_info.index('Data')])
+        self.viewRowInsert(self.viewTitle, self.model_title, 
+        editing_prohibit_columns = [col_info.index('Data')], isAppend = True)
         pass
     @pyqtSlot()
     def onTitleViewDeleted(self):
