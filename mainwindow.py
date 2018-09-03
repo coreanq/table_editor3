@@ -1402,7 +1402,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 self.onMsgValuesViewAtValueChanged( self.model_title.index(row, col )  )
             pass
 
-    def viewRowCopy(self, subject, view, isAppend = False):
+    def viewRowCopy(self, subject, view):
         clipboard = QApplication.clipboard()
         view_model = view.model()
         selection_model = view.selectionModel()
@@ -1440,7 +1440,11 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 for row in lists:
                     row_items = row.split('|')
                     row_items[0] = key_value
-                    self.insertRowToModel(source_model, row_items, insert_row, editing_prohibit_columns)
+                    if( isAppend == True ):
+                        self.insertRowToModel(source_model, row_items, source_model.rowCount()-1, editing_prohibit_columns)
+                        pass
+                    else:
+                        self.insertRowToModel(source_model, row_items, insert_row, editing_prohibit_columns)
                     insert_row = insert_row + 1
             break
         pass
@@ -1480,12 +1484,21 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowCopy('parameter', self.viewParameter )
     @pyqtSlot()
     def onParameterViewPasted(self):
+        view_model = self.viewParameter.model()
         col_info = ci.para_col_info_for_view()
         prohibit_list = [
             col_info.index('16bit주소'), col_info.index('Title'),
             col_info.index('32bit주소'), col_info.index('Title')
             ]
-        self.viewRowPaste('parameter', self.viewParameter, self.model_parameters, prohibit_list)
+
+        # 그룹 생성후 첫 row 추가 이면 append 모드 
+        isAppend = False
+        if( view_model.rowCount() == 0 ):
+            isAppend = True
+        else:
+            isAppend = False
+        self.viewRowPaste('parameter', self.viewParameter, self.model_parameters, 
+            editing_prohibit_columns = prohibit_list, isAppend = isAppend)
     @pyqtSlot()
     def onParameterViewInserted(self):
         view_model = self.viewParameter.model()
@@ -1519,8 +1532,18 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             editing_prohibit_columns = [], isAppend = True)
     @pyqtSlot()
     def onGroupViewDeleted(self):
+        col_info = ci.group_col_info()
         self.viewRowDelete(self.viewGroup)
-            
+
+        # currentIndex = self.viewGroup.selectionModel().currentIndex()
+        # key_value = self.model_group.item(currentIndex.row(), col_info.index('Group')).text()
+
+        # col_info = ci.para_col_info_for_view()
+        # items = self.model_parameters.findItems(key_value, column = col_info.index('Group'))
+        # for item in sorted(items, reverse = True):
+        #     row = item.row()
+        #     self.model_parameters.removeRow(row)
+        pass    
     #msgInfo
     @pyqtSlot()
     def onMsgInfoViewInserted(self):
@@ -1536,15 +1559,24 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         self.viewRowCopy('msg_value', self.viewMsgValue)
     @pyqtSlot()
     def onMsgValueViewPasted(self):
+        view_model = self.viewMsgValue.model()
         col_info = ci.msg_values_col_info()
         prohibit_list = [col_info.index('Title')]
+
+        # 그룹 생성후 첫 row 추가 이면 append 모드 
+        isAppend = False
+        if( view_model.rowCount() == 0 ):
+            isAppend = True
+        else:
+            isAppend = False
+
         self.viewRowPaste('msg_value', self.viewMsgValue, self.model_msg_values, 
-            editing_prohibit_columns = prohibit_list)
+            editing_prohibit_columns = prohibit_list, isAppend = isAppend)
     @pyqtSlot()
     def onMsgValueViewInserted(self):
+        view_model = self.viewMsgValue.model()
         col_info = ci.msg_values_col_info()
         prohibit_list = [col_info.index('Title')]
-        view_model = self.viewMsgValue.model()
 
         # 그룹 생성후 첫 row 추가 이면 append 모드 
         isAppend = False
