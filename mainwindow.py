@@ -77,9 +77,9 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         
         self.model_kpd_para_unit = QStandardItemModel()
 
-        self.actionAddGroup = QAction('Append Group', self)
+        self.actionAddGroup = QAction('Add Group', self)
         self.actionAddPara = QAction('Add Parameter', self)
-        self.actionAddMsgInfo = QAction('Append MsgInfo', self)
+        self.actionAddMsgInfo = QAction('Add MsgInfo', self)
         self.actionAddMsg = QAction('Add Msg', self)
         self.actionAddVar = QAction('Add Var', self )
         self.actionAddTitle = QAction('Append Title', self)
@@ -183,7 +183,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # msg value data 변경 시 수행
         self.model_msg_values.dataChanged.connect(self.onModelMsgValuesDataChanged )
 
-        self.menuFile.triggered[QAction].connect(self.onMenuFileActionTriggered)
+        self.menuFile.triggered[QAction].connect(self.onMenuFileActigonTriggered)
         self.menuEdit.triggered[QAction].connect(self.onMenuEditActionTriggered)
         self.menuAbout.triggered[QAction].connect(self.onMenuAboutActionTriggered)
 
@@ -390,7 +390,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
 
         if( len(ret_val) == 0 ):
             self.lineSourcePath.setText(dir_path)
-            QMessageBox.information(self, '성공', '파일열기가 완료되었습니다')
+            msgBox = QMessageBox()
+            msgBox.setWindowTitle("성공")
+            msgBox.setText("파일열기가 완료되었습니다")
+            msgBox.exec()
             CONFIG['최근폴더']= dir_path
 
         else:
@@ -420,18 +423,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             ret_val = [] 
             source_path = self.lineSourcePath.text()
 
-            if( not os.path.isdir(source_path) ):
-                ret_val.append('소스 폴더명 오류')
-            if(  self.make_backup_file(source_path) == False ):
-                ret_val.append('백업 파일 생성 오류')
-            
-            if( len(ret_val) == 0 ):
-                self.make_base_file(source_path) 
-                self.make_model_to_file(source_path) 
-                QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
-            else:
-                QMessageBox.information(self, '실패', ' | '.join(ret_val) )
-            pass
+            result = self.onBtnCheckClicked()
+            if( len(result) == 0 ):
+                if( not os.path.isdir(source_path) ): ret_val.append('소스 폴더명 오류')
+                if(  self.make_backup_file(source_path) == False ):
+                    ret_val.append('백업 파일 생성 오류')
+                
+                if( len(ret_val) == 0 ):
+                    self.make_base_file(source_path) 
+                    self.make_model_to_file(source_path) 
+                    QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
+                else:
+                    QMessageBox.information(self, '실패', ' | '.join(ret_val) )
+                pass
 
         elif( action_type =='Save As'):
             ret_val = []
@@ -442,20 +446,22 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                                             options = QFileDialog.ShowDirsOnly
                                             )
             
-            if( not os.path.isdir(selected_dir) ):
-                ret_val.append('소스 폴더명 오류')
-            if( self.check_has_any_file_for_write(selected_dir) == True):
-                ret_val.append('타겟 폴더에 중요 파일이 존재')
-            if( self.model_parameters.rowCount() == 0 ):
-                ret_val.append('데이터가 비어 있음')
-            
-            if( len(ret_val) == 0 ):
-                self.make_base_file(selected_dir)
-                self.make_model_to_file(selected_dir)
-                QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
-            else:
-                QMessageBox.critical(self, '실패', ' | '.join(ret_val))
-            pass
+            result = self.onBtnCheckClicked()
+            if( len(result) == 0 ):
+                if( not os.path.isdir(selected_dir) ):
+                    ret_val.append('소스 폴더명 오류')
+                if( self.check_has_any_file_for_write(selected_dir) == True):
+                    ret_val.append('타겟 폴더에 중요 파일이 존재')
+                if( self.model_parameters.rowCount() == 0 ):
+                    ret_val.append('데이터가 비어 있음')
+                
+                if( len(ret_val) == 0 ):
+                    self.make_base_file(selected_dir)
+                    self.make_model_to_file(selected_dir)
+                    QMessageBox.information(self, '성공', '파일생성이 완료되었습니다')
+                else:
+                    QMessageBox.critical(self, '실패', ' | '.join(ret_val))
+                pass
 
         elif( action_type == 'Exit'):
             exit()
@@ -529,7 +535,8 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         print(action.text())
 
     
-    def setLineDelegateAttribute(self, model, view, delegate, columns = [], isNumber = False, validator = None):
+    def setLineDelegateAttribute(self, model, view, delegate, columns = [], isNumber = False, validator = None,
+        width = 0 ):
         for col_index in columns:
             delegate.setEditable(col_index,  True ) 
             delegate.setEditorType(col_index, 'lineedit')
@@ -538,6 +545,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             if( validator ):
                 delegate.setValidator(col_index, validator )
             view.setItemDelegateForColumn(col_index, delegate)
+            if( width != 0 ):
+                header_view = view.horizontalHeader()
+                header_view.setSectionResizeMode(col_index, QHeaderView.Fixed)
+                view.setColumnWidth(col_index, width )
         pass
 
     def setCmbDelegateAttribute(self, model, view, delegate, columns = [], editable = False, 
@@ -620,7 +631,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             col_info.index('최소값'), 
             col_info.index('공장설정값')
         ]
-        reg_ex = QRegularExpression('[-]?[0-9]{1,10}')
+        reg_ex = QRegularExpression('(^[-]?[0-9]{1,10}$|^(0x|0X)?[a-fA-F0-9]{1,8}+$)')
         self.setLineDelegateAttribute(model, view, delegate, col_indexes,  isNumber = True, validator = reg_ex )
 
 
@@ -631,7 +642,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             col_info.index('Name')
         ]
         reg_ex = QRegularExpression('[A-Z]+[_A-Z0-9]*')
-        self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex)
+        self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex, width = 210)
 
         # group 설정 
         model = self.model_group
@@ -847,6 +858,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
                 ))
             return code_err_result_list + name_err_result_list
         else:
+            QMessageBox.information(self, '체크성공', '파라미터 체크 결과 문제 없음')
             return [] 
 
     @pyqtSlot(QModelIndex)
@@ -1515,8 +1527,19 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         else:
             isAppend = False
 
-        self.viewRowInsert(self.viewParameter, self.model_parameters, 
-            editing_prohibit_columns = prohibit_list, isAppend = isAppend)
+        # 파라메터 추가 전 선택된 그룹을 확인해 NULL 이면 추가 못하게 함 
+
+        col_info = ci.group_col_info()
+        group_selection_model = self.viewGroup.selectionModel()
+        group_current_index = group_selection_model.currentIndex()
+        group_name = group_selection_model.model().data(group_current_index)
+
+        if( group_name == "" ):
+            QMessageBox.information(self, '오류', '그룹 이름 없음')
+            pass
+        else:
+            self.viewRowInsert(self.viewParameter, self.model_parameters, 
+                editing_prohibit_columns = prohibit_list, isAppend = isAppend)
 
     @pyqtSlot()
     def onParameterViewDeleted(self):
@@ -1529,28 +1552,40 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     @pyqtSlot()
     def onGroupViewInserted(self):
         self.viewRowInsert(self.viewGroup, self.model_group, 
-            editing_prohibit_columns = [], isAppend = True)
+            editing_prohibit_columns = [] )
     @pyqtSlot()
     def onGroupViewDeleted(self):
         col_info = ci.group_col_info()
+
+        currentIndex = self.viewGroup.selectionModel().currentIndex()
+        key_value = self.model_group.item(currentIndex.row(), col_info.index('Group')).text()
+
+        col_info = ci.para_col_info_for_view()
+        items = self.model_parameters.findItems(key_value, column = col_info.index('Group'))
+        for item in sorted(items, reverse = True):
+            row = item.row()
+            self.model_parameters.removeRow(row)
+
         self.viewRowDelete(self.viewGroup)
-
-        # currentIndex = self.viewGroup.selectionModel().currentIndex()
-        # key_value = self.model_group.item(currentIndex.row(), col_info.index('Group')).text()
-
-        # col_info = ci.para_col_info_for_view()
-        # items = self.model_parameters.findItems(key_value, column = col_info.index('Group'))
-        # for item in sorted(items, reverse = True):
-        #     row = item.row()
-        #     self.model_parameters.removeRow(row)
         pass    
     #msgInfo
     @pyqtSlot()
     def onMsgInfoViewInserted(self):
         self.viewRowInsert(self.viewMsgInfo, self.model_msg_info, 
-            editing_prohibit_columns = [], isAppend = True)
+            editing_prohibit_columns = [] )
     @pyqtSlot()
     def onMsgInfoViewDeleted(self):
+        col_info = ci.msg_info_col_info()
+
+        currentIndex = self.viewMsgInfo.selectionModel().currentIndex()
+        key_value = self.model_msg_info.item(currentIndex.row(), col_info.index('MsgName')).text()
+
+        col_info = ci.msg_values_col_info()
+        items = self.model_msg_values.findItems(key_value, column = col_info.index('MsgName'))
+        for item in sorted(items, reverse = True):
+            row = item.row()
+            self.model_msg_values.removeRow(row)
+
         self.viewRowDelete(self.viewMsgInfo)
 
     #msgValue
