@@ -183,7 +183,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         # msg value data 변경 시 수행
         self.model_msg_values.dataChanged.connect(self.onModelMsgValuesDataChanged )
 
-        self.menuFile.triggered[QAction].connect(self.onMenuFileActigonTriggered)
+        self.menuFile.triggered[QAction].connect(self.onMenuFileActionTriggered)
         self.menuEdit.triggered[QAction].connect(self.onMenuEditActionTriggered)
         self.menuAbout.triggered[QAction].connect(self.onMenuAboutActionTriggered)
 
