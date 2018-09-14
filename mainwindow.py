@@ -568,13 +568,13 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
     def initDelegate(self):
         # delegate 는 하나만 사용 가능 
         # parameters view delegate 설정 
-        model = self.model_title
+        model = self.model_title 
         view = self.viewParameter
         delegate = self.delegate_parameters_view
         col_info = ci.para_col_info_for_view()
         col_index = col_info.index('TitleIndex')
         cmb_model_column_index = ci.title_col_info().index('Enum 이름')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 120, 
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 120, editable=True, 
                 cmb_model_column = cmb_model_column_index )
 
         model = self.model_kpd_para_unit
@@ -631,6 +631,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
             col_info.index('최소값'), 
             col_info.index('공장설정값')
         ]
+        # hex string 입력 가능 
         reg_ex = QRegularExpression('(^[-]?[0-9]{1,10}$|^(0x|0X)?[a-fA-F0-9]{1,8}+$)')
         self.setLineDelegateAttribute(model, view, delegate, col_indexes,  isNumber = True, validator = reg_ex )
 
@@ -641,7 +642,7 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         col_indexes = [ 
             col_info.index('Name')
         ]
-        reg_ex = QRegularExpression('[A-Z]+[_A-Z0-9]*')
+        reg_ex = QRegularExpression('[A-Z][_A-Z0-9]{0,31}')
         self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex, width = 210)
 
         # group 설정 
@@ -652,8 +653,10 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         col_indexes = [ 
             col_info.index('Group')
         ]
-        reg_ex = QRegularExpression('[A-Z]+[_A-Z0-9]*')
+        reg_ex = QRegularExpression('[A-Z][_A-Z0-9]{1,4}')
         self.setLineDelegateAttribute(model, view, delegate, col_indexes, validator = reg_ex) 
+        #그룹 이름 변경시 해당 하는 parameter 들의 그룹 정보를 업데이트 하기 위한 코드 
+        delegate.sigDataChanged.connect(self.onGroupNameChanged)
 
         # msg view delegate 설정 
         model = self.model_title
@@ -662,12 +665,26 @@ class MainWindow(QMainWindow, mainwindow_ui.Ui_MainWindow):
         col_info = ci.msg_values_col_info()
         col_index = col_info.index('TitleIndex')
         cmb_model_column_index = ci.title_col_info().index('Enum 이름')
-        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, 
+        self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150, editable= True, 
                 cmb_model_column = cmb_model_column_index)
 
         col_index = col_info.index('Title')
         self.setCmbDelegateAttribute(model, view, delegate, [col_index], width = 150)
 
+
+    #그룹명 변경시 
+    @pyqtSlot(str, str)
+    def onGroupNameChanged(self, old_name, new_name):
+        col_info = ci.para_col_info_for_view()
+        model = self.model_parameters
+        
+        for row in range(model.rowCount()):
+            col = col_info.index("Group")
+            index = model.index(row, col)
+            group_name = model.data(index)
+            if( group_name == old_name):
+                model.setData(index, new_name)
+        pass
     # unit 선택에 따라서 수시로 변하기 때문에 따로 함수로 만들어 줌 
     def onParameterViewUnitChanged(self, index): 
         col_info = ci.para_col_info_for_view()
