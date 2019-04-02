@@ -5,19 +5,21 @@
     "isShellCommand": true, 
     "showOutput": "always",  
     "suppressTaskName": true,
+    "echoCommand": true,
     "tasks" : [
         {
             "taskName": "pyflakes",
-            "args": ["pyflakes", "${file}"],
+            "args": ["C:\\ProgramData\\Anaconda3\\Library\\Scripts\\pyflakes.exe", "${file}"],
             "isBuildCommand": true
         },
         {
             "taskName": "makercc",
-            "args": ["pyrcc5.exe", "main.qrc", "-o", "qml_rc.py"]
+            // resource output file 을 .ui 파일에서 사용하려면 _rc 를 붙여줘야 함 
+            "args": ["C:\\ProgramData\\Anaconda3\\Library\\bin\\pyrcc5", "resource.qrc", "-o", "resource_rc.py"]
         },
         {
             "taskName": "makeui",
-            "args": ["pyuic5.exe", "mainwindow.ui", "-o", "mainwindow_ui.py"],
+            "args": ["C:\\ProgramData\\Anaconda3\\Library\\bin\\pyuic5", "mainwindow.ui", "-o", "mainwindow_ui.py"],
             "isBuildCommand": true
         } 
     ]
