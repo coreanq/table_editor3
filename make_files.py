@@ -500,7 +500,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             # table 헤더의 enum MAK_000 을 가지고 Address define
             header_name_16bitAddr_lines.append(
-                    "#define _16_{0:<30} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
+                    "#define {0:<30} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
                             name, 
                             comm_16bit_addr, 
                             grp_and_code,
@@ -514,7 +514,7 @@ def make_kpdpara_table(source_path, parameters_model, group_model):
 
             # table 헤더의 enum MAK_000 을 가지고 Address define
             header_name_32bitAddr_lines.append(
-                    "#define {0:<34} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
+                    "#define _32_{0:<34} {1:<10}//{2:<10}{3:<20}{4:>10}".format(
                             name, 
                             comm_32bit_addr, 
                             grp_and_code,
